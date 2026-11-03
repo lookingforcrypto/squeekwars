@@ -167,7 +167,7 @@ Before any action on a village, the contract settles it from `lastSettled` to no
 
 ## 9. Ranking counters
 
-Per village, per season and per game week: village points (resources spent on buildings and sites ÷ 100), attack points and defense points (resource value of enemy units killed), resources looted. Raids under the level-gap rule add nothing. The site builds the tables and weekly titles from these counters and events.
+Per village, per season and per game week: village points (resources spent on buildings and sites ÷ 100), research points (resources spent on research ÷ 100), attack points and defense points (resource value of enemy units killed), resources looted. Raids under the level-gap rule add nothing. The site builds the tables and weekly titles from these counters and events. **Overall** = village points + research points + min(village points, (attack points + defense points) ÷ 200), integer division; a clan's Overall is the sum of its members'. Loot, SEED, Squeeks and wild camps never count toward Overall.
 
 ## 10. Invariants (tested)
 

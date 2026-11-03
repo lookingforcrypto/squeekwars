@@ -1237,7 +1237,7 @@ function clanPage() {
   ${S.invites.length ? `<h3 style="margin-top:10px">Waiting for an answer</h3>${S.invites.map(iv => `<div class="muted">${esc(iv.name)} · answers in ${dur(iv.at - S.t)}</div>`).join('')}` : ''}</div></div>`;
   return h;
 }
-// ---- ranking: village points = resources spent on buildings ÷ 100; attack / defense points = value of the troops you killed
+// ---- ranking: village (build) points = resources spent on buildings ÷ 100; attack / defense points = value of the troops you killed
 const sumCost = (kind, ref, L) => { let t = 0; for (let l = 1; l <= L; l++) t += costOf(kind, ref, l).res.reduce((a, x) => a + x, 0); return t; };
 function villagePoints() {
   let t = sumCost('th', 'townhall', S.th) + sumCost('walls', 'walls', S.walls);
@@ -1250,6 +1250,15 @@ function botPoints(b) {
   if (!PTS_CACHE[k]) { let t = sumCost('th', 'townhall', L) + sumCost('walls', 'walls', b.walls); for (let i = 0; i < 8; i++) t += sumCost('field', i, Math.max(1, L - (i % 3 === 0 ? 1 : 0))); for (const ty of ['wheelhouse', 'storehouse', 'burrow', 'barracks', 'academy', 'vault'].slice(0, 2 + Math.min(4, L))) t += sumCost('plot', ty, Math.max(1, L - 1)); PTS_CACHE[k] = t / 100; }
   return Math.round(PTS_CACHE[k] * (b.active ? 0.9 + 0.2 * hash(b.x, b.y, 40) : 0.7));
 }
+// Overall = village points + research points + combat points; combat = (attack + defense points) ÷ 200, never more than the village points
+const researchPoints = () => Math.round(S.research.done.reduce((a, id) => a + researchCost(RESEARCH.find(r => r.id === id).tier).res.reduce((x, y) => x + y, 0), 0) / 100);
+const overallOf = (v, r, atk, def) => { const c = Math.round(Math.min(v, (atk + def) / 200)); return { v, r, c, total: v + r + c }; };
+const myOverall = () => overallOf(villagePoints(), researchPoints(), S.stats.atk, S.stats.def);
+function botOverall(b) {
+  const v = botPoints(b), ak = Math.max(1, botLvl(b) - 1); let t = 0; while (t < 5 && TIER_AT[t + 1] <= ak) t++;
+  let r = 0; for (let k = 1; k <= t; k++) r += 2 * 6 * 2.2 ** (k - 1);
+  return overallOf(v, Math.round(r * (b.active ? 1 : 0.7)), botStat(b, 'atk'), botStat(b, 'def'));
+}
 function botStat(b, k, wk) {         // bots' battle stats, deterministic per week
   if (!b.active) return 0; const L = botLvl(b), base = { atk: 900, def: 700, loot: 2600 }[k];
   const weekly = w => Math.round(base * L * L / 8 * hash(b.x, b.y, 70 + w * 3 + ['atk', 'def', 'loot'].indexOf(k)) * (hash(b.x, b.y, 69) < 0.5 ? 0.3 : 1));
@@ -1260,33 +1269,36 @@ function rankRows(cat, wk) {
   const rows = [];
   for (let dx = -15; dx <= 15; dx++) for (let dy = -15; dy <= 15; dy++) {
     const b = bot(OWN[0] + dx, OWN[1] + dy); if (!b || b.camp) continue; const cl = botClan(b);
-    rows.push({ name: b.name, addr: b.addr, at: [b.x, b.y], clan: cl ? cl.tag : '', v: cat === 'pts' ? botPoints(b) : botStat(b, cat, wk) });
+    const o = cat === 'gen' ? botOverall(b) : null;
+    rows.push({ name: b.name, addr: b.addr, at: [b.x, b.y], clan: cl ? cl.tag : '', v: o ? o.total : cat === 'pts' ? botPoints(b) : botStat(b, cat, wk), o });
   }
-  const mine = cat === 'pts' ? villagePoints() : wk ? (S.stats.wk[wk] || {})[cat] || 0 : S.stats[cat];
-  rows.push({ name: S.username || 'You', addr: S.wallet, at: OWN, clan: S.clan ? S.clan.tag : '', v: Math.round(mine), me: true });
+  const mo = cat === 'gen' ? myOverall() : null;
+  const mine = mo ? mo.total : cat === 'pts' ? villagePoints() : wk ? (S.stats.wk[wk] || {})[cat] || 0 : S.stats[cat];
+  rows.push({ name: S.username || 'You', addr: S.wallet, at: OWN, clan: S.clan ? S.clan.tag : '', v: Math.round(mine), o: mo, me: true });
   return rows.sort((a, b) => b.v - a.v || (a.me ? -1 : 1));
 }
 function clanRows() {
   const m = {};
   const add = (tag, name, pts, me) => { m[tag] = m[tag] || { tag, name, pts: 0, n: 0, me }; m[tag].pts += pts; m[tag].n++; };
-  for (let dx = -15; dx <= 15; dx++) for (let dy = -15; dy <= 15; dy++) { const b = bot(OWN[0] + dx, OWN[1] + dy); const cl = b && botClan(b); if (cl) add(cl.tag, cl.name, botPoints(b), !!cl.mine); }
-  if (S.clan) add(S.clan.tag, S.clan.name, villagePoints(), true);
+  for (let dx = -15; dx <= 15; dx++) for (let dy = -15; dy <= 15; dy++) { const b = bot(OWN[0] + dx, OWN[1] + dy); const cl = b && botClan(b); if (cl) add(cl.tag, cl.name, botOverall(b).total, !!cl.mine); }
+  if (S.clan) add(S.clan.tag, S.clan.name, myOverall().total, true);
   return Object.values(m).sort((a, b) => b.pts - a.pts);
 }
 function rankingPage() {
-  const cat = S.ui.rk || 'pts', wk = S.ui.rkw ? week(S.t) : 0;
-  const CATS = [['pts', 'Villages'], ['atk', 'Attackers'], ['def', 'Defenders'], ['loot', 'Raiders'], ['clan', 'Clans']];
-  let h = `<h2>Ranking</h2><p class="sub">Your region: every village within 15 tiles. Village points = resources spent on buildings ÷ 100. Attack and defense points = resource value of the troops you killed. Raids on villages 3+ Town Hall levels below you give no points. Season 1 resets everything.</p>`;
+  const cat = S.ui.rk || 'gen', wk = S.ui.rkw && cat !== 'gen' && cat !== 'pts' ? week(S.t) : 0;
+  const CATS = [['gen', 'Overall'], ['pts', 'Villages'], ['atk', 'Attackers'], ['def', 'Defenders'], ['loot', 'Raiders'], ['clan', 'Clans']];
+  let h = `<h2>Ranking</h2><p class="sub">Every village within 15 tiles. <b>Overall = Build + Research + Combat</b>. Season 1 resets everything.</p>
+  <details class="how"><summary>How points are counted</summary><ul><li><b>Build</b>: resources spent on buildings and sites ÷ 100 (the Villages tab).</li><li><b>Research</b>: resources spent on research ÷ 100.</li><li><b>Combat</b>: (attack + defense points) ÷ 200, never more than Build.</li><li><b>Attack / defense points</b>: resource value of the troops you killed. Raids on villages 3+ Town Hall levels below you and on wild camps give none.</li><li><b>Clans</b>: the sum of their members' Overall.</li></ul></details>`;
   h += `<div class="filters">${CATS.map(([k, n]) => `<button class="btn sm ${cat === k ? '' : 'ghost'}" data-act="rk" data-k="${k}" aria-pressed="${cat === k}">${n}</button>`).join('')}${['atk', 'def', 'loot'].includes(cat) ? `<button class="btn sm alt" data-act="rkw">${wk ? 'This week' : 'Whole season'} ⇄</button>` : ''}</div>`;
   const last = week(S.t) - 1;
   if (last >= 1) { const t = ['atk', 'def', 'loot'].map(k => [k, rankRows(k, last)[0]]); h += `<div class="px box" style="margin-bottom:14px"><h3>Titles of week ${last}</h3><div class="titles">${t.map(([k, r]) => `<div><b class="gold" style="font-weight:400">${{ atk: 'Top Attacker', def: 'Top Defender', loot: 'Top Raider' }[k]}</b><br>${r.me ? `<b>${esc(r.name)} (you!)</b>` : esc(r.name)} · ${fmt(r.v)}</div>`).join('')}</div></div>`; }
   if (cat === 'clan') {
     const rows = clanRows();
-    return h + `<div class="px box"><div class="tblwrap"><table class="tbl rank"><thead><tr><th>#</th><th>Clan</th><th>Members here</th><th>Points</th></tr></thead><tbody>${rows.map((r, i) => `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td>[${esc(r.tag)}] ${esc(r.name)}</td><td class="r">${r.n}</td><td class="r">${fmt(r.pts)}</td></tr>`).join('')}</tbody></table></div>${S.clan ? '' : '<p class="muted">Found or join a clan to appear here.</p>'}</div>`;
+    return h + `<div class="px box"><div class="tblwrap"><table class="tbl rank"><thead><tr><th>#</th><th>Clan</th><th>Members here</th><th>Overall</th></tr></thead><tbody>${rows.map((r, i) => `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td>[${esc(r.tag)}] ${esc(r.name)}</td><td class="r">${r.n}</td><td class="r">${fmt(r.pts)}</td></tr>`).join('')}</tbody></table></div>${S.clan ? '' : '<p class="muted">Found or join a clan to appear here.</p>'}</div>`;
   }
   const rows = rankRows(cat, wk), me = rows.findIndex(r => r.me), top = rows.slice(0, 20);
-  const row = (r, i) => `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td>${r.me ? `<span class="swdot" style="--c:${S.banner}"></span>` : ''}${who(r.name, r.addr)}${r.clan ? ` <span class="muted">[${esc(r.clan)}]</span>` : ''}</td><td><button class="lnk" data-act="gorank" data-x="${r.at[0]}" data-y="${r.at[1]}">(${r.at[0]}|${r.at[1]})</button></td><td class="r">${fmt(r.v)}</td></tr>`;
-  h += `<div class="px box"><div class="tblwrap"><table class="tbl rank"><thead><tr><th>#</th><th>Player</th><th>Village</th><th>${{ pts: 'Points', atk: 'Attack pts', def: 'Defense pts', loot: 'Looted' }[cat]}</th></tr></thead><tbody>${top.map(row).join('')}${me >= 20 ? `<tr><td colspan="4" class="muted">…</td></tr>${row(rows[me], me)}` : ''}</tbody></table></div><p class="muted">You are #${me + 1} of ${rows.length}.</p></div>`;
+  const row = (r, i) => `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td>${r.me ? `<span class="swdot" style="--c:${S.banner}"></span>` : ''}${who(r.name, r.addr)}${r.clan ? ` <span class="muted">[${esc(r.clan)}]</span>` : ''}</td><td><button class="lnk" data-act="gorank" data-x="${r.at[0]}" data-y="${r.at[1]}">(${r.at[0]}|${r.at[1]})</button></td><td class="r">${fmt(r.v)}</td>${r.o ? `<td class="r muted">${fmt(r.o.v)}</td><td class="r muted">${fmt(r.o.r)}</td><td class="r muted">${fmt(r.o.c)}</td>` : ''}</tr>`;
+  h += `<div class="px box"><div class="tblwrap"><table class="tbl rank"><thead><tr><th>#</th><th>Player</th><th>Village</th><th>${{ gen: 'Overall', pts: 'Points', atk: 'Attack pts', def: 'Defense pts', loot: 'Looted' }[cat]}</th>${cat === 'gen' ? '<th>Build</th><th>Research</th><th>Combat</th>' : ''}</tr></thead><tbody>${top.map(row).join('')}${me >= 20 ? `<tr><td colspan="${cat === 'gen' ? 7 : 4}" class="muted">…</td></tr>${row(rows[me], me)}` : ''}</tbody></table></div><p class="muted">You are #${me + 1} of ${rows.length}.</p></div>`;
   return h;
 }
 function reportForm(sfx) {

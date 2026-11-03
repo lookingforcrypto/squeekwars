@@ -166,12 +166,17 @@ The live game has no bots: every village is a real wallet. So that the map has s
 ## 13. Ranking and the SEED treasury
 
 - **Ranking** (per region and per season):
+  - **Overall** (the default tab) = Build + Research + Combat:
+    - **Build** = the village points below;
+    - **Research** = resources spent on research ÷ 100;
+    - **Combat** = (attack points + defense points) ÷ 200, never more than Build.
+    - The cap stops a pure fighter with a small village from topping the table, and the ÷ 200 keeps fighting worth roughly a tenth of a builder's points over a season. Loot, SEED, Squeeks and wild camps add nothing, so buying or farming cannot climb it.
   - **Village points:** resources spent on buildings and production sites ÷ 100.
   - **Attack points:** resource value of defenders killed while attacking.
   - **Defense points:** resource value of attackers killed while defending.
   - **Raiders:** resources looted.
-  - **Clans:** sum of the members' village points.
-- **Weekly titles:** Top Attacker, Top Defender and Top Raider get a title and badge, with no resources or SEED, so feeder accounts gain nothing. Raids on villages 3+ Town Hall levels below you give no points. Everything resets each season.
+  - **Clans:** sum of the members' Overall points.
+- **Weekly titles:** Top Attacker, Top Defender and Top Raider get a title and badge, with no resources or SEED, so feeder accounts gain nothing. Raids on villages 3+ Town Hall levels below you and on wild camps give no points. Everything resets each season.
 - **SEED treasury** (all SEED spent is burned):
 
   | Item | SEED | Effect |
