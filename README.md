@@ -14,6 +14,10 @@ A browser strategy game for [Squeekchain](https://squeekchain.com) on Sepolia. E
 
 ![World map](art/mockups/world_map_screen.png)
 
+## Play the prototype
+
+Open [`prototype/index.html`](prototype/) in a browser: the site plus a playable village, world map and raids with time running 60× faster. See [prototype/README.md](prototype/README.md).
+
 ## Repository
 
 | Path | What |
@@ -25,7 +29,8 @@ A browser strategy game for [Squeekchain](https://squeekchain.com) on Sepolia. E
 | `art/map/` | Village map concept |
 | [art/PROMPTS.md](art/PROMPTS.md) | The prompts used to generate the art |
 | `sim/` | Economy simulation (Python) and the parameters behind the tables |
+| `prototype/` | Playable browser prototype (no wallet, no chain) |
 
 ## Status
 
-Design draft v1. Next: the contract-level spec (`SPEC.md`) for the IMD build, then contracts and the site.
+Design draft v1 with a playable prototype. Next: the contract-level spec (`SPEC.md`) for the IMD build, then contracts and the live site.
