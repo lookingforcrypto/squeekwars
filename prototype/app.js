@@ -59,7 +59,7 @@ const WALLS_POS = [640, 356];
 const OWN = [46, 70];
 const RIVAL = [48, 71];
 const NAME_A = ['Iron', 'Amber', 'Grey', 'Silent', 'Swift', 'Golden', 'Dusk', 'Stone', 'Copper', 'Night', 'Ember', 'Frost', 'Oak', 'Ash', 'Rust', 'Bright', 'Hollow', 'Moss'];
-const NAME_B = ['paw', 'whisker', 'burrow', 'tail', 'seed', 'runner', 'claw', 'fang', 'wheel', 'mill', 'ridge', 'grove', 'barrow', 'spark', 'cheek', 'thorn'];
+const NAME_B = ['paw', 'crest', 'burrow', 'tail', 'seed', 'runner', 'claw', 'fang', 'wheel', 'mill', 'ridge', 'grove', 'barrow', 'spark', 'hold', 'thorn'];
 const cap1 = s => s[0].toUpperCase() + s.slice(1);
 function nameFrom(r1, r2, r3) { return NAME_A[Math.floor(r1 * NAME_A.length)] + cap1(NAME_B[Math.floor(r2 * NAME_B.length)]) + (r3 < 0.6 ? Math.floor(r3 * 150) + 2 : ''); }
 const randomName = () => nameFrom(Math.random(), Math.random(), Math.random());
