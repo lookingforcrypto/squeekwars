@@ -1,6 +1,6 @@
 # Squeek Wars · playable prototype
 
-A browser-only prototype of the site and the game. There is no wallet and no chain: the game state lives in your browser, you play a wallet that holds three Squeeks (#4821 leads), and game time runs 60× faster than real time (1 game hour = 1 real minute).
+A browser-only prototype of the site and the game. There is no wallet and no chain: the game state lives in your browser, you play a wallet that holds three Squeeks, and game time runs 60× faster than real time (1 game hour = 1 real minute).
 
 ## Run it
 
@@ -20,7 +20,8 @@ Then open http://localhost:8000.
 - **Village:** tap the Town Hall, a production site, a building or an empty plot. Build, upgrade and queue orders (2 build slots, 1 queued order each); cancel an order with ✕ for 80% back. If you cannot afford something, the panel says what is missing and roughly when you will have it. Zoom with + / − / fit, pinch or the mouse wheel.
 - **Life and night:** villagers walk the roads, chimneys smoke, buildings under construction get scaffolding. From dusk the village goes dark with lit windows; between 00:00 and 04:00 Squeektoshi runs and the Wheelhouse wheel spins. At 04:00 a short replay shows the laps, the SEED for every village and the new wheel bonus.
 - **Academy, Barracks, Market:** research tiers, unit training and dismissing, resource exchange (from Town Hall 2).
-- **Squeeks and the champion:** one village per wallet. On the Champion tab, pick which of your Squeeks leads the village (once per 24 h); the leader is your champion and its level stays with that Squeek. Only a led village gets the wheel bonus. Turn off **Wallet holds Squeeks** in Settings to play the way a wallet without a Squeek does.
+- **Testnet or mainnet:** entering the game asks where to play: Testnet (the practice season) or Mainnet, which stays locked until the official Squeek mint. A TESTNET badge sits in the top bar.
+- **Squeeks:** one village per wallet, same production and SEED for everyone. Squeeks cut construction time after good runs (each extra one adds less, at most −30%), and one of them is your champion (pick it on the Champion tab, once per 24 h; its level stays with that Squeek). Set **Squeeks in your wallet** (0 to 10) in Settings to compare.
 - **World Map:** drag to move, hover (desktop) or tap a village, or type x|y or a player name in **Go to**. Every village's troops, Walls and stock are visible (as they will be on-chain). Send **Scouts** first and your attacks on that village get +10% for 12 hours. Choose troops and send an attack with the battle prediction.
 - **Raids on you:** after your 7-day beginner shield, neighbours with a big enough army raid you, and villages you raided may strike back. A red banner under the top bar counts down every attack on the way.
 - **Clans:** research and build a Clan Hall; at level 3 found a clan and invite players by name, from the Clan tab or from the World Map. Send troops to defend a member and recall them later; members near you send help when you are attacked. The Clan Hall raises banners in your clan colour at levels 3, 5 and 7.

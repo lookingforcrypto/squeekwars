@@ -1,10 +1,10 @@
-# Squeek Wars · Contract specification (Season 1, draft v3)
+# Squeek Wars · Contract specification (draft v4)
 
 The rules the contracts enforce, written for the IMD build. [GAME_DESIGN.md](GAME_DESIGN.md) explains the game; [BUILDINGS.md](BUILDINGS.md) lists every level; `sim/params.py` holds every constant; `prototype/app.js` is a working reference implementation. Where they differ, this file wins.
 
 ## 1. Scope
 
-- **Chain:** Sepolia (11155111). Contracts are final once deployed: no proxies, no upgrade path, no self-destruct.
+- **Chain:** Sepolia (11155111) for the Testnet season. Mainnet Season 1 deploys the same contracts again after the official Squeek mint, with mainnet addresses; nothing carries over. Contracts are final once deployed: no proxies, no upgrade path, no self-destruct.
 - **No money:** the contracts hold no ETH and no tokens, take no fees and pay nobody.
 - **No randomness:** every result follows from public state and the formulas below.
 - **Everything is public:** troops, Walls and stock of every village can be read. Scouting gives an attack bonus, not hidden information.
@@ -25,7 +25,7 @@ These are the addresses `api.squeekchain.com/v1/economy/state` reports. The owne
 - **Amounts** (resources, SEED, XP) are stored as fixed point with at least 3 decimals. Every rounding goes down, against the player.
 - **Levels:** `L` is the current level. Cost of reaching level `L` is `c × g^(L−1)` per resource. Build time is `t × gt^(L−1) × (1 − 0.03 × (TownHall − 1))` hours.
 - **Bounded work:** no call loops over an unbounded set. Where catching up could be long (days to claim, movements to resolve), a call handles a fixed maximum and can be repeated.
-- **Events** for every state change the site shows: founding, leader changes, orders placed, finished and cancelled, research, training, movements sent and resolved (with the full battle table), scouting, clans, treasury and day checkpoints.
+- **Events** for every state change the site shows: founding, champion changes, orders placed, finished and cancelled, research, training, movements sent and resolved (with the full battle table), scouting, clans, treasury and day checkpoints.
 
 ## 4. Contracts and wiring
 
@@ -34,7 +34,7 @@ At most 8 contracts. Suggested split:
 | Contract | Holds |
 |---|---|
 | **SeedLedger** | Day checkpoints from SqueekCore; SEED balance of every village; burns |
-| **Villages** | Founding, leaders, resources and production, buildings and the build queue, research, Market, treasury |
+| **Villages** | Founding, the champion choice, resources and production, buildings and the build queue with the Squeek build speed, research, Market, treasury |
 | **Army** | Units, training, upkeep, movements, scouting, battles, loot, Walls damage, champion XP per Squeek |
 | **Clans** | Clans, invites, membership, support troops, ranking counters |
 
@@ -42,20 +42,22 @@ Constructors take only static values, `$owner` and `$contract:EarlierName`, and 
 
 ## 5. Villages
 
-### Founding and leaders
+### Founding, Squeeks and the champion
 
 - `found(name)`: any wallet without a village founds one. One village per wallet, forever (a village is never deleted).
 - Start: 750 of each resource, 1,500 SEED, Town Hall 1, Walls 1, 8 production sites at level 1, 12 empty plots, a 7-day beginner shield.
 - Tile: the n-th founded village gets tile `shuffle(n)` of the 100 × 100 grid (a fixed bijection, so consecutive villages are not neighbours). From the 10,001st village the grid grows by rings.
-- `setLeader(tokenId)`: the wallet must own the Squeek (`ownerOf`). The Squeek must not lead another village; if it does and that village's wallet no longer owns it, it is released first. At most once per 24 h per village, and not while the champion is away with an army.
-- **The leader is valid** while `ownerOf(leader) == village wallet`. Every check below that needs a leader reads `ownerOf` live.
+- No Squeek is needed to found or to play. Production, SEED and the wheel bonus are the same for every village.
+- **Squeek build speed:** when an order for a building or a production site is placed, `n = SqueekNFT.balanceOf(wallet)` and the order's time is multiplied by `1 − 0.30 × (1 − 0.5^n) × min(1, lastDayWork / 11,000)`, where `lastDayWork` is the work of the latest recorded day. The time is fixed at placement; research and training are not affected.
+- `setChampion(tokenId)`: the wallet must own the Squeek (`ownerOf`). One champion per village, whatever the number of Squeeks. A Squeek is the champion of at most one village: if another village has it and that village's wallet no longer owns it, it is released first. At most once per 24 h per village, and not while the current champion is away with an army.
+- **The champion is valid** while `ownerOf(champion) == village wallet`, read live wherever the champion counts. XP and points are stored per token id.
 
 ### Production (lazy)
 
 Before any action on a village, the contract settles it from `lastSettled` to now, in time order, through each finished build order and each day boundary in between:
 
 - Output per site = `8 × 1.4^(L−1) × (1 + bonus)`; two sites per resource (forests Wood, farms Food, quarries Stone, mines Iron).
-- **bonus** for day d = `min(dayWork(d) / 4,320, 0.25 × Wheelhouse level)`. It is 0 unless the leader is valid at settlement time, and it counts only for the part of the span after `leaderSince`.
+- **bonus** for day d = `min(dayWork(d) / 4,320, 0.25 × Wheelhouse level)`, for every village.
 - Food also pays upkeep: `0.5 × Σ units × room` per hour, own units at home or away. If Food would go below 0, it stops at 0 and the units at home shrink by the share that could not be fed.
 - Each resource is capped at storage: `1,000 + Σ Storehouses 1,200 × 1.22^(L−1)`. Output above the cap is lost.
 - Settlement of more than 30 days at once uses each day's bonus for the first 30 days and base output after.
@@ -102,7 +104,7 @@ Before any action on a village, the contract settles it from `lastSettled` to no
 ## 6. SeedLedger
 
 - `checkpoint()`: anyone, at most once per game day, after 04:00 UTC. `dayWork(d) = SqueekCore.cumulativeWork − cumulativeWork at the previous checkpoint`. Missed days record 0 and their work lands on the day of the next checkpoint.
-- `claim(village)`: adds `dayWork(d) / 10` SEED for every recorded day d after the village's last claimed day (bounded per call). Every village gets the same SEED, led or not. If the village has a valid leader, that Squeek also gets `min(150, dayWork(d) / 100)` XP per day claimed.
+- `claim(village)`: adds `dayWork(d) / 10` SEED for every recorded day d after the village's last claimed day (bounded per call). Every village gets the same SEED, with or without Squeeks. If the village has a valid champion, that Squeek also gets `min(150, dayWork(d) / 100)` XP per day claimed.
 - SEED is an in-game balance per village: no transfer function, no approval, no ERC-20 interface. Only the game contracts can burn it.
 
 ## 7. Army
@@ -126,7 +128,7 @@ Before any action on a village, the contract settles it from `lastSettled` to no
 
 - Kinds: **attack**, **scout** (only Scouts), **support** (to a clan member), **return**. Travel time = distance ÷ speed of the slowest unit (× 1.2 speed with Forced March). Distance is Euclidean on (x|y).
 - Attacks need: no beginner shield on either side, the target not in the attacker's clan, the target's Peace shield off, fewer than 3 successful raids on the target this game day.
-- The champion (the valid leader) can join an attack; it is then away until the army returns.
+- The champion (if valid) can join an attack; it is then away until the army returns.
 - **Resolution:** anyone can resolve a movement after it arrives. Before any action on a village, every movement to or from it that has arrived is resolved first, in arrival order (bounded; a separate `resolve` clears a backlog). Both villages are settled up to the arrival time before the battle.
 
 ### Battle
@@ -143,7 +145,7 @@ Before any action on a village, the contract settles it from `lastSettled` to no
 
 ### Champion
 
-- Level `1 + floor(sqrt(XP / 100))`, max 30. 4 points per level: Might (+100 power each), Attack and Defense (+0.8% each, max 20%), Carry (+2% each).
+- Level `1 + floor(sqrt(XP / 100))`, max 30. 4 points per level: Might `50 + 25 × points`, Attack and Defense +0.5% per point (max 10%), Carry +1% per point (max 20%).
 - XP and points are stored per Squeek token id, not per village.
 
 ## 8. Clans
@@ -160,8 +162,8 @@ Per village, per season and per game week: village points (resources spent on bu
 ## 10. Invariants (tested)
 
 - No resource or SEED moves from one village to another except raid loot.
-- Only the village's wallet acts for it; buffs and the champion need a leader the wallet still owns, checked at the moment of use.
-- One Squeek leads at most one village; passing it on never gives two villages the bonus for the same hours.
+- Only the village's wallet acts for it; the champion counts only while the wallet still owns it.
+- A Squeek is the champion of at most one village; the build speed never exceeds −30%, whatever the number of Squeeks.
 - Resources never exceed storage and never go below 0; SEED never goes below 0.
 - A day's checkpoint and a village's claim for a day happen at most once.
 - Movements resolve in arrival order, and a village's state at a battle includes everything that arrived before it.

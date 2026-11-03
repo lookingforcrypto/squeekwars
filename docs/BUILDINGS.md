@@ -1,4 +1,4 @@
-# Squeek Wars · Buildings and levels (draft v3)
+# Squeek Wars · Buildings and levels (draft v4)
 
 Costs are the sum of the 4 resources (Wood, Food, Stone, Iron); the per-resource split is in `sim/params.py`. Times are before the Town Hall speed bonus. Sprites change every 2 levels (10-level buildings) or every 4 levels (20-level buildings): cardboard → wood → plaster & timber → stone → marble & gold.
 
@@ -40,7 +40,7 @@ Starts at level 1. If an attack wins (≥ 2× defense), every 20 surviving Catap
 
 ## Production sites (8: 2 forests, 2 sunflower farms, 2 quarries, 2 iron mines)
 
-| Level | Base output / h | Led by a Squeek, Wheelhouse at same level, normal night / h | Resources | Time |
+| Level | Base output / h | With Wheelhouse at same level, normal night / h | Resources | Time |
 |---|---|---|---|---|
 | 1 | 8.0 | 10 | – | – |
 | 2 | 11.2 | 17 | 256 | 34 min |
@@ -53,9 +53,9 @@ Starts at level 1. If an attack wins (≥ 2× defense), every 20 surviving Catap
 | 9 | 118.1 | 384 | 6,872 | 5.9 h |
 | 10 | 165.3 | 579 | 10,995 | 8.3 h |
 
-All start at level 1. Output = base × (1 + wheel bonus). The daily wheel bonus comes from Squeektoshi's settled passes (11,000 passes ≈ +255%) and is capped by the Wheelhouse; it applies only to a village led by a Squeek. If the hamster does not run, base output continues.
+All start at level 1. Output = base × (1 + wheel bonus). The daily wheel bonus comes from Squeektoshi's settled passes (11,000 passes ≈ +255%) and is capped by the Wheelhouse. If the hamster does not run, base output continues.
 
-## Wheelhouse (1, unlocked; the bonus needs a Squeek leading the village)
+## Wheelhouse (1, unlocked)
 
 | Level | Wheel bonus cap | Resources | SEED | Time | Look |
 |---|---|---|---|---|---|
@@ -232,7 +232,15 @@ Clan members cannot send resources to each other (anti multi-account); they can 
 
 No trading between players. The Market only converts your own resources: give 100 of one, receive the listed amount of another. +5 per level, level 10 gets a final bonus to 75. SEED cannot be exchanged.
 
-## Champion (the Squeek leading your village)
+## Squeek build speed
+
+| Squeeks held | 0 | 1 | 2 | 3 | 5 | 10 |
+|---|---|---|---|---|---|---|
+| Construction time after a full night | – | -15.0% | -22.5% | -26.2% | -29.1% | -30.0% |
+
+For buildings and production sites, fixed when the order is placed. Scaled down after a weak night (full effect from 11,000 laps). Research and training are not affected.
+
+## Champion (one per wallet that holds a Squeek)
 
 | Champion level | Look | Total XP needed |
 |---|---|---|
@@ -241,4 +249,4 @@ No trading between players. The Market only converts your own resources: give 10
 | 20–29 | steel armor, blue cape | 36,100–78,400 |
 | 30 | golden armor, crown | 84,100 |
 
-4 points per level: Might (+100 power), Attack and Defense (+0.8% per point, max 20%), Carry (+2% per point). XP comes from battles (killed enemy cost ÷ 20) and from the hamster's runs (~110 per day). The champion never dies; after a lost battle it is injured for 12 hours. Only a village led by a Squeek has a champion, and the level belongs to that Squeek.
+4 points per level: Might 50 + 25 per point, Attack and Defense +0.5% per point (max 10%), Carry +1% per point (max 20%). XP comes from battles (killed enemy cost ÷ 20) and from the hamster's runs (~110 per day). The champion never dies; after a lost battle it is injured for 12 hours. One champion per wallet that holds a Squeek, whatever the number of Squeeks; the level belongs to that Squeek.

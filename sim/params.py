@@ -67,10 +67,13 @@ UNAMES = {'piyade': 'Kabuk Kırıcı', 'akinci': 'Yanak Akıncısı', 'kalkan': 
 UPKEEP_FOOD = 0.5             # v2: Food per upkeep point per hour
 
 # kahraman
-HERO_BASE, HERO_PER_POINT = 100, 100
-HERO_PCT = 0.008              # saldırı/savunma puanı başına; 25 puanda %20
-HERO_CARRY = 0.02             # yanak puanı başına taşıma
-HERO_CAP = 0.20
+HERO_BASE, HERO_PER_POINT = 50, 25          # v4: modest champion, one per wallet that holds a Squeek
+HERO_PCT = 0.005              # attack/defense per point; 10% at 20 points
+HERO_CARRY = 0.01             # carry per point, max 20%
+HERO_CAP = 0.10
+HERO_CARRY_CAP = 0.20
+# v4: Squeek holders build faster: time x (1 - SQUEEK_BUILD_MAX x (1 - 0.5^n) x min(1, laps / SQUEEK_BUILD_LAPS))
+SQUEEK_BUILD_MAX, SQUEEK_BUILD_LAPS = 0.30, 11000
 HERO_INJURY = 12
 def hero_level(xp):
     import math

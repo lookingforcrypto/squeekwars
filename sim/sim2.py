@@ -43,7 +43,7 @@ class V:
     def hkuv(s): return HERO_BASE + HERO_PER_POINT * s.pts['kuv']
     def hatk(s): return min(HERO_CAP, HERO_PCT * s.pts['atk'])
     def hdef(s): return min(HERO_CAP, HERO_PCT * s.pts['deff'])
-    def hcar(s): return HERO_CARRY * s.pts['car']
+    def hcar(s): return min(HERO_CARRY_CAP, HERO_CARRY * s.pts['car'])
     def mult(s, d): return min(CARK_STEP * s.lvl('cark'), s.sim.P[d] / PASS_PER_BONUS)
     # --- time ---
     def advance(s, t1):

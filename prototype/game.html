@@ -186,6 +186,17 @@ table.kv td.up{color:var(--green)}
 .champ{display:grid;grid-template-columns:160px 1fr;gap:16px;align-items:center}
 .champ img{width:160px}
 .num{font-family:var(--f-body);font-size:22px;letter-spacing:0}
+.netpick{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:520px;width:100%}
+.net{font:inherit;text-align:left;padding:12px 14px;border:3px solid #0b0806;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.net b{font-family:var(--f-display);font-size:20px;letter-spacing:.04em;text-transform:uppercase}
+.net span{font-size:17px;line-height:1.1}
+.net.on{background:var(--gold-d);color:#1c1006;box-shadow:inset 0 -4px 0 var(--gold-dd),inset 0 3px 0 #f2c97a}
+.net.on:hover{filter:brightness(1.08)}
+.net.off{background:#2a231c;color:#8f7c60;cursor:not-allowed;box-shadow:inset 0 0 0 2px #3b2a1a}
+.net.off b::after{content:" 🔒";font-size:15px}
+.hero .cta{flex-direction:column;align-items:flex-start}
+.netb{max-width:560px}
+.netbadge{font-family:var(--f-display);font-size:12px;letter-spacing:.08em;color:#1c1006;background:#8fd16a;border:2px solid #0b0806;padding:2px 6px;align-self:center;flex:none}
 .sqk img{width:34px;vertical-align:middle;margin-right:6px}
 .pts{display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center}
 .report{padding:10px;margin-bottom:10px}
@@ -326,17 +337,20 @@ table.kv td.up{color:var(--green)}
   <header class="site-h">
     <div class="logo">SQUEEK WARS</div>
     <nav aria-label="Site"><a href="#how">How it works</a><a href="#wheel">The wheel</a><a href="#units">Units</a><a href="#rules">Rules</a><a href="#faq">FAQ</a><a href="#report">Report</a></nav>
-    <a class="btn" href="#village" style="text-decoration:none">Play the demo</a>
+    <a class="btn" href="#village" style="text-decoration:none">Play on testnet</a>
   </header>
   <section class="hero">
     <div class="in">
       <h1>Build a hamster village. <span>Grow with a real wheel.</span></h1>
-      <p>Squeek Wars is a strategy game on Squeekchain. Every wallet can found one village. Squeektoshi's nightly runs pay SEED to everyone, and a Squeek in your wallet leads your village as its champion and turns each run into a production bonus.</p>
+      <p>Squeek Wars is a strategy game on Squeekchain. Every wallet can found one village, and Squeektoshi's nightly runs pay SEED and boost production for everyone. Holding Squeeks adds a champion and faster building.</p>
       <div class="cta">
-        <a class="btn" href="#village" style="text-decoration:none">Play the demo</a>
+        <div class="netpick">
+          <button class="net on" data-act="net-test" type="button"><b>Testnet</b><span>Practice season on Sepolia · play now</span></button>
+          <button class="net off" type="button" disabled aria-disabled="true"><b>Mainnet</b><span>Opens after the official Squeek mint</span></button>
+        </div>
         <button class="btn alt" id="connectBtn" type="button">Connect wallet</button>
       </div>
-      <div class="wnote" id="walletNote" hidden>The live game reads your wallet and the Squeeks in it. This demo has no wallet or chain: you play a wallet holding three Squeeks, with #4821 leading, and time runs 60× faster.</div>
+      <div class="wnote" id="walletNote" hidden>The live game reads your wallet and the Squeeks in it. This demo has no wallet or chain: you play a wallet holding three Squeeks, and time runs 60× faster.</div>
     </div>
   </section>
   <section class="sec" id="how">
@@ -344,16 +358,16 @@ table.kv td.up{color:var(--green)}
     <p class="lead">One village per wallet. Build it up, let the hamster boost it, and raid neighbours who are at least twice as weak.</p>
     <div class="steps">
       <div class="step px"><img src="assets/sprites/town_hall_3.webp" alt="Town Hall"><h3>Build</h3><p>Town Hall, Walls, 8 production sites and 12 plots for Barracks, Academy, Storehouses, Vaults and more.</p></div>
-      <div class="step px"><img src="assets/sprites/wheelhouse_3.webp" alt="Wheelhouse"><h3>Grow with the wheel</h3><p>Every night Squeektoshi runs. His laps pay SEED to every village, and villages led by a Squeek turn them into extra Wood, Food, Stone and Iron.</p></div>
+      <div class="step px"><img src="assets/sprites/wheelhouse_3.webp" alt="Wheelhouse"><h3>Grow with the wheel</h3><p>Every night Squeektoshi runs. His laps pay SEED to every village and boost Wood, Food, Stone and Iron output.</p></div>
       <div class="step px"><img src="assets/sprites/unit_berserker.webp" alt="Berserker"><h3>Fight</h3><p>Train seven unit types, scout and raid on a 100 × 100 world map. Win only with twice the defender's power.</p></div>
-      <div class="step px"><img src="assets/sprites/champion_3.webp" alt="Champion"><h3>Lead with your Squeek</h3><p>Name a Squeek you hold as your village's leader: it brings the wheel bonus and becomes your champion, levelling up to 30. Its level stays with the Squeek.</p></div>
+      <div class="step px"><img src="assets/sprites/champion_3.webp" alt="Champion"><h3>Bring your Squeeks</h3><p>Holding Squeeks makes construction faster after good runs, and one of them becomes your champion, levelling up to 30. Its level stays with the Squeek.</p></div>
     </div>
   </section>
   <section class="sec" id="wheel">
     <h2>The wheel bonus</h2>
     <div class="wheelbox px">
-      <div class="formula">Output per hour = base × (1 + <b>wheel bonus</b>)<br>Wheel bonus = last night's laps ÷ 4,320<br>capped at <b>+25% per Wheelhouse level</b><br>only for villages led by a Squeek</div>
-      <div class="muted" style="font-size:20px">Last recorded night: <b class="gold">11,182 laps</b> → +259% before the cap. A village led by a Squeek with a level 6 Wheelhouse gets +150%. Every village also receives <b class="gold">1,118 SEED</b> from the same run. If the hamster rests, base output keeps going.</div>
+      <div class="formula">Output per hour = base × (1 + <b>wheel bonus</b>)<br>Wheel bonus = last night's laps ÷ 4,320<br>capped at <b>+25% per Wheelhouse level</b></div>
+      <div class="muted" style="font-size:20px">Last recorded night: <b class="gold">11,182 laps</b> → +259% before the cap. A village with a level 6 Wheelhouse gets +150%. Every village also receives <b class="gold">1,118 SEED</b> from the same run. If the hamster rests, base output keeps going.</div>
     </div>
     <div class="looks px" style="margin-top:14px">
       <figure><img src="assets/sprites/town_hall_1.webp" alt="Town Hall, cardboard"><figcaption>Lv 1–2 · cardboard</figcaption></figure>
@@ -373,7 +387,7 @@ table.kv td.up{color:var(--green)}
     <p class="lead">The game rules are enforced by the contracts. The fair-play rules are ours: villages that break them can be hidden from the site's leaderboards and season rewards.</p>
     <div class="rules">
       <div class="px box"><h3>How the game works</h3><ol>
-        <li><b>One village per wallet, open to everyone.</b> A Squeek in your wallet can lead your village: only a led village gets the nightly wheel bonus and a champion. One Squeek leads one village at a time, and a new leader can be named once a day.</li>
+        <li><b>One village per wallet, open to everyone.</b> Production, SEED and the wheel bonus are the same with or without a Squeek. Holding Squeeks gives one champion and faster construction after good runs (up to −30%, each extra Squeek adding less).</li>
         <li><b>Raids take resources only:</b> Wood, Food, Stone and Iron. SEED, NFTs and buildings are never taken.</li>
         <li><b>You win only with twice the defense.</b> Then every defender falls and you can loot; otherwise both sides lose troops and nothing is taken.</li>
         <li><b>New villages get a 7-day shield.</b> They cannot attack or be attacked.</li>
@@ -394,7 +408,8 @@ table.kv td.up{color:var(--green)}
     <h2>FAQ</h2>
     <div class="faq">
       <div class="px"><b>Where does it run?</b><p>Season 1 runs on the Sepolia testnet, next to Squeekchain's own contracts.</p></div>
-      <div class="px"><b>Do I need a Squeek?</b><p>No. Every wallet can play one village and earns the same SEED. A Squeek leading your village adds the nightly wheel bonus and a champion.</p></div>
+      <div class="px"><b>Do I need a Squeek?</b><p>No. Every wallet plays one village with the same production and SEED. Squeeks add one champion and faster building; more Squeeks help less and less.</p></div>
+      <div class="px"><b>Testnet or mainnet?</b><p>The game runs on the Sepolia testnet now as a practice season. Mainnet Season 1 opens after the official Squeek mint, and testnet progress does not carry over.</p></div>
       <div class="px"><b>Can someone take my Squeek?</b><p>No. Raids only take Wood, Food, Stone and Iron. SEED, NFTs and buildings are never taken.</p></div>
       <div class="px"><b>Do I need to be online to defend?</b><p>No. Battles resolve on arrival with the troops and Walls you have at home.</p></div>
       <div class="px"><b>Can I trade with other players?</b><p>No player trading. The Market only exchanges your own resources, which keeps multi-accounts from feeding a main village.</p></div>
@@ -410,7 +425,8 @@ table.kv td.up{color:var(--green)}
 
 <div id="game" hidden>
   <header id="bar">
-    <div class="logo" id="logoHome" title="Back to the site">SQUEEK WARS<small>Led by Squeek #4821</small></div>
+    <div class="logo" id="logoHome" title="Back to the site">SQUEEK WARS<small>3 Squeeks</small></div>
+    <span class="netbadge" title="Practice season on Sepolia. Mainnet opens after the official Squeek mint.">TESTNET</span>
     <div class="res" id="resbar"></div>
     <button class="btn ghost sm" id="testbtn" type="button" aria-label="Settings and test controls">⚙ Settings</button>
     <div class="wheel" id="wheelchip"></div>
@@ -454,6 +470,14 @@ table.kv td.up{color:var(--green)}
     <input id="nm-in" maxlength="16" autocomplete="off">
     <div class="row" style="justify-content:flex-start"><button class="btn" data-act="nm-ok" type="button">Start playing</button><button class="btn ghost" data-act="nm-rand" type="button">Pick one for me</button></div>
     <p class="why" id="nm-why"></p>
+  </div></div>
+  <div id="netbox" class="modal" hidden><div class="px box netb">
+    <h3>Where do you want to play?</h3>
+    <div class="netpick">
+          <button class="net on" data-act="net-test" type="button"><b>Testnet</b><span>Practice season on Sepolia · play now</span></button>
+          <button class="net off" type="button" disabled aria-disabled="true"><b>Mainnet</b><span>Opens after the official Squeek mint</span></button>
+        </div>
+    <p class="muted" style="font-size:17px;margin:10px 0 0">Testnet progress does not carry over to mainnet.</p>
   </div></div>
   <div id="nightbox" class="modal" hidden><div class="px box nightb">
     <h3>Squeektoshi's night run</h3>

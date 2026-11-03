@@ -70,7 +70,9 @@ function nameFrom(r1, r2, r3) { return NAME_A[Math.floor(r1 * NAME_A.length)] + 
 const randomName = () => nameFrom(Math.random(), Math.random(), Math.random());
 const NPC_CLAN = { tag: 'ASH', name: 'Ashen Paws' };
 const SQUEEK_ID = 4821;          // the demo wallet's first Squeek
-const LEADER_COOLDOWN = 24;       // hours between naming leaders
+const LEADER_COOLDOWN = 24;       // hours between choosing champions
+const DEMO_IDS = [SQUEEK_ID, 1203, 7719, 356, 9012, 2468, 6630, 147, 8080, 5155];
+const demoSqueeks = () => DEMO_IDS.map(id => ({ id, xp: id === 1203 ? 1600 : 0, pts: { might: 0, atk: 0, def: 0, carry: 0 }, inj: 0 }));
 const MAX_OFFLINE_H = 72;
 
 // ------------------------------------------------------------------ utils
@@ -101,11 +103,11 @@ function newGame() {
     training: null, champ: { xp: 0, pts: { might: 0, atk: 0, def: 0, carry: 0 }, inj: 0, home: true },
     moves: [], bots: {}, reports: [], log: [], nights: { 1: 11182 }, nextNight: 13297, shieldUntil: 8 + 7 * 24, nextIncoming: 8 + 7 * 24 + 20,
     seq: 1, sel: { kind: 'th' }, wsel: [...RIVAL], unread: 0, lastReal: Date.now(), cam: { x: OWN[0] + 0.5, y: OWN[1] + 0.5 },
-    test: { free: true, instant: true, prod: 1 }, ui: { min: {} }, username: null, clan: null, invites: [], localReports: [],
+    test: { free: true, instant: true, prod: 1, squeeks: 3 }, ui: { min: {} }, username: null, clan: null, invites: [], localReports: [],
     stats: { atk: 0, def: 0, loot: 0, wins: 0, scouts: 0, wk: {} }, intel: {}, quests: [], abroad: [], helpers: [],
     peaceUntil: 0, peaceNext: 0, festUntil: 0, banner: '#f2c14e',
     // one village per wallet; the demo wallet holds three Squeeks and #4821 leads (champion XP belongs to each Squeek)
-    squeeks: [{ id: SQUEEK_ID, xp: 0, pts: { might: 0, atk: 0, def: 0, carry: 0 }, inj: 0 }, { id: 1203, xp: 1600, pts: { might: 0, atk: 0, def: 0, carry: 0 }, inj: 0 }, { id: 7719, xp: 0, pts: { might: 0, atk: 0, def: 0, carry: 0 }, inj: 0 }],
+    squeeks: demoSqueeks(),
     lead: SQUEEK_ID, leadNext: 0,
   };
 }
@@ -116,6 +118,8 @@ function load() {
     const d = newGame(); for (const k in d) if (s[k] === undefined) s[k] = d[k];      // older saves: fill new fields
     for (const k in d.stats) if (s.stats[k] === undefined) s.stats[k] = d.stats[k];
     if (!s.ui) s.ui = { min: {} };
+    if (s.test.squeeks === undefined) s.test.squeeks = s.test.noSqueek ? 0 : 3;
+    for (const q of demoSqueeks()) if (!s.squeeks.some(x => x.id === q.id)) s.squeeks.push(q);
     return s;
   } catch (e) { return null; }
 }
@@ -147,14 +151,17 @@ const baseRate = r => S.fields.reduce((a, L, i) => a + (FIELD_RES[i] === r ? fie
 const nightKey = t => Math.floor((t - 4) / 24) + 1;
 const lastPasses = () => S.nights[nightKey(S.t)] || S.nights[1];
 const wheelCap = () => 0.25 * levelOf('wheelhouse');
-const held = () => S.test.noSqueek ? [] : S.squeeks;                 // Squeeks in the wallet (test switch: none)
-const leader = () => (held().find(q => q.id === S.lead) || {}).id || null;
-const wheelBonus = () => leader() ? Math.min(wheelCap(), lastPasses() / PASS_PER_BONUS) : 0;     // the run's buff needs a Squeek leading the village
+const held = () => S.squeeks.slice(0, S.test.squeeks);              // Squeeks in the wallet (test control: 0 to 10)
+const leader = () => (held().find(q => q.id === S.lead) || {}).id || null;   // the one champion, whatever the count
+const wheelBonus = () => Math.min(wheelCap(), lastPasses() / PASS_PER_BONUS);
+// Squeek holders build faster after a good run; each extra Squeek adds half as much as the one before (max 30%)
+const squeekBuildFor = (n, laps) => n > 0 ? 0.3 * (1 - 0.5 ** n) * Math.min(1, laps / 11000) : 0;
+const squeekBuild = () => squeekBuildFor(held().length, lastPasses());
 const festival = () => S.t < S.festUntil ? 0.2 : 0;
 const rate = r => baseRate(r) * (1 + wheelBonus()) * (1 + festival()) * (S.test.prod || 1);
 const netRate = r => rate(r) - (r === 1 ? foodUse() : 0);
 const forge = () => 0.02 * levelOf('forge');
-const thSpeed = () => 1 - 0.03 * (S.th - 1);
+const thSpeed = () => (1 - 0.03 * (S.th - 1)) * (1 - squeekBuild());
 function costOf(kind, ref, L) {           // resources to reach level L
   if (kind === 'field') { const c = FIELD.cost[FIELD_RES[ref]]; return { res: c.map(x => x * FIELD.cg ** (L - 1)), seed: 0, h: FIELD.t1 * FIELD.tg ** (L - 1) * thSpeed() }; }
   const b = B[ref];
@@ -164,10 +171,10 @@ const canPay = (res, seed = 0) => S.test.free || (res.every((x, i) => S.res[i] +
 function pay(res, seed = 0) { if (S.test.free) return; res.forEach((x, i) => S.res[i] -= x); S.seed -= seed; }
 const hlevel = () => Math.min(30, 1 + Math.floor(Math.sqrt(Math.max(0, S.champ.xp) / 100)));
 const hfree = () => 4 * hlevel() - Object.values(S.champ.pts).reduce((a, b) => a + b, 0);
-const hmight = () => 100 + 100 * S.champ.pts.might;
-const hatk = () => Math.min(0.2, 0.008 * S.champ.pts.atk);
-const hdef = () => Math.min(0.2, 0.008 * S.champ.pts.def);
-const hcarry = () => 0.02 * S.champ.pts.carry;
+const hmight = () => 50 + 25 * S.champ.pts.might;          // one modest champion per wallet that holds a Squeek
+const hatk = () => Math.min(0.1, 0.005 * S.champ.pts.atk);
+const hdef = () => Math.min(0.1, 0.005 * S.champ.pts.def);
+const hcarry = () => Math.min(0.2, 0.01 * S.champ.pts.carry);
 const champOk = () => !!leader() && S.champ.home && S.t >= S.champ.inj;
 const carryBonus = () => (researched('logistics') ? 0.2 : 0) + (researched('logistics2') ? 0.2 : 0);
 const helpPower = () => S.helpers.reduce((s, hp) => s + Object.entries(hp.units).reduce((a, [k, n]) => a + n * U[k].d, 0), 0);
@@ -436,9 +443,9 @@ function setLeader(id) {
   if (!S.test.instant && S.t < S.leadNext) return note(`You can name a new leader in ${dur(S.leadNext - S.t)}.`, 'bad');
   const cur = S.squeeks.find(q => q.id === S.lead); if (cur) { cur.xp = S.champ.xp; cur.pts = { ...S.champ.pts }; cur.inj = S.champ.inj; }
   const nx = S.squeeks.find(q => q.id === id); S.lead = id; S.champ.xp = nx.xp; S.champ.pts = { ...nx.pts }; S.champ.inj = nx.inj || 0; S.leadNext = S.t + LEADER_COOLDOWN;
-  note(`Squeek #${id} now leads your village`, 'ok'); dirty();
+  note(`Squeek #${id} is now your champion`, 'ok'); dirty();
 }
-function doPoint(k) { if (!leader()) return; if (hfree() <= 0) return; if ((k === 'atk' || k === 'def') && S.champ.pts[k] >= 25) return note('That bonus is already at its 20% cap.', 'bad'); S.champ.pts[k]++; dirty(); }
+function doPoint(k) { if (!leader()) return; if (hfree() <= 0) return; if (k !== 'might' && S.champ.pts[k] >= 20) return note('That bonus is already at its cap.', 'bad'); S.champ.pts[k]++; dirty(); }
 const week = t => Math.floor((day(t) - 1) / 7) + 1;
 function addStat(k, v) { S.stats[k] += v; const w = week(S.t); S.stats.wk[w] = S.stats.wk[w] || { atk: 0, def: 0, loot: 0 }; if (k in S.stats.wk[w]) S.stats.wk[w][k] += v; }
 const gapLow = b => S.th - botLvl(b) >= 3;          // target 3+ Town Hall levels below you: half loot, no points
@@ -637,7 +644,8 @@ function route() {
   document.querySelectorAll('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.v === v));
   if (v === 'reports') S.unread = 0;
   if (v === 'home' && SECT.includes(h)) document.getElementById(h)?.scrollIntoView();
-  if (v !== 'home' && !S.username) { const nb = $('#namebox'); nb.hidden = false; const i = $('#nm-in'); i.placeholder = i.placeholder || randomName(); if (innerWidth > 900) setTimeout(() => i.focus(), 50); }
+  if (v !== 'home' && !S.ui.net) { $('#netbox').hidden = false; }
+  else if (v !== 'home' && !S.username) { const nb = $('#namebox'); nb.hidden = false; const i = $('#nm-in'); i.placeholder = i.placeholder || randomName(); if (innerWidth > 900) setTimeout(() => i.focus(), 50); }
   sceneDirty = true; needFull = true; layout(); render(true);
 }
 
@@ -654,8 +662,8 @@ function renderBar() {
   const laps = running ? Math.round(S.nextNight * h / 4) : lastPasses();
   const sb = S.test.free || S.test.instant || S.test.prod > 1 ? ` · <b class="gold">TEST:</b> ${[S.test.free && 'free', S.test.instant && 'instant', S.test.prod > 1 && `output ×${S.test.prod}`].filter(Boolean).join(', ')}` : '';
   const extra = [festival() ? `<b class="ok">Festival +20%</b> ${dur(S.festUntil - S.t)}` : '', S.t < S.peaceUntil ? `<b class="ok">Peace shield</b> ${dur(S.peaceUntil - S.t)}` : ''].filter(Boolean).join(' · ');
-  setHTML($('#wheelchip'), `<span class="dot ${running ? 'run' : ''}"></span> ${running ? `Squeektoshi running · ${fmt(laps)} laps` : `Squeektoshi resting · ${fmt(lastPasses())} laps last night`} · Wheel bonus <b class="gold">+${pct(wheelBonus())}</b>${!leader() ? ' (needs a Squeek leader)' : levelOf('wheelhouse') ? '' : ' (needs a Wheelhouse)'}${extra ? ' · ' + extra : ''} · Day ${day(S.t)} ${clock(S.t)} · ×${S.speed}${sb}`);
-  const lg = $('#logoHome small'); if (lg) lg.textContent = `${S.username || 'New player'} · ${leader() ? `led by Squeek #${leader()}` : 'no Squeek'}`;
+  setHTML($('#wheelchip'), `<span class="dot ${running ? 'run' : ''}"></span> ${running ? `Squeektoshi running · ${fmt(laps)} laps` : `Squeektoshi resting · ${fmt(lastPasses())} laps last night`} · Wheel bonus <b class="gold">+${pct(wheelBonus())}</b>${levelOf('wheelhouse') ? '' : ' (needs a Wheelhouse)'}${squeekBuild() ? ` · ${held().length} Squeek${held().length > 1 ? 's' : ''}: build −${pct(squeekBuild())}` : ''}${extra ? ' · ' + extra : ''} · Day ${day(S.t)} ${clock(S.t)} · ×${S.speed}${sb}`);
+  const lg = $('#logoHome small'); if (lg) lg.textContent = `${S.username || 'New player'} · ${held().length ? `${held().length} Squeek${held().length > 1 ? 's' : ''}` : 'no Squeek'}`;
   const rt = $('#tabs a[data-v="reports"]'); setHTML(rt, 'Reports' + (S.unread ? `<span class="badge">${S.unread}</span>` : ''));
   // incoming attack banner
   const inc = S.moves.filter(m => m.kind === 'incoming').sort((a, b) => a.arrive - b.arrive)[0];
@@ -909,7 +917,8 @@ function demoBlock(i) {
   return '';
 }
 function slotsHtml() {
-  let h = '<h3>Construction</h3><div class="list">';
+  const n = held().length;
+  let h = `<h3>Construction</h3><div class="muted" style="font-size:16px;margin:-4px 0 6px">${n ? `${n} Squeek${n > 1 ? 's' : ''} in your wallet: build time −${pct(squeekBuild())} after last night's run` : 'Hold a Squeek to build faster after good runs'}</div><div class="list">`;
   S.slots.forEach((sl, i) => {
     if (!sl.length) { h += `<div class="slot"><div class="t"><span class="muted">Slot ${i + 1} is free</span></div><div class="q">Tap a building or an empty plot</div></div>`; return; }
     const o = sl[0], p = Math.min(1, (S.t - o.start) / (o.end - o.start));
@@ -1054,11 +1063,11 @@ function worldRight() {
   const sel = S.wsel; let h = '<button class="btn ghost sm sheet-close" data-act="close">Close</button>';
   if (!sel) return h + `<h3>Pick a tile</h3><p class="muted">Tap a village to see what you know about it and to send troops.</p>`;
   const [x, y] = sel;
-  if (x === OWN[0] && y === OWN[1]) return h + `<h3>Your village (${x}|${y})</h3><p class="muted">${esc(S.username || '')} · ${leader() ? `led by Squeek #${leader()}` : 'no Squeek'} · Town Hall ${S.th} · Walls ${S.walls}<br>Defense now: ${fmt(defense())}${S.helpers.length ? ` (with clan support)` : ''}</p><a class="btn sm" href="#village" style="text-decoration:none">Open village</a>`;
+  if (x === OWN[0] && y === OWN[1]) return h + `<h3>Your village (${x}|${y})</h3><p class="muted">${esc(S.username || '')} · ${leader() ? `champion Squeek #${leader()}` : 'no Squeek'} · Town Hall ${S.th} · Walls ${S.walls}<br>Defense now: ${fmt(defense())}${S.helpers.length ? ` (with clan support)` : ''}</p><a class="btn sm" href="#village" style="text-decoration:none">Open village</a>`;
   const b = bot(x, y);
   if (!b) return h + `<h3>Empty tile (${x}|${y})</h3><p class="muted">Free land. New villages are placed here as more wallets join.</p>`;
   const L = botLvl(b), d = dist(OWN, [x, y]), cl = botClan(b), key = x + ',' + y, sl = scoutLeft(b);
-  h += `<h3>${esc(b.name)} (${x}|${y})</h3><div class="vhead"><img src="${spr('town_hall_' + Math.ceil(L / 2))}" alt=""><div class="muted">${b.holder ? `Led by Squeek #${b.id}` : 'No Squeek: no wheel bonus'}${b.rival ? ' · <span class="bad">rival</span>' : ''}<br>Town Hall ${L} · ${d.toFixed(1)} tiles away<br>${cl ? `[${esc(cl.tag)}] ${esc(cl.name)}${cl.mine ? ' (yours)' : ''}` : 'No clan'} · ${botShielded(b) ? 'beginner shield' : b.active ? 'active' : 'inactive'}</div></div>`;
+  h += `<h3>${esc(b.name)} (${x}|${y})</h3><div class="vhead"><img src="${spr('town_hall_' + Math.ceil(L / 2))}" alt=""><div class="muted">${b.holder ? `Champion Squeek #${b.id}` : 'No Squeek'}${b.rival ? ' · <span class="bad">rival</span>' : ''}<br>Town Hall ${L} · ${d.toFixed(1)} tiles away<br>${cl ? `[${esc(cl.tag)}] ${esc(cl.name)}${cl.mine ? ' (yours)' : ''}` : 'No clan'} · ${botShielded(b) ? 'beginner shield' : b.active ? 'active' : 'inactive'}</div></div>`;
   { const tr = botTroops(b), w = botWalls(b); h += `<table class="kv"><tr><td>Defenders</td><td>${tr.spearman} Spearmen${tr.shieldbearer ? `, ${tr.shieldbearer} Shieldbearers` : ''}</td></tr><tr><td>Walls</td><td>Lv ${w} (+${4 * w}%)${w < b.walls ? ' · rebuilding' : ''}</td></tr><tr><td>Defense</td><td>${fmt(botDefense(b))}</td></tr><tr><td>Lootable now</td><td>~${fmt(botLootable(b) * (gapLow(b) ? 0.5 : 1))}</td></tr><tr><td>Scouting bonus</td><td>${sl ? `<span class="ok">+${pct(SCOUT_BONUS)} · ${dur(sl)} left</span>` : '<span class="muted">none</span>'}</td></tr></table>`; }
   if (gapLow(b)) h += `<p class="why">Town Hall ${L} is 3+ levels below yours: raids here give half loot and no attack points.</p>`;
   if (S.clan && !cl) h += `<div class="row" style="margin:8px 0;justify-content:flex-start"><button class="btn sm alt" data-act="invite" ${S.invites.some(iv => iv.key === key) ? 'disabled' : ''}>${S.invites.some(iv => iv.key === key) ? 'Invite sent' : `Invite to [${esc(S.clan.tag)}]`}</button></div>`;
@@ -1155,19 +1164,22 @@ function marketPage() {
   return h;
 }
 function champPage() {
-  const intro = `<h2>Champion</h2><p class="sub">Every wallet plays one village. A Squeek in your wallet can lead it: the leader brings the hamster's buffs, the nightly wheel bonus on production and a champion that earns XP from battles and from Squeektoshi's runs, up to level 30. The level belongs to the Squeek and goes with it when it changes hands. One Squeek leads one village at a time; you can name a new leader once every ${LEADER_COOLDOWN} h.</p>`;
-  if (!held().length) return intro + `<div class="px box"><h3>No Squeek in this wallet</h3><p class="muted">You can play everything, but your village gets no wheel bonus and has no champion. Hold a Squeek and name it here to get both.</p></div>`;
+  const n = held().length, laps = lastPasses();
+  const intro = `<h2>Champion</h2><p class="sub">Everyone plays one village per wallet with the same production and SEED. A wallet that holds Squeeks gets two modest extras: one champion (whatever the number of Squeeks) and faster construction after Squeektoshi's runs. The champion's level belongs to its Squeek and goes with it when it changes hands; one Squeek is the champion of one village at a time, and you can switch once every ${LEADER_COOLDOWN} h.</p>`;
+  const curve = [1, 2, 3, 5, 10].map(k => `<td class="r ${k === n ? 'gold' : ''}">−${pct(squeekBuildFor(k, Math.min(laps, 11000) >= 11000 ? 11000 : laps))}</td>`).join('');
+  const speed = `<div class="px box" style="margin-bottom:14px"><h3>Build speed from your Squeeks</h3><p style="margin:0">${n ? `${n} Squeek${n > 1 ? 's' : ''} and last night's ${fmt(laps)} laps: <b class="gold" style="font-weight:400">−${pct(squeekBuild())}</b> construction time.` : 'No Squeek in this wallet: construction runs at the normal speed.'}</p><div class="tblwrap"><table class="tbl" style="max-width:520px;margin-top:8px"><thead><tr><th>Squeeks</th><th>1</th><th>2</th><th>3</th><th>5</th><th>10</th></tr></thead><tbody><tr><td>Build time</td>${curve}</tr></tbody></table></div><p class="muted" style="margin:6px 0 0">Each extra Squeek adds half as much as the one before, so it never passes −30%. A weak night lowers it: the full effect needs 11,000 laps.</p></div>`;
+  if (!n) return intro + speed + `<div class="px box"><h3>No Squeek in this wallet</h3><p class="muted">You can play everything at full production. Hold a Squeek to get a champion and faster construction.</p></div>`;
   const rankOf = xp => { const l = Math.min(30, 1 + Math.floor(Math.sqrt(Math.max(0, xp) / 100))); return [l, l >= 30 ? 4 : l >= 20 ? 3 : l >= 10 ? 2 : 1]; };
-  const list = `<div class="px box" style="margin-top:14px"><h3>Squeeks in your wallet</h3><div class="list">${held().map(q => { const xp = q.id === S.lead ? S.champ.xp : q.xp; const [l, r] = rankOf(xp); const on = q.id === leader(); return `<div class="card row sqk"><span><img src="${spr('champion_' + r)}" alt=""> Squeek #${q.id} · level ${l} · ${fmt(xp)} XP</span>${on ? '<b class="gold" style="font-weight:400">Leading</b>' : `<button class="btn sm" data-act="lead" data-id="${q.id}" ${!S.champ.home || (!S.test.instant && S.t < S.leadNext) ? 'disabled' : ''}>Lead</button>`}</div>`; }).join('')}</div>${!S.test.instant && S.t < S.leadNext ? `<p class="muted">Next change in ${dur(S.leadNext - S.t)}.</p>` : ''}</div>`;
-  if (!leader()) return intro + `<div class="px box"><p class="muted">No Squeek leads your village yet: name one below.</p></div>` + list;
+  const list = `<div class="px box" style="margin-top:14px"><h3>Squeeks in your wallet</h3><div class="list">${held().map(q => { const xp = q.id === S.lead ? S.champ.xp : q.xp; const [l, r] = rankOf(xp); const on = q.id === leader(); return `<div class="card row sqk"><span><img src="${spr('champion_' + r)}" alt=""> Squeek #${q.id} · level ${l} · ${fmt(xp)} XP</span>${on ? '<b class="gold" style="font-weight:400">Champion</b>' : `<button class="btn sm" data-act="lead" data-id="${q.id}" ${!S.champ.home || (!S.test.instant && S.t < S.leadNext) ? 'disabled' : ''}>Make champion</button>`}</div>`; }).join('')}</div>${!S.test.instant && S.t < S.leadNext ? `<p class="muted">Next change in ${dur(S.leadNext - S.t)}.</p>` : ''}</div>`;
+  if (!leader()) return intro + speed + `<div class="px box"><p class="muted">Choose which Squeek is your champion below.</p></div>` + list;
   const L = hlevel(), next = 100 * L * L, prev = 100 * (L - 1) * (L - 1), free = hfree(), rank = L >= 30 ? 4 : L >= 20 ? 3 : L >= 10 ? 2 : 1;
   const st = S.champ.home ? (S.t < S.champ.inj ? `injured for ${dur(S.champ.inj - S.t)}` : 'at home, defending') : 'with an army';
-  return intro + `<div class="px box champ"><img src="${spr('champion_' + rank)}" alt="Champion"><div><div class="disp" style="font-size:22px">Squeek #${leader()} · Level ${L}</div><div class="muted">${fmt(S.champ.xp)} XP${L < 30 ? ` · next level at ${fmt(next)}` : ' · max level'}</div><div class="prog" style="max-width:360px"><i style="width:${L < 30 ? ((S.champ.xp - prev) / (next - prev) * 100).toFixed(0) : 100}%"></i></div><p class="muted">Status: ${st}</p>
+  return intro + speed + `<div class="px box champ"><img src="${spr('champion_' + rank)}" alt="Champion"><div><div class="disp" style="font-size:22px">Champion Squeek #${leader()} · Level ${L}</div><div class="muted">${fmt(S.champ.xp)} XP${L < 30 ? ` · next level at ${fmt(next)}` : ' · max level'}</div><div class="prog" style="max-width:360px"><i style="width:${L < 30 ? ((S.champ.xp - prev) / (next - prev) * 100).toFixed(0) : 100}%"></i></div><p class="muted">Status: ${st}</p>
   <h3 style="margin-top:10px">Points to spend: <span class="num">${free}</span></h3><div class="pts">
   <span>Might · own power</span><b style="font-weight:400">${fmt(hmight())}</b><button class="btn sm" data-act="pt" data-k="might" ${free ? '' : 'disabled'}>+1</button>
-  <span>Attack bonus (max 20%)</span><b style="font-weight:400">+${(hatk() * 100).toFixed(1)}%</b><button class="btn sm" data-act="pt" data-k="atk" ${free && S.champ.pts.atk < 25 ? '' : 'disabled'}>+1</button>
-  <span>Defense bonus (max 20%)</span><b style="font-weight:400">+${(hdef() * 100).toFixed(1)}%</b><button class="btn sm" data-act="pt" data-k="def" ${free && S.champ.pts.def < 25 ? '' : 'disabled'}>+1</button>
-  <span>Carry bonus</span><b style="font-weight:400">+${(hcarry() * 100).toFixed(0)}%</b><button class="btn sm" data-act="pt" data-k="carry" ${free ? '' : 'disabled'}>+1</button></div></div></div>` + list;
+  <span>Attack bonus (max 10%)</span><b style="font-weight:400">+${(hatk() * 100).toFixed(1)}%</b><button class="btn sm" data-act="pt" data-k="atk" ${free && S.champ.pts.atk < 20 ? '' : 'disabled'}>+1</button>
+  <span>Defense bonus (max 10%)</span><b style="font-weight:400">+${(hdef() * 100).toFixed(1)}%</b><button class="btn sm" data-act="pt" data-k="def" ${free && S.champ.pts.def < 20 ? '' : 'disabled'}>+1</button>
+  <span>Carry bonus (max 20%)</span><b style="font-weight:400">+${(hcarry() * 100).toFixed(0)}%</b><button class="btn sm" data-act="pt" data-k="carry" ${free && S.champ.pts.carry < 20 ? '' : 'disabled'}>+1</button></div></div></div>` + list;
 }
 function reportKind(r) { return r.kind || (r.title.startsWith('Attack') ? 'atk' : r.title.startsWith('Defense') ? 'def' : r.title.startsWith('Scout') ? 'scout' : 'atk'); }
 function reportsPage() {
@@ -1273,7 +1285,8 @@ function testPanel() {
   return `<div class="row"><h3 style="margin:0">Settings</h3><button class="btn ghost sm" data-act="closetest">Close</button></div>
   <div class="list" style="margin:8px 0 12px">${tg('set-sound', S.ui.sound !== false, 'Sound')}${tg('set-night', S.ui.replay !== false, 'Show the night run')}${tg('set-notify', !!S.ui.notify && perm === 'granted', perm === 'unsupported' ? 'Notifications (not supported here)' : perm === 'denied' ? 'Notifications (blocked in browser)' : 'Notify me when something finishes')}</div>
   <h3 style="margin:0 0 6px">Prototype test controls</h3>
-  <div class="list" style="margin:0 0 8px">${tg('tg-free', S.test.free, 'Free: nothing costs resources')}${tg('tg-instant', S.test.instant, 'Instant: no build, research, training or travel time')}${tg('tg-prod', S.test.prod > 1, 'Production ×1000')}${tg('tg-squeek', !S.test.noSqueek, 'Wallet holds Squeeks (off: play without one)')}</div>
+  <div class="list" style="margin:0 0 8px">${tg('tg-free', S.test.free, 'Free: nothing costs resources')}${tg('tg-instant', S.test.instant, 'Instant: no build, research, training or travel time')}${tg('tg-prod', S.test.prod > 1, 'Production ×1000')}</div>
+  <div class="muted" style="font-size:17px;margin-bottom:6px">Squeeks in your wallet</div><div class="speeds">${[0, 1, 2, 3, 5, 10].map(n => `<button class="btn sm ${S.test.squeeks === n ? 'on' : ''}" data-act="sqn" data-n="${n}">${n}</button>`).join('')}</div>
   <div class="muted" style="font-size:17px;margin-bottom:6px">Game speed (game time per real time)</div><div class="speeds">${[1, 60, 600, 1000, 3600].map(s => `<button class="btn sm ${S.speed === s ? 'on' : ''}" data-act="speed" data-s="${s}">×${s}</button>`).join('')}</div>
   <div class="list"><button class="btn sm alt" data-act="cheat-res">+10,000 each resource</button><button class="btn sm alt" data-act="cheat-seed">+10,000 SEED</button><button class="btn sm alt" data-act="shield" ${S.t < S.shieldUntil ? '' : 'disabled'}>End my beginner shield</button><button class="btn sm alt" data-act="night-now">Play the night run now</button><button class="btn sm ghost" data-act="reset">Restart the demo</button></div><p class="muted" style="font-size:16px">Your demo village is saved in this browser.</p>`;
 }
@@ -1448,6 +1461,7 @@ function onClick(e) {
   if (a === 'found') { const nm = $('#cl-name').value.trim(), tag = $('#cl-tag').value.trim().toUpperCase(); if (nm.length < 3 || nm.length > 24) return note('Clan name: 3 to 24 characters.', 'bad'); if (!/^[A-Z0-9]{2,4}$/.test(tag)) return note('Clan tag: 2 to 4 letters or digits.', 'bad'); if ([NPC_CLAN, ...CLANS].some(c => c.tag === tag)) return note(`[${tag}] is taken by another clan.`, 'bad'); S.clan = { name: nm, tag, members: [], founded: S.t }; note(`Clan [${tag}] ${nm} founded`, 'ok'); sceneDirty = true; dirty(); return; }
   if (a === 'kick') { const k = t.dataset.k; S.clan.members = S.clan.members.filter(x => x !== k); S.abroad.filter(st => st.key === k).forEach(() => recall(S.abroad.findIndex(st => st.key === k))); note('Member removed'); dirty(); return; }
   if (a === 'disband') { while (S.abroad.length) recall(0); S.clan = null; S.invites = []; S.helpers = []; note('Clan disbanded'); sceneDirty = true; dirty(); return; }
+  if (a === 'net-test') { S.ui.net = 'testnet'; $('#netbox').hidden = true; if (view === 'home') { location.hash = 'village'; return; } route(); return; }
   if (a === 'nm-ok') { const v = $('#nm-in').value.trim(); if (!/^[A-Za-z0-9_]{3,16}$/.test(v)) { $('#nm-why').textContent = 'Use 3 to 16 letters, digits or _.'; return; } S.username = v; $('#namebox').hidden = true; scrollTo(0, 0); note(`Welcome, ${v}!`, 'ok'); dirty(); return; }
   if (a === 'nm-rand') { S.username = $('#nm-in').placeholder || randomName(); $('#namebox').hidden = true; scrollTo(0, 0); note(`Welcome, ${S.username}!`, 'ok'); dirty(); return; }
   if (a === 'rp-send') return submitReport(t.dataset.s);
@@ -1455,7 +1469,7 @@ function onClick(e) {
   if (a === 'min') { S.ui.min[t.dataset.p] = !S.ui.min[t.dataset.p]; dirty(); return; }
   if (a === 'tg-free') { S.test.free = !S.test.free; note(S.test.free ? 'Test: everything is free' : 'Test: normal costs'); dirty(); return; }
   if (a === 'tg-instant') { S.test.instant = !S.test.instant; note(S.test.instant ? 'Test: everything is instant' : 'Test: normal build and travel times'); dirty(); return; }
-  if (a === 'tg-squeek') { S.test.noSqueek = !S.test.noSqueek; note(S.test.noSqueek ? 'Test: your wallet holds no Squeek (no wheel bonus, no champion)' : 'Test: your wallet holds 3 Squeeks again'); sceneDirty = true; dirty(); return; }
+  if (a === 'sqn') { S.test.squeeks = +t.dataset.n; if (!leader() && held().length && S.champ.home) { S.lead = held()[0].id; } note(`Test: ${S.test.squeeks} Squeek${S.test.squeeks === 1 ? '' : 's'} in your wallet`); dirty(); return; }
   if (a === 'tg-prod') { S.test.prod = S.test.prod > 1 ? 1 : 1000; note(`Test: production ×${S.test.prod}`); dirty(); return; }
   if (a === 'speed') { S.speed = +t.dataset.s; dirty(); return; }
   if (a === 'cheat-res') { const cap = storage(); S.res = S.res.map(x => Math.min(cap, x + 10000)); note(`Resources topped up (Storehouse holds ${fmt(cap)} each)`); dirty(); return; }
