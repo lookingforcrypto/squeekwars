@@ -81,7 +81,7 @@ Research costs resources (split evenly) and SEED. One research runs at a time. v
 | Forager | Raider: low stats, high carry | 20 / 15 | 8 | 120 | 1 | 160 | 12 min | tier 1 |
 | Shieldbearer | Defense | 15 / 70 | 5 | 20 | 1 | 220 | 18 min | tier 2 |
 | Berserker | Attack | 75 / 20 | 6 | 40 | 1 | 245 | 20 min | tier 2 |
-| Scout | Spies on a village; does not fight | 0 / 5 | 16 | 0 | 1 | 130 | 8 min | tier 2 |
+| Scout | Finds weak spots: +10% attack on that village for 12 h; does not fight | 0 / 5 | 16 | 0 | 1 | 130 | 8 min | tier 2 |
 | Charger | Fast (rides a hamster ball) | 90 / 50 | 14 | 80 | 2 | 510 | 35 min | tier 3 |
 | Catapult | Lowers the Walls | 30 / 10 | 3 | 0 | 4 | 930 | 70 min | tier 4 |
 
@@ -103,7 +103,8 @@ A maxed village grows about 1,150 Food an hour, enough for about 2,300 upkeep, s
 
 - **Defenders are wiped only when attack ≥ 2× defense.** Only then can the village be raided, and only then do Catapults work (every 20 surviving Catapults lower the Walls by 1 level, max 2 per attack).
 - **Loot** = surviving units' carry × (1 + champion carry bonus + Logistics). Amounts protected by the Vault are excluded; the rest is taken evenly from the 4 resources.
-- **No randomness, but missing information:** without fresh intel the game shows a defense range (about −25% to +30%). Scouting a village, or attacking it, reveals its exact troops, Walls and stock for 12 hours; then the calculator shows the exact result.
+- **No randomness and no hidden information:** contract state is public, so every village's troops, Walls and stock are visible and the battle calculator shows the exact result before you send.
+- **Scouting bonus:** Scouts find weak spots. For 12 hours after the scout report, your attacks on that village get +10% attack (the bonus must still be running when the army arrives). Scouting is an edge you earn, not a secret, so reading the chain directly gives no advantage.
 - **Pick on someone your size:** raids on villages 3 or more Town Hall levels below yours give half loot, no ranking points and no champion XP.
 - **Walls damage stays:** Walls lowered by Catapults are rebuilt one level every 12 hours.
 - **Travel time** = distance ÷ speed of the slowest unit in the army.
@@ -122,8 +123,8 @@ A maxed village grows about 1,150 Food an hour, enough for about 2,300 upkeep, s
 - The map is browsed in 10 × 10 regions with a minimap of the whole world.
 - Founded villages show an icon that grows with the Town Hall level and a plate with that level. Empty tiles are Squeeks whose owners have not founded yet.
 - Markers: own village, clan members, beginner shield, armies on the move, incoming attacks.
-- Selecting a village shows its owner, clan, Town Hall level, distance and a defense range; after scouting also its defenders, Walls and lootable amount. Travel time per unit, scouting, attack and clan support start from the same panel. Desktop shows the same summary on hover; a box jumps to x|y or a player name.
-- Open issue: contract state is public, so a player who reads the chain directly can see exact troops. Scouting only creates real fog of war if troop counts are stored hidden (for example as commitments). See open items.
+- Selecting a village shows its owner, clan, Town Hall level, distance, defenders, Walls, defense, lootable amount and any running scouting bonus. Travel time per unit, scouting, attack and clan support start from the same panel. Desktop shows the same summary on hover; a box jumps to x|y or a player name.
+- Everything is public on-chain by design: there is no fog of war. Hidden troop counts would need commit-reveal (defenders would have to be online) or encrypted computation (FHE); both were ruled out for Season 1.
 
 ## 11. Protection and anti multi-account
 
@@ -192,6 +193,5 @@ The contract that reads Squeekchain can be repointed through a public 72-hour ti
 ## 17. Open items
 
 - Which Squeekchain deployment to read (the live stream-game core or the core in the docs record).
-- Fog of war on-chain: scouting only hides information if troop counts are not readable from contract state (commit-reveal or hidden counts), otherwise the defense range is a UI convenience.
 - The Clan Hall has one look for all levels; banners mark levels 3, 5 and 7 until 5 staged sprites exist (prompts in `art/PROMPTS.md`).
 - `SPEC.md`: the contract-level rule text for the IMD build.

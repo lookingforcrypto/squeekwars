@@ -31,7 +31,7 @@ const RESEARCH = [
   { id: 'vault', tier: 1, name: 'Vault', d: 'Building: protects resources' },
   { id: 'shieldbearer', tier: 2, name: 'Shieldbearer', d: 'Defender: 70 defense' },
   { id: 'berserker', tier: 2, name: 'Berserker', d: 'Attacker: 75 attack' },
-  { id: 'scout', tier: 2, name: 'Scout', d: 'Spies on a village: exact troops, Walls and stock' },
+  { id: 'scout', tier: 2, name: 'Scout', d: 'Finds weak spots: +10% attack on that village for 12 h' },
   { id: 'forge', tier: 2, name: 'Forge', d: 'Building: +2% power per level' },
   { id: 'clanhall', tier: 2, name: 'Clan Hall', d: 'Building: clans and support' },
   { id: 'charger', tier: 3, name: 'Charger', d: 'Fast unit, speed 14' },
@@ -223,12 +223,9 @@ function botArmy(b) {                // the troops a neighbour sends when it rai
   return { berserker: bers, spearman: Math.round(botTroops(b).spearman * 0.5 * keep) };
 }
 const botAtk = u => (u.berserker || 0) * U.berserker.a + (u.spearman || 0) * U.spearman.a;
-function defRange(b) {               // what you know about a village's defense without fresh scouting
-  const D = botDefense(b), it = S.intel[b.x + ',' + b.y];
-  if (it && S.t - it.t <= 12) return { lo: D, hi: D, exact: true, age: S.t - it.t };
-  const h = hash(b.x, b.y, 60 + day(S.t)); const r10 = x => Math.max(10, Math.round(x / 10) * 10);
-  return { lo: r10(D * (0.72 + 0.1 * h)), hi: r10(D * (1.22 + 0.12 * h)), exact: false };
-}
+const SCOUT_BONUS = 0.1, SCOUT_HOURS = 12;      // contract state is public, so scouting gives an edge instead of secrets
+function scoutLeft(b) { const it = S.intel[b.x + ',' + b.y]; return it ? Math.max(0, it.t + SCOUT_HOURS - S.t) : 0; }
+const scoutBonus = b => scoutLeft(b) > 0 ? SCOUT_BONUS : 0;
 const botShielded = b => b.shield && S.t < b.shield + 8;
 const myClan = b => !!(b && S.clan && S.clan.members.includes(b.x + ',' + b.y));
 const clanHall = () => levelOf('clanhall');
@@ -496,16 +493,16 @@ function arrive(m) {
 function resolveScout(m) {
   const b = bot(m.to[0], m.to[1]); const key = m.to.join(',');
   const tr = botTroops(b), w = botWalls(b), stock = botStock(b), D = botDefense(b);
-  S.intel[key] = { t: S.t, D }; addStat('scouts', 1);
+  S.intel[key] = { t: S.t }; addStat('scouts', 1);
   report('s', `Scouting ${b.name} (${b.x}|${b.y})`,
-    [`Defense ${fmt(D)} · Walls level ${w} (+${4 * w}%) · Town Hall ${botLvl(b)}.`, `About ${fmt(botLootable(b))} can be looted (stock ${fmt(stock)} of each, ${fmt(botProt(b))} of each is in the Vault).`, `${botClan(b) ? `Clan [${botClan(b).tag}]. ` : ''}Your scouts were not seen.`],
+    [`Weak spots found: your attacks on this village get +${pct(SCOUT_BONUS)} attack for the next ${SCOUT_HOURS} h.`, `Defense ${fmt(D)} · Walls level ${w} (+${4 * w}%) · Town Hall ${botLvl(b)}.`, `About ${fmt(botLootable(b))} can be looted (stock ${fmt(stock)} of each, ${fmt(botProt(b))} of each is in the Vault).`, `${botClan(b) ? `Clan [${botClan(b).tag}]. ` : ''}Your scouts were not seen.`],
     [{ title: `Defenders · ${b.name}`, rows: [['Spearman', tr.spearman, 0, tr.spearman], ['Shieldbearer', tr.shieldbearer, 0, tr.shieldbearer]].filter(r => r[1] > 0) }], { kind: 'scout', target: m.to });
   S.moves.push({ id: S.seq++, kind: 'return', from: m.to, units: m.units, champ: false, loot: [0, 0, 0, 0], depart: S.t, arrive: S.t + m.back });
   note(`Scout report from (${b.x}|${b.y})`, 'ok');
 }
 function resolveAttack(m) {
   const b = bot(m.to[0], m.to[1]); const st = botState(b);
-  const A = attackPower(m.units, m.champ), D = botDefense(b);
+  const sb = scoutBonus(b), A = attackPower(m.units, m.champ) * (1 + sb), D = botDefense(b);
   const fa = Math.min(1, 0.5 * D / A), fd = Math.min(1, 0.5 * A / D), win = A >= 2 * D;
   const back = researched('medicine') ? 0.1 : 0;
   const surv = {}, lost = {};
@@ -528,10 +525,9 @@ function resolveAttack(m) {
     if ((surv.catapult || 0) >= 20) { const dn = Math.min(2, Math.floor(surv.catapult / 20)); const w0 = botWalls(b); st.walls = Math.max(0, w0 - dn); st.wallAt = S.t; catapult = ` Walls lowered from ${w0} to ${st.walls} (they rebuild one level every 12 h).`; }
     addStat('wins', 1); addStat('loot', loot.reduce((a, x) => a + x, 0));
   }
-  S.intel[m.to.join(',')] = { t: S.t, D: botDefense(b) };
   const tot = loot.reduce((a, x) => a + x, 0);
   report(win ? 'w' : 'l', `Attack on ${b.name} (${b.x}|${b.y})`,
-    [`Your attack ${fmt(A)} vs defense ${fmt(D)}${win ? ' · at least 2×: defenders wiped' : A >= D ? ' · not 2×: no loot' : ''}.`,
+    [`Your attack ${fmt(A)}${sb ? ` (with +${pct(sb)} from scouting)` : ''} vs defense ${fmt(D)}${win ? ' · at least 2×: defenders wiped' : A >= D ? ' · not 2×: no loot' : ''}.`,
      `You lost ${pct(fa)} of your army (${unitList(lost)}). They lost ${pct(fd)} of their defenders.${catapult}`,
      win ? `Loot: ${fmt(tot)} (${loot.map((x, i) => `${fmt(x)} ${RES_NAME[RES[i]]}`).join(', ')})${low ? '. Town Hall 3+ levels below yours: half loot and no attack points.' : ''}` : 'No loot.'],
     [{ title: 'Your army', rows: attRows }, { title: `Defenders · ${b.name}`, rows: defRows }], { kind: 'atk', target: m.to, sent: m.units });
@@ -930,7 +926,7 @@ const QUESTS = [
   { id: 'train', t: 'Have 10 units at home', d: 'Spearmen attack and defend equally well.', ok: () => UK.reduce((a, k) => a + S.units[k], 0) >= 10, rw: 250, go: 'tab:army' },
   { id: 'walls2', t: 'Raise the Walls to level 2', d: 'Every Walls level adds 4% defense.', ok: () => S.walls >= 2, rw: 250, go: 'walls' },
   { id: 'vault', t: 'Build a Vault', d: 'Raiders cannot touch what sits in it.', ok: () => levelOf('vault') >= 1, rw: 300, go: 'b:vault' },
-  { id: 'scout', t: 'Scout a village', d: 'Research Scouts, train a few, and send them from the World Map.', ok: () => S.stats.scouts >= 1, rw: 300, go: 'tab:world' },
+  { id: 'scout', t: 'Scout a village', d: 'Research Scouts, train a few and send them from the World Map: +10% attack on that village for 12 h.', ok: () => S.stats.scouts >= 1, rw: 300, go: 'tab:world' },
   { id: 'raid', t: 'Win a raid', d: 'Attack with at least twice the defense of your target.', ok: () => S.stats.wins >= 1, rw: 400, go: 'tab:world' },
   { id: 'th4', t: 'Reach Town Hall level 4', d: 'More plots, higher caps, faster building.', ok: () => S.th >= 4, rw: 500, go: 'th' },
   { id: 'clan', t: 'Found or join a clan', d: 'Clan Hall level 3 founds one. Members defend each other.', ok: () => !!S.clan, rw: 500, go: 'tab:clan' },
@@ -997,7 +993,7 @@ function drawWorld() {
     if (b && b.rival) { c.fillStyle = '#222'; c.fillRect(sx + ts * 0.82, sy + ts * 0.06, 3, ts * 0.42); c.fillStyle = '#ff5a4a'; c.fillRect(sx + ts * 0.82 + 3, sy + ts * 0.06, ts * 0.22, ts * 0.15); c.font = `${Math.round(ts * 0.22)}px VT323, monospace`; c.textAlign = 'center'; c.fillStyle = '#0b0806'; c.fillRect(sx + ts * 0.12, sy + 1, ts * 0.62, ts * 0.22); c.fillStyle = '#ff8a7a'; c.textBaseline = 'middle'; c.fillText('RIVAL', sx + ts * 0.43, sy + ts * 0.12); }
     const cl = b && botClan(b); if (cl) flag(c, sx, sy, ts, cl.mine ? '#6aa8ff' : cl === NPC_CLAN ? '#a07ad8' : clanColor(cl.tag));
     if (own) flag(c, sx, sy, ts, S.banner);
-    if (b && S.intel[x + ',' + y] && S.t - S.intel[x + ',' + y].t <= 12) { c.fillStyle = '#0b0806cc'; c.fillRect(sx + 3, sy + 3, ts * 0.2, ts * 0.2); c.fillStyle = '#8fd16a'; c.font = `${Math.round(ts * 0.2)}px VT323, monospace`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('i', sx + 3 + ts * 0.1, sy + 3 + ts * 0.1); }
+    if (b && scoutLeft(b) > 0) { c.fillStyle = '#0b0806cc'; c.fillRect(sx + 3, sy + 3, ts * 0.2, ts * 0.2); c.fillStyle = '#8fd16a'; c.font = `${Math.round(ts * 0.2)}px VT323, monospace`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('i', sx + 3 + ts * 0.1, sy + 3 + ts * 0.1); }
     c.fillStyle = 'rgba(20,15,10,.92)'; c.strokeStyle = own ? S.banner : '#6b4a2b'; c.lineWidth = 2;
     const pw = ts * 0.3, ph = ts * 0.22; c.fillRect(sx + ts / 2 - pw / 2, sy + ts - ph - 2, pw, ph); c.strokeRect(sx + ts / 2 - pw / 2, sy + ts - ph - 2, pw, ph);
     c.fillStyle = own ? S.banner : '#f3e6c8'; c.font = `${Math.round(ts * 0.24)}px VT323, monospace`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(L, sx + ts / 2, sy + ts - ph / 2 - 1);
@@ -1034,7 +1030,7 @@ function worldLeft() {
   <div class="mkt goto"><label>Go to<input id="goto" maxlength="24" placeholder="x|y or a player name" autocomplete="off"></label><button class="btn sm" data-act="goto">Go</button></div>
   <div class="row" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap"><button class="btn sm" data-act="home">My village</button><button class="btn sm alt" data-act="rival">Rival (${RIVAL[0]}|${RIVAL[1]})</button></div>
   <h3 style="margin-top:12px">Armies</h3><div class="list">${movesHtml()}</div>
-  <h3 style="margin-top:12px">Legend</h3><div class="muted" style="font-size:17px">100 × 100 tiles, one per Squeek. Drag to move, tap a tile. Plate = Town Hall level · your flag = you · blue flag = your clan · other flags = other clans · bubble = beginner shield · green i = fresh scout report · dashed lines: gold attack, white scouts, blue support, green return, red incoming</div>`;
+  <h3 style="margin-top:12px">Legend</h3><div class="muted" style="font-size:17px">100 × 100 tiles, one per Squeek. Drag to move, tap a tile. Plate = Town Hall level · your flag = you · blue flag = your clan · other flags = other clans · bubble = beginner shield · green i = scouting bonus active · dashed lines: gold attack, white scouts, blue support, green return, red incoming</div>`;
 }
 function picker(keys, prefix) {
   return `<div class="unitsel">${keys.map(k => `<img src="${spr(U[k].sprite)}" alt=""><span>${U[k].name} <button class="btn ghost sm" data-act="amax" data-u="${k}">all ${S.units[k]}</button></span><input type="number" min="0" max="${S.units[k]}" value="0" id="${prefix}-${k}" data-u="${k}" inputmode="numeric">`).join('')}</div><div class="row" style="justify-content:flex-start;margin-top:6px"><button class="btn ghost sm" data-act="aall">Everyone</button><button class="btn ghost sm" data-act="anone">Clear</button></div>`;
@@ -1046,10 +1042,9 @@ function worldRight() {
   if (x === OWN[0] && y === OWN[1]) return h + `<h3>Your village (${x}|${y})</h3><p class="muted">${esc(S.username || '')} · Squeek #${SQUEEK_ID} · Town Hall ${S.th} · Walls ${S.walls}<br>Defense now: ${fmt(defense())}${S.helpers.length ? ` (with clan support)` : ''}</p><a class="btn sm" href="#village" style="text-decoration:none">Open village</a>`;
   const b = bot(x, y);
   if (!b) return h + `<h3>Empty tile (${x}|${y})</h3><p class="muted">Squeek #${1 + Math.floor(hash(x, y, 9) * 9971)} has not founded a village yet. Only its owner can settle here.</p>`;
-  const L = botLvl(b), d = dist(OWN, [x, y]), rng = defRange(b), cl = botClan(b), key = x + ',' + y;
+  const L = botLvl(b), d = dist(OWN, [x, y]), cl = botClan(b), key = x + ',' + y, sl = scoutLeft(b);
   h += `<h3>${esc(b.name)} (${x}|${y})</h3><div class="vhead"><img src="${spr('town_hall_' + Math.ceil(L / 2))}" alt=""><div class="muted">Squeek #${b.id}${b.rival ? ' · <span class="bad">rival</span>' : ''}<br>Town Hall ${L} · ${d.toFixed(1)} tiles away<br>${cl ? `[${esc(cl.tag)}] ${esc(cl.name)}${cl.mine ? ' (yours)' : ''}` : 'No clan'} · ${botShielded(b) ? 'beginner shield' : b.active ? 'active' : 'inactive'}</div></div>`;
-  if (rng.exact) { const tr = botTroops(b), w = botWalls(b); h += `<table class="kv"><tr><td>Scouted</td><td>${dur(rng.age)} ago</td></tr><tr><td>Defenders</td><td>${tr.spearman} Spearmen${tr.shieldbearer ? `, ${tr.shieldbearer} Shieldbearers` : ''}</td></tr><tr><td>Walls</td><td>Lv ${w} (+${4 * w}%)</td></tr><tr><td>Defense</td><td>${fmt(rng.lo)}</td></tr><tr><td>Lootable now</td><td>~${fmt(botLootable(b) * (gapLow(b) ? 0.5 : 1))}</td></tr></table>`; }
-  else h += `<p class="muted">Defense about <b class="gold" style="font-weight:400">${fmt(rng.lo)}–${fmt(rng.hi)}</b>. Scout it, or attack once, for exact troops, Walls and stock.</p>`;
+  { const tr = botTroops(b), w = botWalls(b); h += `<table class="kv"><tr><td>Defenders</td><td>${tr.spearman} Spearmen${tr.shieldbearer ? `, ${tr.shieldbearer} Shieldbearers` : ''}</td></tr><tr><td>Walls</td><td>Lv ${w} (+${4 * w}%)${w < b.walls ? ' · rebuilding' : ''}</td></tr><tr><td>Defense</td><td>${fmt(botDefense(b))}</td></tr><tr><td>Lootable now</td><td>~${fmt(botLootable(b) * (gapLow(b) ? 0.5 : 1))}</td></tr><tr><td>Scouting bonus</td><td>${sl ? `<span class="ok">+${pct(SCOUT_BONUS)} · ${dur(sl)} left</span>` : '<span class="muted">none</span>'}</td></tr></table>`; }
   if (gapLow(b)) h += `<p class="why">Town Hall ${L} is 3+ levels below yours: raids here give half loot and no attack points.</p>`;
   if (S.clan && !cl) h += `<div class="row" style="margin:8px 0;justify-content:flex-start"><button class="btn sm alt" data-act="invite" ${S.invites.some(iv => iv.key === key) ? 'disabled' : ''}>${S.invites.some(iv => iv.key === key) ? 'Invite sent' : `Invite to [${esc(S.clan.tag)}]`}</button></div>`;
   if (myClan(b)) {
@@ -1061,6 +1056,7 @@ function worldRight() {
     return h + `<h3 style="margin-top:10px">Send support</h3>${picker(ready, 'atk')}<div class="stickgo"><button class="btn alt" style="width:100%" data-act="support" id="atk-go">Send support</button></div>`;
   }
   if (botShielded(b)) return h + `<p class="muted">Under a beginner shield: you cannot attack yet.</p>`;
+  if (!sl) h += `<p class="muted" style="font-size:17px">${researched('scout') ? 'Send Scouts to find weak spots' : 'Scouts (Academy tier 2) find weak spots'}: +${pct(SCOUT_BONUS)} attack on this village for ${SCOUT_HOURS} h.</p>`;
   if (researched('scout')) h += `<div class="row card" style="margin:8px 0"><span>Scouts at home: ${S.units.scout}</span><span class="pbtn"><input type="number" id="sc-n" min="1" max="${S.units.scout}" value="${Math.min(3, S.units.scout)}" style="width:56px" inputmode="numeric"><button class="btn sm alt" data-act="scout" ${S.units.scout ? '' : 'disabled'}>Scout</button></span></div>`;
   const ready = FIGHT.filter(k => S.units[k] > 0);
   if (!ready.length) return h + `<p class="muted">You have no troops at home. Train units in the Army tab.</p>` + travelBox(d);
@@ -1075,22 +1071,20 @@ function travelBox(d) {
 function updatePrediction() {
   const box = $('#pred'); if (!box || !S.wsel) return; const b = bot(S.wsel[0], S.wsel[1]); if (!b) return;
   const units = {}; document.querySelectorAll('#wright input[id^="atk-"][data-u]').forEach(i => units[i.dataset.u] = Math.min(S.units[i.dataset.u], +i.value || 0));
-  const champ = $('#atk-champ')?.checked && champOk(); const A = attackPower(units, champ), rng = defRange(b), D = (rng.lo + rng.hi) / 2;
+  const champ = $('#atk-champ')?.checked && champOk(); const sb = scoutBonus(b), A = attackPower(units, champ) * (1 + sb), D = botDefense(b);
   const nSel = Object.values(units).reduce((s, n) => s + n, 0); const go = $('#atk-go'); if (go) go.disabled = nSel < 1;
-  const dTxt = rng.exact ? `<b>${fmt(rng.lo)}</b>` : `about <b>${fmt(rng.lo)}–${fmt(rng.hi)}</b>`;
-  if (nSel < 1) { box.innerHTML = `Their defense is ${dTxt}: you need <b>${fmt(2 * rng.hi)}</b> attack to be sure to win.`; return; }
-  const fa = Math.min(1, 0.5 * D / Math.max(1, A)), fd = Math.min(1, 0.5 * A / D);
-  const sure = A >= 2 * rng.hi, no = A < 2 * rng.lo;
+  if (nSel < 1) { box.innerHTML = `Their defense is <b>${fmt(D)}</b>: you need <b>${fmt(2 * D)}</b> attack to win${sb ? ` (your scouting adds +${pct(sb)})` : ''}.`; return; }
+  const fa = Math.min(1, 0.5 * D / Math.max(1, A)), fd = Math.min(1, 0.5 * A / D), win = A >= 2 * D;
   const surv = {}; for (const k in units) surv[k] = Math.round(units[k] * (1 - fa));
   const spd = Object.keys(units).filter(k => units[k] > 0).map(k => U[k].s); const tt = spd.length ? dist(OWN, [b.x, b.y]) / (Math.min(...spd) * (researched('march') ? 1.2 : 1)) : 0;
-  const loot = rng.exact ? ` · loot ~${fmt(Math.min(botLootable(b) * (gapLow(b) ? 0.5 : 1), carryOf(surv, champ)))}` : ` · can carry ${fmt(carryOf(surv, champ))}`;
-  box.innerHTML = `Attack <b>${fmt(A)}</b> vs defense ${dTxt}<br>You lose ~${pct(fa)} · they lose ~${pct(fd)}<br>${sure ? `<span class="ok">Win${loot}</span>` : no ? `<span class="bad">No win: under 2× their defense</span>` : `<span class="gold">Uncertain: scout first or send more</span>`} · ${S.test.instant ? 'arrives instantly' : `arrives in ${dur(tt)}`}`;
+  const late = sb && tt > scoutLeft(b) && !S.test.instant ? `<br><span class="gold">The scouting bonus runs out before your army arrives.</span>` : '';
+  box.innerHTML = `Attack <b>${fmt(A)}</b>${sb ? ` (+${pct(sb)} scouted)` : ''} vs defense <b>${fmt(D)}</b><br>You lose ~${pct(fa)} · they lose ${pct(fd)}<br>${win ? `<span class="ok">Win · loot ~${fmt(Math.min(botLootable(b) * (gapLow(b) ? 0.5 : 1), carryOf(surv, champ)))}</span>` : `<span class="bad">No win: under 2× their defense</span>`} · ${S.test.instant ? 'arrives instantly' : `arrives in ${dur(tt)}`}${late}`;
 }
 function tileTip(x, y) {
   if (x === OWN[0] && y === OWN[1]) return `<b>${esc(S.username || 'You')}</b> · your village<br>Town Hall ${S.th}`;
   const b = bot(x, y); if (!b) return `(${x}|${y}) · empty`;
-  const cl = botClan(b), rng = defRange(b);
-  return `<b>${esc(b.name)}</b>${cl ? ` [${esc(cl.tag)}]` : ''} · (${x}|${y})<br>Town Hall ${botLvl(b)} · ${dist(OWN, [x, y]).toFixed(1)} tiles · ${botShielded(b) ? 'shield' : b.active ? 'active' : 'inactive'}<br>Defense ${rng.exact ? fmt(rng.lo) : `~${fmt(rng.lo)}–${fmt(rng.hi)}`}`;
+  const cl = botClan(b), sl = scoutLeft(b);
+  return `<b>${esc(b.name)}</b>${cl ? ` [${esc(cl.tag)}]` : ''} · (${x}|${y})<br>Town Hall ${botLvl(b)} · ${dist(OWN, [x, y]).toFixed(1)} tiles · ${botShielded(b) ? 'shield' : b.active ? 'active' : 'inactive'}<br>Defense ${fmt(botDefense(b))} · loot ~${fmt(botLootable(b))}${sl ? `<br><span class="ok">Scouted: +${pct(SCOUT_BONUS)} attack, ${dur(sl)} left</span>` : ''}`;
 }
 
 // ------------------------------------------------------------------ UI: pages
@@ -1112,7 +1106,7 @@ function armyPage() {
     if (room < 1) h += `<p class="bad">No room for more troops: build or upgrade Burrows.</p>`;
     const locked = UK.filter(k => !unitOpen(k)); if (locked.length) h += `<p class="muted">Locked until researched: ${locked.map(k => U[k].name).join(', ')}.</p>`;
   }
-  h += `</div><div class="px box"><h3>On the move</h3><div class="list">${movesHtml()}</div><p class="muted">Pick a target on the World Map to attack or scout.</p>`;
+  h += `</div><div class="px box"><h3>On the move</h3><div class="list">${movesHtml()}</div><p class="muted">Pick a target on the World Map to attack, or to scout it first for +10% attack.</p>`;
   if (S.abroad.length) h += `<h3 style="margin-top:12px">Supporting clan members</h3><div class="list">${S.abroad.map((st, i) => `<div class="card row"><span>${unitList(st.units)} at ${esc(st.name)}</span><button class="btn ghost sm" data-act="recall" data-i="${i}">Recall</button></div>`).join('')}</div>`;
   if (S.helpers.length) h += `<h3 style="margin-top:12px">Clan support in your village</h3><div class="list">${S.helpers.map(hp => `<div class="card">${unitList(hp.units)} from ${esc(hp.name)} · leaves in ${dur(hp.until - S.t)}</div>`).join('')}</div>`;
   return h + `</div></div>`;
