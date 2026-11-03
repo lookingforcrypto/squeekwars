@@ -203,4 +203,4 @@ The function-level rules are in [SPEC.md](SPEC.md). Contracts are final once dep
 
 - Mainnet Season 1: which chain Squeekchain's mainnet uses (on Ethereum L1, every build, training and attack costs players gas), and whether to keep the game open to every wallet.
 - The Clan Hall has one look for all levels; banners mark levels 3, 5 and 7 until 5 staged sprites exist (prompts in `art/PROMPTS.md`).
-- The IMD build: brief ready in [IMD_BRIEF.md](IMD_BRIEF.md), waiting for payment.
+- The IMD build of the Testnet season: brief ready in [IMD_BRIEF.md](IMD_BRIEF.md), waiting for payment.
