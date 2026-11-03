@@ -193,6 +193,8 @@ table.kv td.up{color:var(--green)}
 .rs b{font-family:var(--f-display);font-size:15px;font-weight:600}
 .champ{display:grid;grid-template-columns:160px 1fr;gap:16px;align-items:center}
 .champ img{width:160px}
+.num{font-family:var(--f-body);font-size:22px;letter-spacing:0}
+.sqk img{width:34px;vertical-align:middle;margin-right:6px}
 .pts{display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center}
 .report{padding:10px;margin-bottom:10px}
 .report .h{display:flex;justify-content:space-between;gap:10px;font-family:var(--f-display);font-size:15px}
@@ -337,29 +339,29 @@ table.kv td.up{color:var(--green)}
   <section class="hero">
     <div class="in">
       <h1>Build a hamster village. <span>Grow with a real wheel.</span></h1>
-      <p>Squeek Wars is a strategy game on Squeekchain. Every Squeek NFT is a village and its champion, and Squeektoshi's nightly runs power the whole economy.</p>
+      <p>Squeek Wars is a strategy game on Squeekchain. Every wallet can found one village. Squeektoshi's nightly runs pay SEED to everyone, and a Squeek in your wallet leads your village as its champion and turns each run into a production bonus.</p>
       <div class="cta">
         <a class="btn" href="#village" style="text-decoration:none">Play the demo</a>
         <button class="btn alt" id="connectBtn" type="button">Connect wallet</button>
       </div>
-      <div class="wnote" id="walletNote" hidden>The live game reads your Squeek from your wallet. This demo has no wallet or chain: you play Squeek #4821 and time runs 60× faster.</div>
+      <div class="wnote" id="walletNote" hidden>The live game reads your wallet and the Squeeks in it. This demo has no wallet or chain: you play a wallet holding three Squeeks, with #4821 leading, and time runs 60× faster.</div>
     </div>
   </section>
   <section class="sec" id="how">
     <h2>How it works</h2>
-    <p class="lead">One village per Squeek. Build it up, let the hamster boost it, and raid neighbours who are at least twice as weak.</p>
+    <p class="lead">One village per wallet. Build it up, let the hamster boost it, and raid neighbours who are at least twice as weak.</p>
     <div class="steps">
       <div class="step px"><img src="assets/sprites/town_hall_3.webp" alt="Town Hall"><h3>Build</h3><p>Town Hall, Walls, 8 production sites and 12 plots for Barracks, Academy, Storehouses, Vaults and more.</p></div>
-      <div class="step px"><img src="assets/sprites/wheelhouse_3.webp" alt="Wheelhouse"><h3>Grow with the wheel</h3><p>Every night Squeektoshi runs. His laps pay SEED to every village and boost Wood, Food, Stone and Iron output.</p></div>
+      <div class="step px"><img src="assets/sprites/wheelhouse_3.webp" alt="Wheelhouse"><h3>Grow with the wheel</h3><p>Every night Squeektoshi runs. His laps pay SEED to every village, and villages led by a Squeek turn them into extra Wood, Food, Stone and Iron.</p></div>
       <div class="step px"><img src="assets/sprites/unit_berserker.webp" alt="Berserker"><h3>Fight</h3><p>Train seven unit types, scout and raid on a 100 × 100 world map. Win only with twice the defender's power.</p></div>
-      <div class="step px"><img src="assets/sprites/champion_3.webp" alt="Champion"><h3>Lead with your Squeek</h3><p>Your NFT is your champion. It levels up from battles and from the hamster's runs, up to level 30.</p></div>
+      <div class="step px"><img src="assets/sprites/champion_3.webp" alt="Champion"><h3>Lead with your Squeek</h3><p>Name a Squeek you hold as your village's leader: it brings the wheel bonus and becomes your champion, levelling up to 30. Its level stays with the Squeek.</p></div>
     </div>
   </section>
   <section class="sec" id="wheel">
     <h2>The wheel bonus</h2>
     <div class="wheelbox px">
-      <div class="formula">Output per hour = base × (1 + <b>wheel bonus</b>)<br>Wheel bonus = last night's laps ÷ 4,320<br>capped at <b>+25% per Wheelhouse level</b></div>
-      <div class="muted" style="font-size:20px">Last recorded night: <b class="gold">11,182 laps</b> → +259% before the cap. A village with a level 6 Wheelhouse gets +150%. Every village also receives <b class="gold">1,118 SEED</b> from the same run. If the hamster rests, base output keeps going.</div>
+      <div class="formula">Output per hour = base × (1 + <b>wheel bonus</b>)<br>Wheel bonus = last night's laps ÷ 4,320<br>capped at <b>+25% per Wheelhouse level</b><br>only for villages led by a Squeek</div>
+      <div class="muted" style="font-size:20px">Last recorded night: <b class="gold">11,182 laps</b> → +259% before the cap. A village led by a Squeek with a level 6 Wheelhouse gets +150%. Every village also receives <b class="gold">1,118 SEED</b> from the same run. If the hamster rests, base output keeps going.</div>
     </div>
     <div class="looks px" style="margin-top:14px">
       <figure><img src="assets/sprites/town_hall_1.webp" alt="Town Hall, cardboard"><figcaption>Lv 1–2 · cardboard</figcaption></figure>
@@ -379,7 +381,7 @@ table.kv td.up{color:var(--green)}
     <p class="lead">The game rules are enforced by the contracts. The fair-play rules are ours: villages that break them can be hidden from the site's leaderboards and season rewards.</p>
     <div class="rules">
       <div class="px box"><h3>How the game works</h3><ol>
-        <li><b>One village per Squeek NFT.</b> The village and its champion follow the NFT when it changes hands.</li>
+        <li><b>One village per wallet, open to everyone.</b> A Squeek in your wallet can lead your village: only a led village gets the nightly wheel bonus and a champion. One Squeek leads one village at a time, and a new leader can be named once a day.</li>
         <li><b>Raids take resources only:</b> Wood, Food, Stone and Iron. SEED, NFTs and buildings are never taken.</li>
         <li><b>You win only with twice the defense.</b> Then every defender falls and you can loot; otherwise both sides lose troops and nothing is taken.</li>
         <li><b>New villages get a 7-day shield.</b> They cannot attack or be attacked.</li>
@@ -400,6 +402,7 @@ table.kv td.up{color:var(--green)}
     <h2>FAQ</h2>
     <div class="faq">
       <div class="px"><b>Where does it run?</b><p>Season 1 runs on the Sepolia testnet, next to Squeekchain's own contracts.</p></div>
+      <div class="px"><b>Do I need a Squeek?</b><p>No. Every wallet can play one village and earns the same SEED. A Squeek leading your village adds the nightly wheel bonus and a champion.</p></div>
       <div class="px"><b>Can someone take my Squeek?</b><p>No. Raids only take Wood, Food, Stone and Iron. SEED, NFTs and buildings are never taken.</p></div>
       <div class="px"><b>Do I need to be online to defend?</b><p>No. Battles resolve on arrival with the troops and Walls you have at home.</p></div>
       <div class="px"><b>Can I trade with other players?</b><p>No player trading. The Market only exchanges your own resources, which keeps multi-accounts from feeding a main village.</p></div>
@@ -410,12 +413,12 @@ table.kv td.up{color:var(--green)}
     <p class="lead">Found a bug, or a player breaking the rules? Tell us here. Your player name and game day are attached.</p>
     <div class="px box" id="reportForm"></div>
   </section>
-  <div class="foot">Squeek Wars prototype · no wallet, no chain · numbers are draft v1</div>
+  <div class="foot">Squeek Wars prototype · no wallet, no chain · numbers are draft v2</div>
 </div>
 
 <div id="game" hidden>
   <header id="bar">
-    <div class="logo" id="logoHome" title="Back to the site">SQUEEK WARS<small>Village of Squeek #4821</small></div>
+    <div class="logo" id="logoHome" title="Back to the site">SQUEEK WARS<small>Led by Squeek #4821</small></div>
     <div class="res" id="resbar"></div>
     <button class="btn ghost sm" id="testbtn" type="button" aria-label="Settings and test controls">⚙ Settings</button>
     <div class="wheel" id="wheelchip"></div>

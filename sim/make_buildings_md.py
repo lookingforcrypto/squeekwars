@@ -13,7 +13,7 @@ LOOK = ['cardboard', 'wood', 'plaster & timber', 'stone', 'marble & gold']
 def look10(L): return LOOK[(L - 1) // 2]
 def look20(L): return LOOK[(L - 1) // 4]
 MARKET = {L: 25 + 5 * (L - 1) for L in range(1, 10)}; MARKET[10] = 75
-o = ["# Squeek Wars · Buildings and levels (draft v2)\n",
+o = ["# Squeek Wars · Buildings and levels (draft v3)\n",
      "Costs are the sum of the 4 resources (Wood, Food, Stone, Iron); the per-resource split is in `sim/params.py`. Times are before the Town Hall speed bonus. Sprites change every 2 levels (10-level buildings) or every 4 levels (20-level buildings): cardboard → wood → plaster & timber → stone → marble & gold.\n",
      "**General rules:** no building or field can exceed the Town Hall level; Storehouse and Vault can go up to 2× the Town Hall level. Two build slots run in parallel and each slot holds one queued order. Orders are paid when placed.\n"]
 rows = [[L, min(12, 3 + L), L, min(20, 2 * L), f"-{int(MERKEZ_SPEEDUP*100*(L-1))}%", f0(BASE_DEF_PER_MERKEZ * L), '–' if L == 1 else f0(cost('merkez', L)), '–' if L == 1 else f0(seed('merkez', L)), '–' if L == 1 else hrs(tm('merkez', L)), look10(L)] for L in range(1, 11)]
@@ -24,10 +24,10 @@ rows = []
 for L in range(1, 11):
     base = FIELD_BASE * FIELD_G ** (L - 1); m = 1 + min(CARK_STEP * L, 11000 / PASS_PER_BONUS)
     rows.append([L, f1(base), f0(base * m), '–' if L == 1 else f0(160 * FIELD_CG ** (L - 1)), '–' if L == 1 else hrs(FIELD_T1 * FIELD_TG ** (L - 1))])
-o += ["## Production sites (8: 2 forests, 2 sunflower farms, 2 quarries, 2 iron mines)\n", tb(['Level', 'Base output / h', 'With Wheelhouse at same level, normal night / h', 'Resources', 'Time'], rows),
-      "All start at level 1. Output = base × (1 + wheel bonus). The daily wheel bonus comes from Squeektoshi's settled passes (11,000 passes ≈ +255%) and is capped by the Wheelhouse. If the hamster does not run, base output continues.\n"]
+o += ["## Production sites (8: 2 forests, 2 sunflower farms, 2 quarries, 2 iron mines)\n", tb(['Level', 'Base output / h', 'Led by a Squeek, Wheelhouse at same level, normal night / h', 'Resources', 'Time'], rows),
+      "All start at level 1. Output = base × (1 + wheel bonus). The daily wheel bonus comes from Squeektoshi's settled passes (11,000 passes ≈ +255%) and is capped by the Wheelhouse; it applies only to a village led by a Squeek. If the hamster does not run, base output continues.\n"]
 rows = [[L, f"+{int(CARK_STEP*100*L)}%", f0(cost('cark', L)), f0(seed('cark', L)), hrs(tm('cark', L)), look10(L)] for L in range(1, 11)]
-o += ["## Wheelhouse (1, unlocked)\n", tb(['Level', 'Wheel bonus cap', 'Resources', 'SEED', 'Time', 'Look'], rows)]
+o += ["## Wheelhouse (1, unlocked; the bonus needs a Squeek leading the village)\n", tb(['Level', 'Wheel bonus cap', 'Resources', 'SEED', 'Time', 'Look'], rows)]
 rows = [[L, f0(AMBAR_CAP * AMBAR_G ** (L - 1)), f0(cost('ambar', L)), hrs(tm('ambar', L)), look20(L)] for L in range(1, 21)]
 o += ["## Storehouse (several allowed, unlocked, 20 levels)\n", tb(['Level', 'Added capacity (per resource)', 'Resources', 'Time', 'Look'], rows), f"Without a Storehouse the village holds {f0(STORE_BASE)} of each resource. Output above capacity is lost.\n"]
 rows = [[L, f0(YANAK_CAP * YANAK_G ** (L - 1)), f0(cost('yanak', L)), hrs(tm('yanak', L)), look20(L)] for L in range(1, 21)]
@@ -50,6 +50,6 @@ rows = [[L, 'join' if L < 3 else 'found', 3 * L, f0(50 * L), f0(cost('klan', L))
 o += ["## Clan Hall (1, Academy tier 2)\n", tb(['Level', 'Clan', 'Member cap (founder)', 'Allied reinforcements (upkeep)', 'Resources', 'Time', 'Look'], rows), "Clan members cannot send resources to each other (anti multi-account); they can only send troops to help defend. Clan chat is off-chain.\n"]
 rows = [[L, f"100 → {MARKET[L]}", f0(cost('pazar', L)), hrs(tm('pazar', L)), look10(L)] for L in range(1, 11)]
 o += ["## Market (1, Town Hall 2)\n", tb(['Level', 'Exchange rate', 'Resources', 'Time', 'Look'], rows), "No trading between players. The Market only converts your own resources: give 100 of one, receive the listed amount of another. +5 per level, level 10 gets a final bonus to 75. SEED cannot be exchanged.\n"]
-o += ["## Champion (the Squeek NFT)\n", tb(['Champion level', 'Look', 'Total XP needed'], [['1–9', 'red scarf, wooden sword', '0–6,400'], ['10–19', 'leather armor, shield', '8,100–32,400'], ['20–29', 'steel armor, blue cape', '36,100–78,400'], ['30', 'golden armor, crown', '84,100']]),
-      "4 points per level: Might (+100 power), Attack and Defense (+0.8% per point, max 20%), Carry (+2% per point). XP comes from battles (killed enemy cost ÷ 20) and from the hamster's runs (~110 per day). The champion never dies; after a lost battle it is injured for 12 hours.\n"]
+o += ["## Champion (the Squeek leading your village)\n", tb(['Champion level', 'Look', 'Total XP needed'], [['1–9', 'red scarf, wooden sword', '0–6,400'], ['10–19', 'leather armor, shield', '8,100–32,400'], ['20–29', 'steel armor, blue cape', '36,100–78,400'], ['30', 'golden armor, crown', '84,100']]),
+      "4 points per level: Might (+100 power), Attack and Defense (+0.8% per point, max 20%), Carry (+2% per point). XP comes from battles (killed enemy cost ÷ 20) and from the hamster's runs (~110 per day). The champion never dies; after a lost battle it is injured for 12 hours. Only a village led by a Squeek has a champion, and the level belongs to that Squeek.\n"]
 open('../docs/BUILDINGS.md', 'w').write("\n".join(o)); print('ok')
