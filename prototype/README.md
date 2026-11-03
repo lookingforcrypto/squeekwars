@@ -20,6 +20,8 @@ Then open http://localhost:8000.
 - **Hamster:** every game night (00:00–04:00) Squeektoshi runs; at 04:00 you get SEED and a new wheel bonus for the day.
 - **Academy, Barracks, Market, Champion:** research tiers, unit training, resource exchange and champion points.
 - **World Map:** drag to move, tap a village to see its defense and loot, send an attack with the battle prediction. After your 7-day beginner shield ends, neighbours attack you too.
-- **Test controls** (bottom right): change the game speed (×1 to ×3600), add resources or SEED, end the beginner shield, restart.
+- **Test mode (on by default):** nothing costs resources and everything is instant (building, research, training, travel). Turn either off in **Test controls** (bottom right) to play with the real costs and times. Test controls also offer production ×1000, game speed ×1 to ×3600, extra resources or SEED, ending the beginner shield and a restart.
+- **Rival:** Ironpaw (Squeek #777) at (48|71) is a neighbour with a real army to attack; its troops recover a few game hours after a battle.
+- **Panels:** every side panel has a Hide/Show button.
 
 `game.html` is the same page without the document wrapper (used for the hosted preview); `app.js` holds all rules and UI.

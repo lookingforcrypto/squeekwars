@@ -57,6 +57,7 @@ const TH_POS = [960, 630];
 const SITES = [[524, 180, 255, false], [192, 480, 238, true], [1404, 168, 217, false], [1728, 480, 217, true], [200, 874, 214, false], [572, 1176, 204, true], [1732, 858, 204, true], [1336, 1166, 198, false]];
 const WALLS_POS = [640, 356];
 const OWN = [46, 70];
+const RIVAL = [48, 71];
 const SQUEEK_ID = 4821;
 const MAX_OFFLINE_H = 72;
 
@@ -87,11 +88,12 @@ function newGame() {
     plots: Array(12).fill(null), slots: [[], []], research: { done: [], cur: null }, units: Object.fromEntries(UK.map(k => [k, 0])),
     training: null, champ: { xp: 0, pts: { might: 0, atk: 0, def: 0, carry: 0 }, inj: 0, home: true },
     moves: [], bots: {}, reports: [], log: [], nights: { 1: 11182 }, nextNight: 13297, shieldUntil: 8 + 7 * 24, nextIncoming: 8 + 7 * 24 + 20,
-    seq: 1, sel: { kind: 'th' }, wsel: null, unread: 0, lastReal: Date.now(), cam: { x: OWN[0] + 0.5, y: OWN[1] + 0.5 },
+    seq: 1, sel: { kind: 'th' }, wsel: [...RIVAL], unread: 0, lastReal: Date.now(), cam: { x: OWN[0] + 0.5, y: OWN[1] + 0.5 },
+    test: { free: true, instant: true, prod: 1 }, ui: { min: {} },
   };
 }
 function load() {
-  try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const s = JSON.parse(raw); if (s && s.v === 1) return s; } } catch (e) { }
+  try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const s = JSON.parse(raw); if (s && s.v === 1) { if (!s.test) s.test = { free: true, instant: true, prod: 1 }; if (!s.ui) s.ui = { min: {} }; return s; } } } catch (e) { }
   return null;
 }
 function save() { try { S.lastReal = Date.now(); localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { } }
@@ -115,7 +117,7 @@ const nightKey = t => Math.floor((t - 4) / 24) + 1;
 const lastPasses = () => S.nights[nightKey(S.t)] || S.nights[1];
 const wheelCap = () => 0.25 * levelOf('wheelhouse');
 const wheelBonus = () => Math.min(wheelCap(), lastPasses() / PASS_PER_BONUS);
-const rate = r => baseRate(r) * (1 + wheelBonus());
+const rate = r => baseRate(r) * (1 + wheelBonus()) * (S.test.prod || 1);
 const forge = () => 0.02 * levelOf('forge');
 const thSpeed = () => 1 - 0.03 * (S.th - 1);
 function costOf(kind, ref, L) {           // resources to reach level L
@@ -123,8 +125,8 @@ function costOf(kind, ref, L) {           // resources to reach level L
   const b = B[ref];
   return { res: b.c.map(x => x * b.g ** (L - 1)), seed: b.seed ? b.seed[0] * b.seed[1] ** (L - 1) : 0, h: b.t1 * b.gt ** (L - 1) * thSpeed() };
 }
-const canPay = (res, seed = 0) => res.every((x, i) => S.res[i] + 1e-6 >= x) && S.seed + 1e-6 >= seed;
-function pay(res, seed = 0) { res.forEach((x, i) => S.res[i] -= x); S.seed -= seed; }
+const canPay = (res, seed = 0) => S.test.free || (res.every((x, i) => S.res[i] + 1e-6 >= x) && S.seed + 1e-6 >= seed);
+function pay(res, seed = 0) { if (S.test.free) return; res.forEach((x, i) => S.res[i] -= x); S.seed -= seed; }
 const hlevel = () => Math.min(30, 1 + Math.floor(Math.sqrt(Math.max(0, S.champ.xp) / 100)));
 const hfree = () => 4 * hlevel() - Object.values(S.champ.pts).reduce((a, b) => a + b, 0);
 const hmight = () => 100 + 100 * S.champ.pts.might;
@@ -148,7 +150,8 @@ function bot(x, y) {
   const key = x + ',' + y;
   if (BOT[key] !== undefined) return BOT[key];
   let b = null;
-  if (x >= 0 && y >= 0 && x < WORLD && y < WORLD && !(x === OWN[0] && y === OWN[1]) && hash(x, y, 1) < 0.42) {
+  if (x === RIVAL[0] && y === RIVAL[1]) b = { x, y, id: 777, name: 'Ironpaw', rival: true, lvl0: 5, active: true, clan: false, shield: 0, sp: 60, sb: 20, walls: 4 };
+  else if (x >= 0 && y >= 0 && x < WORLD && y < WORLD && !(x === OWN[0] && y === OWN[1]) && hash(x, y, 1) < 0.42) {
     const h = k => hash(x, y, k);
     const active = h(3) > 0.3, lvl = 1 + Math.floor(h(2) * 7);
     b = { x, y, id: 1 + Math.floor(h(9) * 9971), lvl0: lvl, active, clan: h(8) < 0.05, shield: h(7) < 0.08 ? 24 * (1 + Math.floor(h(10) * 6)) : 0,
@@ -156,7 +159,7 @@ function bot(x, y) {
   }
   BOT[key] = b; return b;
 }
-function botLvl(b) { return Math.min(10, b.lvl0 + (b.active ? Math.floor(S.t / 24 / 20) : 0)); }
+function botLvl(b) { return Math.min(10, b.lvl0 + (b.active && !b.rival ? Math.floor(S.t / 24 / 20) : 0)); }
 function botState(b) {
   const k = b.x + ',' + b.y;
   if (!S.bots[k]) { const L = botLvl(b); const r = 2 * fieldBase(L) * (b.active ? 2 : 1); S.bots[k] = { s0: Math.min(botCap(b), r * 48), t0: 8, loss: 0, lossAt: 0, raids: {} }; }
@@ -167,8 +170,8 @@ const botProt = b => 150 + (b.active ? 250 * 1.22 ** (botLvl(b) - 1) : 0);
 function botStock(b) { const st = botState(b); const r = 2 * fieldBase(botLvl(b)) * (b.active ? 2 : 1); return Math.min(botCap(b), st.s0 + r * (S.t - st.t0)); }
 const botLootable = b => 4 * Math.max(0, botStock(b) - botProt(b));
 function botTroops(b) {
-  const st = botState(b); const keep = 1 - st.loss * Math.max(0, 1 - (S.t - st.lossAt) / 20);
-  const grow = b.active ? 1 + S.t / 24 / 30 : 1;
+  const st = botState(b); const keep = 1 - st.loss * Math.max(0, 1 - (S.t - st.lossAt) / (b.rival ? 4 : 20));
+  const grow = b.active && !b.rival ? 1 + S.t / 24 / 30 : 1;
   return { spearman: Math.round(b.sp * keep * grow), shieldbearer: Math.round(b.sb * keep * grow) };
 }
 function botDefense(b) { const tr = botTroops(b); return (tr.spearman * 35 + tr.shieldbearer * 70) * (1 + 0.04 * b.walls) + 40 * botLvl(b); }
@@ -178,7 +181,7 @@ const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 // ------------------------------------------------------------------ simulation
 function produce(h) {
   if (h <= 0) return;
-  const cap = storage(), up = upkeep();
+  const cap = storage(), up = S.test.free ? 0 : upkeep();
   for (let r = 0; r < 4; r++) {
     let v = S.res[r] + rate(r) * h - (r === 1 ? up * h : 0);
     if (r === 1 && v < 0) {          // starvation: lose troops at home
@@ -230,7 +233,7 @@ function finishOrder(o) {
   else if (o.kind === 'th') S.th = o.to;
   else if (o.kind === 'walls') S.walls = o.to;
   else if (o.kind === 'plot') { const p = S.plots[o.ref]; p.lvl = o.to; p.building = false; }
-  note(`${orderName(o)} reached level ${o.to}`, 'ok'); sceneDirty = true;
+  if (!S.test.instant) note(`${orderName(o)} reached level ${o.to}`, 'ok'); sceneDirty = true;
 }
 const orderName = o => o.kind === 'field' ? FIELD_NAME[o.ref] : o.kind === 'th' ? 'Town Hall' : o.kind === 'walls' ? 'Walls' : B[S.plots[o.ref].type].name;
 const pending = (kind, ref) => S.slots.some(sl => sl.some(o => o.kind === kind && o.ref === ref));
@@ -251,31 +254,32 @@ function upgradeCheck(kind, ref) {
   if (L >= max) why = 'Maximum level reached.';
   else if (pending(kind, ref)) why = 'Already in the build queue.';
   else if (to > capOf(kind, ref)) why = `Needs Town Hall level ${kind !== 'plot' || !['storehouse', 'vault'].includes(S.plots[ref].type) ? to : Math.ceil(to / 2)}.`;
-  else if (!slotFor()) why = 'Both build slots and their queues are full.';
+  else if (!S.test.instant && !slotFor()) why = 'Both build slots and their queues are full.';
   else if (!canPay(c.res, c.seed)) why = 'Not enough resources yet.';
   return { to, c, why };
 }
 function slotFor() { const s = [...S.slots].sort((a, b) => a.length - b.length)[0]; return s.length < 2 ? s : null; }
 function placeOrder(kind, ref, to, c) {
+  if (S.test.instant) { pay(c.res, c.seed); finishOrder({ kind, ref, to }); return; }
   const sl = slotFor(); if (!sl) return;
   const start = sl.length ? sl[sl.length - 1].end : S.t;
   pay(c.res, c.seed); sl.push({ id: S.seq++, kind, ref, to, start, end: start + c.h });
 }
 function doUpgrade(kind, ref) {
   const u = upgradeCheck(kind, ref); if (u.why) return note(u.why, 'bad');
-  placeOrder(kind, ref, u.to, u.c); note(`${kind === 'field' ? FIELD_NAME[ref] : kind === 'th' ? 'Town Hall' : kind === 'walls' ? 'Walls' : B[S.plots[ref].type].name} → level ${u.to} ordered`); sceneDirty = true; dirty();
+  placeOrder(kind, ref, u.to, u.c); note(`${kind === 'field' ? FIELD_NAME[ref] : kind === 'th' ? 'Town Hall' : kind === 'walls' ? 'Walls' : B[S.plots[ref].type].name} → level ${u.to}${S.test.instant ? '' : ' ordered'}`, S.test.instant ? 'ok' : ''); sceneDirty = true; dirty();
 }
 function buildCheck(i, type) {
   const c = costOf('plot', type, 1); let why = '';
   if (B[type].unlock && !researched(B[type].unlock)) why = 'Research it in the Academy first.';
   else if (plotsOf(type).length >= B[type].multi) why = 'You already have one.';
-  else if (!slotFor()) why = 'Both build slots and their queues are full.';
+  else if (!S.test.instant && !slotFor()) why = 'Both build slots and their queues are full.';
   else if (!canPay(c.res, c.seed)) why = 'Not enough resources yet.';
   return { c, why };
 }
 function doBuild(i, type) {
   const b = buildCheck(i, type); if (b.why) return note(b.why, 'bad');
-  S.plots[i] = { type, lvl: 0, building: true }; placeOrder('plot', i, 1, b.c); S.sel = { kind: 'plot', i }; note(`${B[type].name} ordered`); sceneDirty = true; dirty();
+  S.plots[i] = { type, lvl: 0, building: true }; placeOrder('plot', i, 1, b.c); S.sel = { kind: 'plot', i }; note(S.test.instant ? `${B[type].name} built` : `${B[type].name} ordered`, S.test.instant ? 'ok' : ''); sceneDirty = true; dirty();
 }
 function researchCost(t) { const tot = 600 * 2.2 ** (t - 1); return { res: [0.3, 0.2, 0.25, 0.25].map(f => tot * f), seed: 300 * 2 ** (t - 1), h: 2 * 1.8 ** (t - 1) * 0.95 ** (levelOf('academy') - 1) }; }
 const tierOpen = () => Math.floor((levelOf('academy') + 1) / 2);
@@ -285,12 +289,14 @@ function doResearch(id) {
   if (S.research.cur) return note('The Academy is busy.', 'bad');
   if (r.tier > tierOpen()) return note(`Needs Academy level ${2 * r.tier - 1}.`, 'bad');
   if (!canPay(c.res, c.seed)) return note('Not enough resources yet.', 'bad');
-  pay(c.res, c.seed); S.research.cur = { id, end: S.t + c.h, start: S.t }; note(`Researching ${r.name}`); dirty();
+  pay(c.res, c.seed);
+  if (S.test.instant) { S.research.done.push(id); note(`Research done: ${r.name}`, 'ok'); dirty(); return; }
+  S.research.cur = { id, end: S.t + c.h, start: S.t }; note(`Researching ${r.name}`); dirty();
 }
 const unitOpen = k => !U[k].r || researched(U[k].r);
 function trainMax(k) {
   const room = popCap() - upkeepPlanned(); const byRoom = Math.floor(room / U[k].u);
-  const byRes = Math.min(...U[k].cost.map((c, i) => Math.floor(S.res[i] / c)));
+  const byRes = S.test.free ? Infinity : Math.min(...U[k].cost.map((c, i) => Math.floor(S.res[i] / c)));
   return Math.max(0, Math.min(byRoom, byRes));
 }
 function doTrain(k, n) {
@@ -300,6 +306,7 @@ function doTrain(k, n) {
   if (!unitOpen(k)) return note('Research this unit first.', 'bad');
   if (n < 1 || n > trainMax(k)) return note('Not enough resources or Burrow room for that many.', 'bad');
   pay(U[k].cost.map(c => c * n)); const h = n * U[k].m / 60 * 0.9 ** (levelOf('barracks') - 1);
+  if (S.test.instant) { S.units[k] += n; note(`${n} ${U[k].name}${n > 1 ? 's' : ''} trained`, 'ok'); dirty(); return; }
   S.training = { unit: k, n, start: S.t, end: S.t + h }; note(`Training ${n} ${U[k].name}${n > 1 ? 's' : ''}`); dirty();
 }
 function doExchange(from, to, amt) {
@@ -312,7 +319,7 @@ function doExchange(from, to, amt) {
 }
 function doPoint(k) { if (hfree() <= 0) return; if ((k === 'atk' || k === 'def') && S.champ.pts[k] >= 25) return note('That bonus is already at its 20% cap.', 'bad'); S.champ.pts[k]++; dirty(); }
 function sendAttack(b, units, champ) {
-  if (S.t < S.shieldUntil) return note('Your beginner shield is on: you cannot attack yet.', 'bad');
+  if (!S.test.free && S.t < S.shieldUntil) return note('Your beginner shield is on: you cannot attack yet.', 'bad');
   if (botShielded(b)) return note('That village is under a beginner shield.', 'bad');
   if (b.clan) return note('That village is in your clan.', 'bad');
   const st = botState(b); if ((st.raids[day(S.t)] || 0) >= 3) return note('That village was raided 3 times today already.', 'bad');
@@ -320,11 +327,11 @@ function sendAttack(b, units, champ) {
   for (const k of UK) { const n = Math.min(S.units[k], Math.max(0, Math.floor(units[k] || 0))); if (n) { sent[k] = n; any = true; } }
   if (!any) return note('Choose some units to send.', 'bad');
   if (champ && !champOk()) champ = false;
-  const d = dist(OWN, [b.x, b.y]); const spd = Math.min(...Object.keys(sent).map(k => U[k].s)) * (researched('march') ? 1.2 : 1);
+  const d = S.test.instant ? 0 : dist(OWN, [b.x, b.y]); const spd = Math.min(...Object.keys(sent).map(k => U[k].s)) * (researched('march') ? 1.2 : 1);
   for (const k in sent) S.units[k] -= sent[k];
   if (champ) S.champ.home = false;
   S.moves.push({ id: S.seq++, kind: 'attack', to: [b.x, b.y], units: sent, champ, depart: S.t, arrive: S.t + d / spd, back: d / spd });
-  note(`Army sent to (${b.x}|${b.y}), arrives in ${dur(d / spd)}`); dirty();
+  note(S.test.instant ? `Army sent to (${b.x}|${b.y})` : `Army sent to (${b.x}|${b.y}), arrives in ${dur(d / spd)}`); dirty();
 }
 function arrive(m) {
   if (m.kind === 'attack') return resolveAttack(m);
@@ -399,8 +406,8 @@ function logEvt(s) { S.log.unshift({ t: S.t, s }); S.log = S.log.slice(0, 60); }
 // ------------------------------------------------------------------ UI: toasts, routing
 function note(msg, kind = '') {
   const el = document.createElement('div'); el.className = `toast ${kind}`; el.textContent = msg;
-  const box = $('#toasts'); box.appendChild(el); while (box.children.length > 3) box.firstChild.remove();
-  setTimeout(() => el.remove(), 3800);
+  const box = $('#toasts'); box.appendChild(el); while (box.children.length > 2) box.firstChild.remove();
+  setTimeout(() => el.remove(), 2600);
 }
 let view = 'home', sceneDirty = true, needFull = true;
 const dirty = () => { needFull = true; };
@@ -428,8 +435,8 @@ function renderBar() {
   $('#resbar').innerHTML = items + `<div class="r seedr">${icon('seed')} <b>${fmt(S.seed)}</b><s> SEED</s><em>next run ${clockToNight()}</em></div>`;
   const h = ((S.t % 24) + 24) % 24, running = h < 4;
   const laps = running ? Math.round(S.nextNight * h / 4) : lastPasses();
-  $('#wheelchip').innerHTML = `<span class="st"><span class="dot ${running ? 'run' : ''}"></span>${running ? `Squeektoshi is running · ${fmt(laps)} laps` : `Squeektoshi rests · last night ${fmt(lastPasses())} laps`}</span>
-    <span>Wheel bonus <b class="gold">+${pct(wheelBonus())}</b>${levelOf('wheelhouse') ? '' : ' · build a Wheelhouse'} · Day ${day(S.t)} ${clock(S.t)} · ×${S.speed}</span>`;
+  const sb = S.test.free || S.test.instant || S.test.prod > 1 ? ` · <b class="gold">TEST:</b> ${[S.test.free && 'free', S.test.instant && 'instant', S.test.prod > 1 && `output ×${S.test.prod}`].filter(Boolean).join(', ')}` : '';
+  $('#wheelchip').innerHTML = `<span class="dot ${running ? 'run' : ''}"></span> ${running ? `Squeektoshi running · ${fmt(laps)} laps` : `Squeektoshi resting · ${fmt(lastPasses())} laps last night`} · Wheel bonus <b class="gold">+${pct(wheelBonus())}</b>${levelOf('wheelhouse') ? '' : ' (needs a Wheelhouse)'} · Day ${day(S.t)} ${clock(S.t)} · ×${S.speed}${sb}`;
   const rt = $('#tabs a[data-v="reports"]'); rt.innerHTML = 'Reports' + (S.unread ? `<span class="badge">${S.unread}</span>` : '');
   const bh = $('#bar').getBoundingClientRect().height; document.documentElement.style.setProperty('--barh', bh + 'px');
 }
@@ -492,7 +499,8 @@ const plate = (x, y, L, busy, max) => `<span class="plate ${busy ? 'busy' : ''} 
 
 // ------------------------------------------------------------------ UI: village panels
 function costHtml(c) {
-  return `<div class="cost">${c.res.map((x, i) => `<span class="${S.res[i] + 1e-6 < x ? 'short' : ''}">${icon(RES[i])} ${fmt(x)}</span>`).join('')}${c.seed ? `<span class="${S.seed + 1e-6 < c.seed ? 'short' : ''}">${icon('seed')} ${fmt(c.seed)} SEED</span>` : ''}<span>⏱ ${dur(c.h)}</span></div>`;
+  const sh = (have, need) => !S.test.free && have + 1e-6 < need ? 'short' : '';
+  return `<div class="cost">${c.res.map((x, i) => `<span class="${sh(S.res[i], x)}">${icon(RES[i])} ${fmt(x)}</span>`).join('')}${c.seed ? `<span class="${sh(S.seed, c.seed)}">${icon('seed')} ${fmt(c.seed)} SEED</span>` : ''}<span>⏱ ${S.test.instant ? 'instant (test)' : dur(c.h)}</span></div>`;
 }
 function effects(kind, ref, L, to) {
   const rows = [];
@@ -530,7 +538,7 @@ function detailPanel() {
     for (const t of PLOT_TYPES) {
       const bc = buildCheck(sel.i, t); const c = bc.c;
       if (B[t].multi === 1 && plotsOf(t).length) continue;
-      h += `<div class="opt"><img src="${spr(B[t].sprite + (t === 'clanhall' ? '' : '_1'))}" alt=""><div><div class="row"><span class="n">${B[t].name}</span><button class="btn sm" data-act="build" data-t="${t}" ${bc.why ? 'disabled' : ''}>Build</button></div><div class="d">${B[t].role}</div><div class="c">${c.res.map((x, i) => `<span class="${S.res[i] < x ? 'bad' : ''}">${icon(RES[i])}${fmt(x)}</span>`).join(' ')} · ${dur(c.h)}</div>${bc.why && bc.why !== 'Not enough resources yet.' ? `<div class="why">${bc.why}</div>` : ''}</div></div>`;
+      h += `<div class="opt"><img src="${spr(B[t].sprite + (t === 'clanhall' ? '' : '_1'))}" alt=""><div><div class="row"><span class="n">${B[t].name}</span><button class="btn sm" data-act="build" data-t="${t}" ${bc.why ? 'disabled' : ''}>Build</button></div><div class="d">${B[t].role}</div><div class="c">${c.res.map((x, i) => `<span class="${!S.test.free && S.res[i] < x ? 'bad' : ''}">${icon(RES[i])}${fmt(x)}</span>`).join(' ')} · ${S.test.instant ? 'instant' : dur(c.h)}</div>${bc.why && bc.why !== 'Not enough resources yet.' ? `<div class="why">${bc.why}</div>` : ''}</div></div>`;
     }
     return h + '</div>';
   }
@@ -616,6 +624,7 @@ function drawWorld() {
     drawImg(img('town_hall_' + st), sx + ts / 2, sy + ts * 0.78, ts * 0.5);
     if (L >= 7) drawImg(img('storehouse_' + st), sx + ts * 0.78, sy + ts * 0.82, ts * 0.3);
     if (b && botShielded(b)) { c.fillStyle = 'rgba(150,205,255,.22)'; c.strokeStyle = 'rgba(170,215,255,.8)'; c.lineWidth = 2; c.beginPath(); c.ellipse(sx + ts / 2, sy + ts * 0.5, ts * 0.46, ts * 0.42, 0, 0, 7); c.fill(); c.stroke(); }
+    if (b && b.rival) { c.fillStyle = '#222'; c.fillRect(sx + ts * 0.82, sy + ts * 0.06, 3, ts * 0.42); c.fillStyle = '#ff5a4a'; c.fillRect(sx + ts * 0.82 + 3, sy + ts * 0.06, ts * 0.22, ts * 0.15); c.font = `${Math.round(ts * 0.22)}px VT323, monospace`; c.textAlign = 'center'; c.fillStyle = '#0b0806'; c.fillRect(sx + ts * 0.12, sy + 1, ts * 0.62, ts * 0.22); c.fillStyle = '#ff8a7a'; c.textBaseline = 'middle'; c.fillText('RIVAL', sx + ts * 0.43, sy + ts * 0.12); }
     if (b && b.clan) { c.fillStyle = '#222'; c.fillRect(sx + ts * 0.8, sy + ts * 0.1, 3, ts * 0.38); c.fillStyle = '#6aa8ff'; c.fillRect(sx + ts * 0.8 + 3, sy + ts * 0.1, ts * 0.2, ts * 0.13); }
     c.fillStyle = 'rgba(20,15,10,.92)'; c.strokeStyle = own ? '#f2c14e' : '#6b4a2b'; c.lineWidth = 2;
     const pw = ts * 0.3, ph = ts * 0.22; c.fillRect(sx + ts / 2 - pw / 2, sy + ts - ph - 2, pw, ph); c.strokeRect(sx + ts / 2 - pw / 2, sy + ts - ph - 2, pw, ph);
@@ -652,7 +661,7 @@ function drawMini() {
 function worldLeft() {
   return `<h3>World map</h3><canvas id="minimap" class="mm" width="180" height="180"></canvas>
   <div class="muted" style="font-size:17px">100 × 100 tiles, one per Squeek. Drag to move, tap a tile. Your village is at (${OWN[0]}|${OWN[1]}).</div>
-  <div class="row" style="margin-top:8px"><button class="btn sm" data-act="home">Go to my village</button></div>
+  <div class="row" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap"><button class="btn sm" data-act="home">My village</button><button class="btn sm alt" data-act="rival">Rival (${RIVAL[0]}|${RIVAL[1]})</button></div>
   <h3 style="margin-top:12px">Armies</h3><div class="list">${movesHtml()}</div>
   <h3 style="margin-top:12px">Legend</h3><div class="muted" style="font-size:17px">Plate = Town Hall level · gold ring = you · blue flag = clan · bubble = beginner shield · empty tile = Squeek not settled yet · dashed lines: gold attack, green return, red incoming</div>`;
 }
@@ -664,7 +673,7 @@ function worldRight() {
   const b = bot(x, y);
   if (!b) return h + `<h3>Empty tile (${x}|${y})</h3><p class="muted">Squeek #${1 + Math.floor(hash(x, y, 9) * 9971)} has not founded a village yet. Only its owner can settle here.</p>`;
   const L = botLvl(b), D = botDefense(b), tr = botTroops(b), d = dist(OWN, [x, y]);
-  h += `<h3>Village of Squeek #${b.id}</h3><div class="thumbs" style="min-height:90px"><img src="${spr('town_hall_' + Math.ceil(L / 2))}" alt=""></div>
+  h += `<h3>${b.rival ? `${b.name} · Squeek #${b.id} · rival` : `Village of Squeek #${b.id}`}</h3><div class="thumbs" style="min-height:90px"><img src="${spr('town_hall_' + Math.ceil(L / 2))}" alt=""></div>
   <table class="kv"><tr><td>Position</td><td>(${x}|${y}) · ${d.toFixed(1)} tiles</td></tr><tr><td>Town Hall</td><td>${L}</td></tr><tr><td>Status</td><td>${b.clan ? 'your clan' : botShielded(b) ? 'beginner shield' : b.active ? 'active' : 'inactive'}</td></tr>
   <tr><td>Defenders at home</td><td>${tr.spearman} Spearmen${tr.shieldbearer ? `, ${tr.shieldbearer} Shieldbearers` : ''}</td></tr><tr><td>Walls</td><td>Lv ${b.walls} (+${4 * b.walls}%)</td></tr>
   <tr><td>Defense power</td><td>${fmt(D)}</td></tr><tr><td>Lootable now</td><td>~${fmt(botLootable(b))}</td></tr></table>`;
@@ -685,7 +694,7 @@ function updatePrediction() {
   const surv = {}; for (const k in units) surv[k] = Math.round(units[k] * (1 - fa));
   const loot = win ? Math.min(botLootable(b), carryOf(surv, champ)) : 0;
   const spd = Object.keys(units).filter(k => units[k] > 0).map(k => U[k].s); const tt = spd.length ? dist(OWN, [b.x, b.y]) / (Math.min(...spd) * (researched('march') ? 1.2 : 1)) : 0;
-  box.innerHTML = `Attack <b>${fmt(A)}</b> vs defense <b>${fmt(D)}</b> · need ${fmt(2 * D)} to win<br>You lose ~${pct(fa)} · they lose ${pct(fd)}<br>${win ? `<span class="ok">Win · loot ~${fmt(loot)}</span>` : `<span class="bad">No win: under 2× the defense</span>`} · arrives in ${dur(tt)}`;
+  box.innerHTML = `Attack <b>${fmt(A)}</b> vs defense <b>${fmt(D)}</b> · need ${fmt(2 * D)} to win<br>You lose ~${pct(fa)} · they lose ${pct(fd)}<br>${win ? `<span class="ok">Win · loot ~${fmt(loot)}</span>` : `<span class="bad">No win: under 2× the defense</span>`} · ${S.test.instant ? 'arrives instantly' : `arrives in ${dur(tt)}`}`;
 }
 
 // ------------------------------------------------------------------ UI: pages
@@ -701,6 +710,7 @@ function armyPage() {
   else if (S.training) { const tr = S.training, p = (S.t - tr.start) / (tr.end - tr.start); h += `<div class="slot"><div class="t"><span>${tr.n} ${U[tr.unit].name}</span><span>${dur(tr.end - S.t)}</span></div><div class="prog"><i style="width:${(p * 100).toFixed(0)}%"></i></div></div><p class="muted">One batch at a time.</p>`; }
   else {
     h += `<div class="opts">` + UK.filter(unitOpen).map(k => { const mx = trainMax(k); return `<div class="opt"><img src="${spr(U[k].sprite)}" alt=""><div><div class="row"><span class="n">${U[k].name}</span><span class="muted">max ${mx}</span></div><div class="c">${U[k].cost.map((c, i) => `${icon(RES[i])}${c}`).join(' ')} · ${dur(U[k].m / 60 * 0.9 ** (bl - 1))} each</div><div class="row" style="justify-content:flex-start;margin-top:4px"><input type="number" id="tr-${k}" min="1" max="${mx}" value="${Math.min(mx, 10)}" style="width:80px;background:var(--well);border:2px solid var(--line);color:var(--ink);font:inherit;padding:1px 4px"><button class="btn sm" data-act="train" data-u="${k}" ${mx < 1 ? 'disabled' : ''}>Train</button></div></div></div>`; }).join('') + `</div>`;
+    if (popCap() - upkeepPlanned() < 1) h += `<p class="bad">No room for more troops: build or upgrade Burrows.</p>`;
     const locked = UK.filter(k => !unitOpen(k)); if (locked.length) h += `<p class="muted">Locked until researched: ${locked.map(k => U[k].name).join(', ')}.</p>`;
   }
   h += `</div><div class="px box"><h3>On the move</h3><div class="list">${movesHtml()}</div><p class="muted">Pick a target on the World Map to attack.</p></div></div>`;
@@ -754,7 +764,10 @@ function reportsPage() {
   return h;
 }
 function testPanel() {
-  return `<div class="row"><h3 style="margin:0">Prototype test controls</h3><button class="btn ghost sm" data-act="closetest">Close</button></div><div class="muted" style="font-size:17px;margin-bottom:6px">Game speed (game time per real time)</div><div class="speeds">${[1, 60, 600, 3600].map(s => `<button class="btn sm ${S.speed === s ? 'on' : ''}" data-act="speed" data-s="${s}">×${s}</button>`).join('')}</div>
+  const tg = (act, on, label) => `<button class="btn sm ${on ? '' : 'ghost'}" data-act="${act}" aria-pressed="${on}">${on ? 'On' : 'Off'} · ${label}</button>`;
+  return `<div class="row"><h3 style="margin:0">Prototype test controls</h3><button class="btn ghost sm" data-act="closetest">Close</button></div>
+  <div class="list" style="margin:8px 0">${tg('tg-free', S.test.free, 'Free: nothing costs resources')}${tg('tg-instant', S.test.instant, 'Instant: no build, research, training or travel time')}${tg('tg-prod', S.test.prod > 1, 'Production ×1000')}</div>
+  <div class="muted" style="font-size:17px;margin-bottom:6px">Game speed (game time per real time)</div><div class="speeds">${[1, 60, 600, 1000, 3600].map(s => `<button class="btn sm ${S.speed === s ? 'on' : ''}" data-act="speed" data-s="${s}">×${s}</button>`).join('')}</div>
   <div class="list"><button class="btn sm alt" data-act="cheat-res">+10,000 each resource</button><button class="btn sm alt" data-act="cheat-seed">+10,000 SEED</button><button class="btn sm alt" data-act="shield" ${S.t < S.shieldUntil ? '' : 'disabled'}>End my beginner shield</button><button class="btn sm ghost" data-act="reset">Restart the demo</button></div><p class="muted" style="font-size:16px">Your demo village is saved in this browser.</p>`;
 }
 
@@ -763,6 +776,12 @@ let lastFull = 0, lastBar = 0, pdown = false;
 addEventListener('pointerdown', () => { pdown = true; }, true);
 addEventListener('pointerup', () => { setTimeout(() => { pdown = false; }, 0); }, true);
 addEventListener('pointercancel', () => { pdown = false; }, true);
+function panel(id, html, closable) {
+  html = html.replace('<button class="btn ghost sm sheet-close" data-act="close">Close</button>', '');
+  const m = html.match(/<h3[^>]*>([\s\S]*?)<\/h3>/); const title = m ? m[1] : ''; const body = m ? html.replace(m[0], '') : html;
+  const min = S.ui.min[id];
+  return `<div class="ph"><h3>${title}</h3><span class="pbtn">${closable ? '<button class="btn ghost sm sheet-close" data-act="close">Close</button>' : ''}<button class="btn ghost sm" data-act="min" data-p="${id}" aria-expanded="${!min}">${min ? 'Show' : 'Hide'}</button></span></div>${min ? '' : body}`;
+}
 function setHTML(el, h) { if (el && el._h !== h) { el.innerHTML = h; el._h = h; } }
 function render(force) {
   if (view === 'home') return;
@@ -773,11 +792,11 @@ function render(force) {
   const full = force || needFull || now - lastFull > 1000;
   if (view === 'village') {
     if (sceneDirty) { renderScene(); sceneDirty = false; }
-    if (full && !typing) { setHTML($('#vleft'), villageLeft()); setHTML($('#vright'), detailPanel()); }
+    if (full && !typing) { setHTML($('#vleft'), panel('vleft', villageLeft(), false)); setHTML($('#vright'), panel('vright', detailPanel(), true)); }
   }
   if (view === 'world') {
     drawWorld();
-    if (full && !typing) { const wl = $('#wleft'); const before = wl._h; setHTML(wl, worldLeft()); drawMini(); const keep = {}; document.querySelectorAll('#wright input').forEach(i => keep[i.id] = i.type === 'checkbox' ? i.checked : i.value); setHTML($('#wright'), worldRight()); for (const id in keep) { const el = document.getElementById(id); if (el) el.type === 'checkbox' ? el.checked = keep[id] : el.value = keep[id]; } updatePrediction(); }
+    if (full && !typing) { const wl = $('#wleft'); const before = wl._h; setHTML(wl, panel('wleft', worldLeft(), false)); drawMini(); const keep = {}; document.querySelectorAll('#wright input').forEach(i => keep[i.id] = i.type === 'checkbox' ? i.checked : i.value); setHTML($('#wright'), panel('wright', worldRight(), true)); for (const id in keep) { const el = document.getElementById(id); if (el) el.type === 'checkbox' ? el.checked = keep[id] : el.value = keep[id]; } updatePrediction(); }
   }
   if (full && !typing) {
     if (view === 'army') setHTML($('#army'), armyPage());
@@ -814,13 +833,18 @@ function onClick(e) {
   if (a === 'home') { S.cam = { x: OWN[0] + 0.5, y: OWN[1] + 0.5 }; S.wsel = [...OWN]; openSheet('#wright'); dirty(); return; }
   if (a === 'attack') { const units = {}; document.querySelectorAll('#wright input[data-u]').forEach(i => units[i.dataset.u] = +i.value || 0); return sendAttack(bot(S.wsel[0], S.wsel[1]), units, $('#atk-champ')?.checked); }
   if (a === 'closetest') { $('#testpanel').hidden = true; return; }
+  if (a === 'min') { S.ui.min[t.dataset.p] = !S.ui.min[t.dataset.p]; dirty(); return; }
+  if (a === 'tg-free') { S.test.free = !S.test.free; note(S.test.free ? 'Test: everything is free' : 'Test: normal costs'); dirty(); return; }
+  if (a === 'tg-instant') { S.test.instant = !S.test.instant; note(S.test.instant ? 'Test: everything is instant' : 'Test: normal build and travel times'); dirty(); return; }
+  if (a === 'tg-prod') { S.test.prod = S.test.prod > 1 ? 1 : 1000; note(`Test: production ×${S.test.prod}`); dirty(); return; }
+  if (a === 'rival') { S.cam = { x: RIVAL[0] + 0.5, y: RIVAL[1] + 0.5 }; S.wsel = [...RIVAL]; S.ui.min.wright = false; openSheet('#wright'); dirty(); return; }
   if (a === 'speed') { S.speed = +t.dataset.s; dirty(); return; }
   if (a === 'cheat-res') { const cap = storage(); S.res = S.res.map(x => Math.min(cap, x + 10000)); note(`Resources topped up (Storehouse holds ${fmt(cap)} each)`); dirty(); return; }
   if (a === 'cheat-seed') { S.seed += 10000; dirty(); return; }
   if (a === 'shield') { S.shieldUntil = S.t; S.nextIncoming = S.t + 6; note('Beginner shield ended. Neighbours can attack you now.', 'bad'); dirty(); return; }
   if (a === 'reset') { S = newGame(); for (const k in BOT) delete BOT[k]; miniCache = null; pan.init = false; save(); note('Demo restarted'); route(); return; }
 }
-function selectHit(hit) { const k = hit.dataset.hit; S.sel = k === 'th' || k === 'walls' ? { kind: k } : { kind: k, i: +hit.dataset.i }; openSheet('#vright'); sceneDirty = true; dirty(); }
+function selectHit(hit) { const k = hit.dataset.hit; S.sel = k === 'th' || k === 'walls' ? { kind: k } : { kind: k, i: +hit.dataset.i }; S.ui.min.vright = false; openSheet('#vright'); sceneDirty = true; dirty(); }
 function openSheet(sel) { $(sel).classList.remove('closed'); }
 function init() {
   S = load() || newGame();
@@ -838,7 +862,7 @@ function init() {
   });
   stageDrag($('#wstage'), (dx, dy) => { S.cam.x = Math.min(WORLD, Math.max(0, S.cam.x - dx / wcam.ts)); S.cam.y = Math.min(WORLD, Math.max(0, S.cam.y - dy / wcam.ts)); drawWorld(); drawMini(); }, e => {
     const r = $('#worldcv').getBoundingClientRect(); const x = Math.floor(S.cam.x + (e.clientX - r.left - cvW / 2) / wcam.ts), y = Math.floor(S.cam.y + (e.clientY - r.top - cvH / 2) / wcam.ts);
-    if (x < 0 || y < 0 || x >= WORLD || y >= WORLD) return; S.wsel = [x, y]; openSheet('#wright'); dirty();
+    if (x < 0 || y < 0 || x >= WORLD || y >= WORLD) return; S.wsel = [x, y]; S.ui.min.wright = false; openSheet('#wright'); dirty();
   });
   document.addEventListener('click', e => { if (e.target.id === 'minimap') { const r = e.target.getBoundingClientRect(); S.cam.x = (e.clientX - r.left) / r.width * 100; S.cam.y = (e.clientY - r.top) / r.height * 100; drawWorld(); drawMini(); } });
   addEventListener('resize', () => { layout(); });
