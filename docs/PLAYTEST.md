@@ -22,7 +22,7 @@ Everything below was fixed or added, except the daily Champion tasks (dropped on
 | 1.4 Childish name parts | Replaced. | 565 bot names, none left. |
 | 2.1 Early SEED gate | Start with 1,500 SEED. | |
 | 2.4 Farming tiny villages | Villages 3+ Town Hall levels below you: half loot, no points, no XP. Bots refill their stock half as fast (other raiders share it). | Loot about 1.25× own production for an active raider (v1 before the fix: 2.5×). |
-| 2.5 Exact enemy defense for free | A defense range until scouted or attacked. New **Scout** unit (tier 2). | Range 3,480–5,690 before, exact after scouting. |
+| 2.5 Exact enemy defense for free | Contract state is public, so hiding it would be fake: defense stays visible. Instead the new **Scout** unit (tier 2) finds weak spots: +10% attack on that village for 12 h. | Attack 7,600 → 8,360 after scouting; the bonus ends after 12 h. |
 | 2.6 Food ceiling not explained | Army page shows which limit binds (Burrow room or Food) and allows dismissing units. | |
 | 2.7 Full storage silent | Gold border with "full in …" when under 2 h; red blinking "FULL" when full. | |
 | Phone resource bar cut off | 3-column grid: all 4 resources and SEED visible. | 5 of 5 visible, no sideways scroll. |
