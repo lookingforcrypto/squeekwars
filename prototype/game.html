@@ -197,6 +197,7 @@ table.kv td.up{color:var(--green)}
 .hero .cta{flex-direction:column;align-items:flex-start}
 .netb{max-width:560px}
 .netbadge{font-family:var(--f-display);font-size:12px;letter-spacing:.08em;color:#1c1006;background:#8fd16a;border:2px solid #0b0806;padding:2px 6px;align-self:center;flex:none}
+.sqtag{display:inline-block;font-size:16px;color:#1c1006;background:linear-gradient(#ffe08a,#f2c14e);border:2px solid #0b0806;padding:0 6px;margin:2px 0 4px}
 .sqk img{width:34px;vertical-align:middle;margin-right:6px}
 .pts{display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center}
 .report{padding:10px;margin-bottom:10px}
@@ -342,7 +343,7 @@ table.kv td.up{color:var(--green)}
   <section class="hero">
     <div class="in">
       <h1>Build a hamster village. <span>Grow with a real wheel.</span></h1>
-      <p>Squeek Wars is a strategy game on Squeekchain. Every wallet can found one village, and Squeektoshi's nightly runs pay SEED and boost production for everyone. Holding Squeeks adds a champion and faster building.</p>
+      <p>Squeek Wars is a strategy game on Squeekchain. Every wallet can found one village, and Squeektoshi's nightly runs pay SEED and boost production for everyone. Every village has a champion; holding a Squeek makes it a little stronger and your building faster.</p>
       <div class="cta">
         <div class="netpick">
           <button class="net on" data-act="net-test" type="button"><b>Testnet</b><span>Practice season on Sepolia · play now</span></button>
@@ -360,7 +361,7 @@ table.kv td.up{color:var(--green)}
       <div class="step px"><img src="assets/sprites/town_hall_3.webp" alt="Town Hall"><h3>Build</h3><p>Town Hall, Walls, 8 production sites and 12 plots for Barracks, Academy, Storehouses, Vaults and more.</p></div>
       <div class="step px"><img src="assets/sprites/wheelhouse_3.webp" alt="Wheelhouse"><h3>Grow with the wheel</h3><p>Every night Squeektoshi runs. His laps pay SEED to every village and boost Wood, Food, Stone and Iron output.</p></div>
       <div class="step px"><img src="assets/sprites/unit_berserker.webp" alt="Berserker"><h3>Fight</h3><p>Train seven unit types, scout and raid on a 100 × 100 world map. Win only with twice the defender's power.</p></div>
-      <div class="step px"><img src="assets/sprites/champion_3.webp" alt="Champion"><h3>Bring your Squeeks</h3><p>Holding Squeeks makes construction faster after good runs, and one of them becomes your champion, levelling up to 30. Its level stays with the Squeek.</p></div>
+      <div class="step px"><img src="assets/sprites/champion_3.webp" alt="Champion"><h3>Lead with a champion</h3><p>Every village has a champion that levels up to 30 from battles and the hamster's runs. Hold a Squeek and it becomes a Squeek champion: +10% XP and stats, and Squeeks speed up building.</p></div>
     </div>
   </section>
   <section class="sec" id="wheel">
@@ -387,7 +388,7 @@ table.kv td.up{color:var(--green)}
     <p class="lead">The game rules are enforced by the contracts. The fair-play rules are ours: villages that break them can be hidden from the site's leaderboards and season rewards.</p>
     <div class="rules">
       <div class="px box"><h3>How the game works</h3><ol>
-        <li><b>One village per wallet, open to everyone.</b> Production, SEED and the wheel bonus are the same with or without a Squeek. Holding Squeeks gives one champion and faster construction after good runs (up to −30%, each extra Squeek adding less).</li>
+        <li><b>One village per wallet, open to everyone.</b> Production, SEED and the wheel bonus are the same with or without a Squeek. Every village has a champion. Holding a Squeek gives it +10% XP and stats, and Squeeks speed up construction after good runs (up to −30%, each extra Squeek adding less).</li>
         <li><b>Raids take resources only:</b> Wood, Food, Stone and Iron. SEED, NFTs and buildings are never taken.</li>
         <li><b>You win only with twice the defense.</b> Then every defender falls and you can loot; otherwise both sides lose troops and nothing is taken.</li>
         <li><b>New villages get a 7-day shield.</b> They cannot attack or be attacked.</li>
@@ -408,7 +409,7 @@ table.kv td.up{color:var(--green)}
     <h2>FAQ</h2>
     <div class="faq">
       <div class="px"><b>Where does it run?</b><p>Season 1 runs on the Sepolia testnet, next to Squeekchain's own contracts.</p></div>
-      <div class="px"><b>Do I need a Squeek?</b><p>No. Every wallet plays one village with the same production and SEED. Squeeks add one champion and faster building; more Squeeks help less and less.</p></div>
+      <div class="px"><b>Do I need a Squeek?</b><p>No. Every wallet plays one village with the same production and SEED. A Squeek makes your champion 10% stronger and faster to level, and Squeeks speed up building; more Squeeks help less and less.</p></div>
       <div class="px"><b>Testnet or mainnet?</b><p>The game runs on the Sepolia testnet now as a practice season. Mainnet Season 1 opens after the official Squeek mint, and testnet progress does not carry over.</p></div>
       <div class="px"><b>Can someone take my Squeek?</b><p>No. Raids only take Wood, Food, Stone and Iron. SEED, NFTs and buildings are never taken.</p></div>
       <div class="px"><b>Do I need to be online to defend?</b><p>No. Battles resolve on arrival with the troops and Walls you have at home.</p></div>

@@ -67,7 +67,8 @@ UNAMES = {'piyade': 'Kabuk Kırıcı', 'akinci': 'Yanak Akıncısı', 'kalkan': 
 UPKEEP_FOOD = 0.5             # v2: Food per upkeep point per hour
 
 # kahraman
-HERO_BASE, HERO_PER_POINT = 50, 25          # v4: modest champion, one per wallet that holds a Squeek
+HERO_BASE, HERO_PER_POINT = 50, 25          # v4: modest champion; v5: every village has one
+HERO_SQUEEK_BOOST = 1.10      # v5: a wallet holding a Squeek: champion XP and stats x 1.1
 HERO_PCT = 0.005              # attack/defense per point; 10% at 20 points
 HERO_CARRY = 0.01             # carry per point, max 20%
 HERO_CAP = 0.10

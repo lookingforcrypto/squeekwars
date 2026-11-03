@@ -1,4 +1,4 @@
-# Squeek Wars · Buildings and levels (draft v4)
+# Squeek Wars · Buildings and levels (draft v5)
 
 Costs are the sum of the 4 resources (Wood, Food, Stone, Iron); the per-resource split is in `sim/params.py`. Times are before the Town Hall speed bonus. Sprites change every 2 levels (10-level buildings) or every 4 levels (20-level buildings): cardboard → wood → plaster & timber → stone → marble & gold.
 
@@ -240,7 +240,7 @@ No trading between players. The Market only converts your own resources: give 10
 
 For buildings and production sites, fixed when the order is placed. Scaled down after a weak night (full effect from 11,000 laps). Research and training are not affected.
 
-## Champion (one per wallet that holds a Squeek)
+## Champion (one per village)
 
 | Champion level | Look | Total XP needed |
 |---|---|---|
@@ -249,4 +249,4 @@ For buildings and production sites, fixed when the order is placed. Scaled down 
 | 20–29 | steel armor, blue cape | 36,100–78,400 |
 | 30 | golden armor, crown | 84,100 |
 
-4 points per level: Might 50 + 25 per point, Attack and Defense +0.5% per point (max 10%), Carry +1% per point (max 20%). XP comes from battles (killed enemy cost ÷ 20) and from the hamster's runs (~110 per day). The champion never dies; after a lost battle it is injured for 12 hours. One champion per wallet that holds a Squeek, whatever the number of Squeeks; the level belongs to that Squeek.
+4 points per level: Might 50 + 25 per point, Attack and Defense +0.5% per point (max 10%), Carry +1% per point (max 20%). XP comes from battles (killed enemy cost ÷ 20) and from the hamster's runs (~110 per day). The champion never dies; after a lost battle it is injured for 12 hours. Every village has one. If the wallet holds a Squeek, it is a Squeek champion: +10% XP and +10% to every stat, with a golden glow.

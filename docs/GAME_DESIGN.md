@@ -1,6 +1,6 @@
-# Squeek Wars · Game design (draft v4)
+# Squeek Wars · Game design (draft v5)
 
-Squeek Wars is a browser strategy game for Squeekchain. Every wallet can found one village. Squeektoshi, the real hamster whose wheel runs drive Squeekchain, powers the economy: every village earns SEED from his settled work, and each night's run boosts production everywhere. Holding Squeeks adds two modest extras: faster construction after good runs and one champion.
+Squeek Wars is a browser strategy game for Squeekchain. Every wallet can found one village. Squeektoshi, the real hamster whose wheel runs drive Squeekchain, powers the economy: every village earns SEED from his settled work, and each night's run boosts production everywhere. Every village has a champion. Holding Squeeks adds two modest extras: a Squeek champion (+10% XP and stats) and faster construction after good runs.
 
 Numbers marked as draft come from the economy simulation in `sim/` and can still change. Per-level tables are in [BUILDINGS.md](BUILDINGS.md).
 
@@ -15,7 +15,7 @@ Numbers marked as draft come from the economy simulation in `sim/` and can still
   | Construction time, after a full night | – | −15% | −22.5% | −26% | −29% | −30% |
 
   The bonus never passes 30%, applies to buildings and production sites (not research or training) and is fixed when the order is placed.
-- **One champion per wallet that holds a Squeek,** whatever the number of Squeeks. The wallet picks which of its Squeeks is the champion; one Squeek is the champion of one village at a time, the choice can change once every 24 hours, and the champion's XP and points belong to that Squeek and go with it when it changes hands. No Squeek, no champion.
+- **Every village has a champion (v5).** If the wallet holds at least one Squeek, it is a **Squeek champion**: +10% XP and +10% to every stat, with a golden glow. One Squeek is enough; more Squeeks only speed up construction. The champion and its XP belong to the village.
 - **SEED:** 1 SEED per 10 settled wheel passes, the same for every village, with or without Squeeks. +200 for a zoomies witness, at most once a day. SEED is an in-game balance of the village, not an ERC-20: it cannot be transferred (so extra wallets cannot funnel SEED into one village). SEED spent on upgrades, research and the treasury is burned. SEED cannot be exchanged in the Market.
 - **Resources:** Wood, Food, Stone, Iron. They are in-game balances, not tokens, and cannot be sent to other players.
 - **Raids take resources only.** SEED, NFTs and buildings are never taken. The only structure that can lose levels is the Walls (Catapults).
@@ -119,8 +119,8 @@ A maxed village grows about 1,150 Food an hour, enough for about 2,300 upkeep, s
 
 ## 9. Champion
 
-- One Squeek the wallet holds, chosen by the player (see section 1). No Squeek, no champion; more Squeeks do not add champions. Level cap 30.
-- XP and points are stored per Squeek token id, so a levelled Squeek keeps its level when it is sold or moved to another wallet. A champion that is away with an army cannot be replaced until it returns.
+- Every village has one champion from the start; its XP and points belong to the village. While the wallet holds a Squeek, it is a Squeek champion: every XP gain × 1.1 and every stat × 1.1 (attack and defense cap 11%, carry 22%). Level cap 30.
+- A champion that is away with an army counts for the Squeek bonus only through the wallet's Squeeks at the moment of battle.
 - XP from battles (cost of killed enemy units ÷ 20) and from Squeektoshi's runs (about 110 XP a day, capped).
 - 4 points per level, kept modest so a champion helps but never replaces an army (v4): Might 50 + 25 per point, Attack and Defense +0.5% per point (max 10%), Carry +1% per point (max 20%). A level-10 champion with every point in Might adds 1,050 power, about 30 Spearmen.
 - Either joins an attack or stays home to defend. Never dies: after a lost battle it is injured for 12 hours; the hamster's runs speed up recovery.
@@ -142,7 +142,7 @@ A maxed village grows about 1,150 Food an hour, enough for about 2,300 upkeep, s
 - A village can be raided successfully at most 3 times a day.
 - The Vault protects a fixed amount from raids.
 - No trading between players, and clan members cannot send resources to each other. The Market only exchanges a player's own resources.
-- **One village per wallet.** Squeek extras are capped (build speed at most −30%, one champion), so many Squeeks or many wallets add little; a Squeek is the champion of one village at a time.
+- **One village per wallet.** Squeek extras are capped (build speed at most −30%, the champion bonus +10% from the first Squeek on), so many Squeeks or many wallets add little.
 - Known gap: wallets are free, so a player can still run extra villages and raid them. They gain no SEED transfers, no resource transfers and no clan sending; raids on them are limited to 3 a day and give half loot and no points once they fall 3 Town Hall levels behind.
 
 ## 12. Clans
@@ -193,8 +193,8 @@ A quest list of 14 steps leads new players through the core loop (Wheelhouse →
 Within IMD's limit of 8 contracts:
 
 1. **SeedLedger:** daily work checkpoint from SqueekCore, SEED balances per village (non-transferable), burns
-2. **Villages:** founding (one per wallet), the champion choice, Squeek build speed, production and storage, buildings and the build queue, research, Market, treasury
-3. **Army:** training, upkeep, movements, scouting, battles, loot, Walls damage, champion XP per Squeek
+2. **Villages:** founding (one per wallet), Squeek build speed, production and storage, buildings and the build queue, research, Market, treasury
+3. **Army:** training, upkeep, movements, scouting, battles, loot, Walls damage, the champion
 4. **Clans:** clans, invites, support troops, ranking counters
 
 The function-level rules are in [SPEC.md](SPEC.md). Contracts are final once deployed (no proxies). The only admin power: the Squeekchain addresses (Squeek NFT and SqueekCore) can be repointed through a public 72-hour timelock, which can be renounced.
