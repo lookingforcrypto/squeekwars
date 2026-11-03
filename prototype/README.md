@@ -23,5 +23,10 @@ Then open http://localhost:8000.
 - **Test mode (on by default):** nothing costs resources and everything is instant (building, research, training, travel). Turn either off in **Test controls** (bottom right) to play with the real costs and times. Test controls also offer production ×1000, game speed ×1 to ×3600, extra resources or SEED, ending the beginner shield and a restart.
 - **Rival:** Ironpaw (Squeek #777) at (48|71) is a neighbour with a real army to attack; its troops recover a few game hours after a battle.
 - **Panels:** every side panel has a Hide/Show button.
+- **Buildings:** Move a building to another empty plot or Demolish it (no refund). The Walls look changes with their level (cardboard, wood, palisade on stone, stone, marble).
+- **Player name:** chosen when you first enter the game, or picked at random. Neighbours have names too.
+- **Clans:** research and build a Clan Hall; at level 3 found a clan, then invite players by name, from the Clan tab or from a village on the World Map. Clan members cannot attack each other.
+- **Battles:** choose how many of each unit to send; reports list sent, lost and remaining units for both sides.
+- **Rules and reports:** the site has a Rules section and a Report form (also in the Reports tab). On claude.ai, reports are stored in the page's shared database where only the owner can read them all; elsewhere they are kept on the device.
 
 `game.html` is the same page without the document wrapper (used for the hosted preview); `app.js` holds all rules and UI.

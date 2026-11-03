@@ -70,7 +70,7 @@ table.kv td.up{color:var(--green)}
 .view.on{display:block}
 .stage{position:fixed;left:0;right:0;top:var(--barh,78px);bottom:0;overflow:hidden;background:#2a4a22;touch-action:none;cursor:grab}
 .stage.drag{cursor:grabbing}
-.scene{position:absolute;left:0;top:0;width:1920px;height:1200px;transform-origin:0 0;background:url(assets/village_bg.webp) 0 0/1920px 1200px no-repeat}
+.scene{position:absolute;left:0;top:0;width:1920px;height:1200px;transform-origin:0 0;background:url(assets/village_bg_w1.webp) 0 0/1920px 1200px no-repeat}
 .scene .spr{position:absolute;transform:translateX(-50%);pointer-events:none;image-rendering:auto}
 .scene .spr.build{opacity:.55;filter:saturate(.5)}
 .hit{position:absolute;transform:translate(-50%,-50%);border-radius:50%;cursor:pointer;background:transparent;border:0}
@@ -170,7 +170,7 @@ table.kv td.up{color:var(--green)}
 .hero .cta{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .hero .cta .btn{font-size:17px;padding:10px 18px}
 .wnote{font-size:18px;color:var(--dim);margin-top:10px;max-width:56ch}
-.sec{padding:44px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));max-width:1100px;margin:0 auto}
+.sec{scroll-margin-top:70px;padding:44px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));max-width:1100px;margin:0 auto}
 .sec h2{font-size:28px;color:var(--gold);margin:0 0 6px}
 .sec .lead{color:var(--dim);max-width:62ch;margin:0 0 18px;font-size:21px}
 .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
@@ -218,13 +218,26 @@ table.kv td.up{color:var(--green)}
   .hero::after{background:linear-gradient(180deg,#0b080600 0%,#0b080600 34%,#0b0806ee 56%,#16100b 100%)}
   #testpanel{width:auto;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));transform:none}
 }
+/* ---------- modal, forms, report tables ---------- */
+.modal{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:#000b;padding:16px}
+.modal .box{max-width:440px;width:100%}
+.modal input{width:100%;background:var(--well);border:2px solid var(--line);color:var(--ink);font:inherit;font-size:22px;padding:6px 8px;margin:6px 0 10px}
+.plusmark.tgt{color:#8fd16a;animation:blink 1s steps(2) infinite}
+.rpt{display:flex;flex-direction:column;gap:4px;font-size:18px;color:var(--dim);margin-top:10px}
+.rpt textarea{background:var(--well);border:2px solid var(--line);color:var(--ink);font:inherit;font-size:19px;padding:6px;resize:vertical;width:100%}
+.mkt input{min-width:0}
+.rtbl{margin-top:8px}
+.rtbl th:first-child{color:var(--gold)}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.rules ol{margin:0;padding-left:22px;color:var(--dim);font-size:19px;display:flex;flex-direction:column;gap:6px}
+.rules li b{color:var(--ink);font-weight:400}
 @media (prefers-reduced-motion: reduce){ *{animation:none!important;transition:none!important} }
 </style>
 
 <div id="home" class="view">
   <header class="site-h">
     <div class="logo">SQUEEK WARS</div>
-    <nav aria-label="Site"><a href="#how">How it works</a><a href="#wheel">The wheel</a><a href="#units">Units</a><a href="#faq">FAQ</a></nav>
+    <nav aria-label="Site"><a href="#how">How it works</a><a href="#wheel">The wheel</a><a href="#units">Units</a><a href="#rules">Rules</a><a href="#faq">FAQ</a><a href="#report">Report</a></nav>
     <a class="btn" href="#village" style="text-decoration:none">Play the demo</a>
   </header>
   <section class="hero">
@@ -267,6 +280,27 @@ table.kv td.up{color:var(--green)}
     <p class="lead">Attack and defense power decide every battle. There is no luck: the battle calculator shows the result before you send.</p>
     <div class="units" id="unitCards"></div>
   </section>
+  <section class="sec" id="rules">
+    <h2>Rules</h2>
+    <p class="lead">The game rules are enforced by the contracts. The fair-play rules are ours: villages that break them can be hidden from the site's leaderboards and season rewards.</p>
+    <div class="rules">
+      <div class="px box"><h3>How the game works</h3><ol>
+        <li><b>One village per Squeek NFT.</b> The village and its champion follow the NFT when it changes hands.</li>
+        <li><b>Raids take resources only:</b> Wood, Food, Stone and Iron. SEED, NFTs and buildings are never taken.</li>
+        <li><b>You win only with twice the defense.</b> Then every defender falls and you can loot; otherwise both sides lose troops and nothing is taken.</li>
+        <li><b>New villages get a 7-day shield.</b> They cannot attack or be attacked.</li>
+        <li><b>A village can be raided successfully at most 3 times a day.</b> What sits in its Vault is safe.</li>
+        <li><b>No trading between players.</b> The Market only exchanges your own resources, and SEED cannot be exchanged.</li>
+      </ol></div>
+      <div class="px box"><h3>Fair play</h3><ol>
+        <li><b>No feeder accounts.</b> Don't run extra wallets just to be raided by, or to feed, a main village.</li>
+        <li><b>No bug abuse.</b> If something gives you resources or wins it shouldn't, report it instead of using it.</li>
+        <li><b>Keep names clean.</b> No offensive, hateful or impersonating player or clan names.</li>
+        <li><b>Leave the site alone.</b> Don't attack or overload the website, the contracts' readers or other players' devices.</li>
+        <li><b>Report, don't retaliate.</b> Use the report form below for bugs and rule-breakers.</li>
+      </ol></div>
+    </div>
+  </section>
   <section class="sec" id="faq">
     <h2>FAQ</h2>
     <div class="faq">
@@ -275,6 +309,11 @@ table.kv td.up{color:var(--green)}
       <div class="px"><b>Do I need to be online to defend?</b><p>No. Battles resolve on arrival with the troops and Walls you have at home.</p></div>
       <div class="px"><b>Can I trade with other players?</b><p>No player trading. The Market only exchanges your own resources, which keeps multi-accounts from feeding a main village.</p></div>
     </div>
+  </section>
+  <section class="sec" id="report">
+    <h2>Report a problem</h2>
+    <p class="lead">Found a bug, or a player breaking the rules? Tell us here. Your player name and game day are attached.</p>
+    <div class="px box" id="reportForm"></div>
   </section>
   <div class="foot">Squeek Wars prototype · no wallet, no chain · numbers are draft v1</div>
 </div>
@@ -305,14 +344,23 @@ table.kv td.up{color:var(--green)}
   <div id="army" class="view page"></div>
   <div id="academy" class="view page"></div>
   <div id="market" class="view page"></div>
+  <div id="clan" class="view page"></div>
   <div id="champion" class="view page"></div>
   <div id="reports" class="view page"></div>
 
   <nav id="tabs" class="px" aria-label="Game">
-    <a href="#village" data-v="village">Village</a><a href="#world" data-v="world">World Map</a><a href="#army" data-v="army">Army</a><a href="#academy" data-v="academy">Academy</a><a href="#market" data-v="market">Market</a><a href="#champion" data-v="champion">Champion</a><a href="#reports" data-v="reports">Reports</a>
+    <a href="#village" data-v="village">Village</a><a href="#world" data-v="world">World Map</a><a href="#army" data-v="army">Army</a><a href="#academy" data-v="academy">Academy</a><a href="#market" data-v="market">Market</a><a href="#clan" data-v="clan">Clan</a><a href="#champion" data-v="champion">Champion</a><a href="#reports" data-v="reports">Reports</a>
   </nav>
   <button class="btn ghost sm" id="testbtn" type="button">Test controls</button>
   <div id="testpanel" class="px" hidden></div>
+  <div id="namebox" class="modal" hidden><div class="px box">
+    <h3>Choose your player name</h3>
+    <p class="muted">Other players see it on the World Map, in battle reports and in clan invites. Skip it and we pick one for you.</p>
+    <label for="nm-in" class="muted">Player name (3–16 letters, digits or _)</label>
+    <input id="nm-in" maxlength="16" autocomplete="off">
+    <div class="row" style="justify-content:flex-start"><button class="btn" data-act="nm-ok" type="button">Start playing</button><button class="btn ghost" data-act="nm-rand" type="button">Pick one for me</button></div>
+    <p class="why" id="nm-why"></p>
+  </div></div>
 </div>
 <div id="toasts" aria-live="polite"></div>
 <script src="app.js"></script>
