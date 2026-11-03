@@ -175,18 +175,19 @@ A quest list of 14 steps leads new players through the core loop (Wheelhouse →
 
 ## 15. Economy simulation
 
-600 villages over 150 days with Squeektoshi's real 7 nights (8,500–13,300 passes a night), four player types, proportional battles with the 2× rule, and the 2 + 2 build queue. Numbers are for the v2 parameters; v1 in brackets.
+600 villages over 150 days with Squeektoshi's real 7 nights (8,500–13,300 passes a night), four player types, proportional battles with the 2× rule, and the 2 + 2 build queue. Numbers are for the v8 parameters (base output 12 per site); v2 (base 8) in brackets.
 
 | Player type | Town Hall 5 | Town Hall 7 | Town Hall 8 | Town Hall 10 | Production lost to raids |
 |---|---|---|---|---|---|
-| Builder (3 logins a day) | day 13 (16) | day 29 (28) | day 41 (41) | day 93 (93) | 0.2% (1.7%) |
-| Balanced (3 logins a day) | day 12 (15) | day 29 (27) | day 45 (41) | day 100 (93) | 0% (1.6%) |
-| Raider (6 logins a day) | day 12 (12) | day 29 (29) | day 46 (42) | day 102 (102) | 24% (31%) |
-| Casual (1 login a day) | day 14 (15) | day 31 (31) | day 44 (42) | day 97 (94) | 2.6% (0%) |
+| Builder (3 logins a day) | day 14 (13) | day 29 (29) | day 45 (41) | day 100 (93) | 0.1% (0.2%) |
+| Balanced (3 logins a day) | day 14 (12) | day 29 (29) | day 45 (45) | day 100 (100) | 0% (0%) |
+| Raider (6 logins a day) | day 15 (12) | day 29 (29) | day 46 (46) | day 102 (102) | 35% (24%) |
+| Casual (1 login a day) | day 14 (14) | day 31 (31) | day 44 (44) | day 97 (97) | 14% (2.6%) |
 
-- About 1,100 SEED a day per village. Maxing the Town Hall, Wheelhouse and research needs about 129,000 SEED, so the hamster paces the top levels for everyone. That is why v2 changes the early game (Town Hall 5 three days sooner) but hardly the late game.
-- Raiders get about 14% of their income from loot (v1: 17.5%). Villages that quit lose about 9% of their output.
-- The Market, scouting, clan support and the raids-from-neighbours logic of the prototype are not part of this simulation; the prototype's own 15-day playtest checks them (see `docs/PLAYTEST.md`).
+- More output buys armies, not levels: at day 90 a typical army holds 1,139 upkeep (v2: 867), and the last 30 days see 126 battles a day (v2: 38). Town Hall milestones barely move, because about 1,100 SEED a day paces them for everyone (maxing the Town Hall, Wheelhouse and research needs about 129,000 SEED).
+- The price of a livelier map: casual players lose 14% of their output to raids (v2: 2.6%), and raiders, who mostly hit each other, 35%.
+- Raiders get about 13% of their income from loot. Villages that quit lose about 8% of their output.
+- The Market, scouting, clan support, Squeek extras and the raids-from-neighbours logic of the prototype are not part of this simulation; the prototype's own 15-day playtests check them (see `docs/PLAYTEST.md`).
 - The simulated players are simple bots; read the numbers as direction, not precise values.
 
 ## 16. Contracts (draft)
