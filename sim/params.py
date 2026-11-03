@@ -7,7 +7,7 @@ PASS_PER_BONUS = 180 * 24    # o günün koşu bonusu = geçiş / 4320  (11.000 
 WITNESS = 200                # zoomies tanıklığı (günde en fazla 1)
 
 # kaynak alanı (her türden 2): saatlik taban üretim
-FIELD_BASE, FIELD_G = 8.0, 1.4
+FIELD_BASE, FIELD_G = 12.0, 1.4             # v8: +50% (was 8): armies arrive days earlier
 FIELD_COST = {0: (30, 50, 45, 40), 1: (45, 20, 50, 45), 2: (45, 45, 20, 50), 3: (50, 45, 45, 10)}   # v2: playtest rebalance
 FIELD_CG, FIELD_T1, FIELD_TG = 1.60, 0.4, 1.4
 

@@ -42,16 +42,16 @@ Starts at level 1. If an attack wins (≥ 2× defense), every 20 surviving Catap
 
 | Level | Base output / h | With Wheelhouse at same level, normal night / h | Resources | Time |
 |---|---|---|---|---|
-| 1 | 8.0 | 10 | – | – |
-| 2 | 11.2 | 17 | 256 | 34 min |
-| 3 | 15.7 | 27 | 410 | 47 min |
-| 4 | 22.0 | 44 | 655 | 1.1 h |
-| 5 | 30.7 | 69 | 1,049 | 1.5 h |
-| 6 | 43.0 | 108 | 1,678 | 2.2 h |
-| 7 | 60.2 | 166 | 2,684 | 3.0 h |
-| 8 | 84.3 | 253 | 4,295 | 4.2 h |
-| 9 | 118.1 | 384 | 6,872 | 5.9 h |
-| 10 | 165.3 | 579 | 10,995 | 8.3 h |
+| 1 | 12.0 | 15 | – | – |
+| 2 | 16.8 | 25 | 256 | 34 min |
+| 3 | 23.5 | 41 | 410 | 47 min |
+| 4 | 32.9 | 66 | 655 | 1.1 h |
+| 5 | 46.1 | 104 | 1,049 | 1.5 h |
+| 6 | 64.5 | 161 | 1,678 | 2.2 h |
+| 7 | 90.4 | 248 | 2,684 | 3.0 h |
+| 8 | 126.5 | 379 | 4,295 | 4.2 h |
+| 9 | 177.1 | 576 | 6,872 | 5.9 h |
+| 10 | 247.9 | 868 | 10,995 | 8.3 h |
 
 All start at level 1. Output = base × (1 + wheel bonus). The daily wheel bonus comes from Squeektoshi's settled passes (11,000 passes ≈ +255%) and is capped by the Wheelhouse. If the hamster does not run, base output continues.
 

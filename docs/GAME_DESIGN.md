@@ -1,4 +1,4 @@
-# Squeek Wars · Game design (draft v7)
+# Squeek Wars · Game design (draft v8)
 
 Squeek Wars is a browser strategy game for Squeekchain. Every wallet can found one village. Squeektoshi, the real hamster whose wheel runs drive Squeekchain, powers the economy: every village earns SEED from his settled work, and each night's run boosts production everywhere. Every village has a champion. Holding Squeeks adds two modest extras: a Squeek champion (+10% XP and stats) and faster construction after good runs.
 
@@ -35,7 +35,7 @@ Numbers marked as draft come from the economy simulation in `sim/` and can still
 
 ## 3. Production
 
-- **Hourly output** = base output of the site level × (1 + wheel bonus), for every village.
+- **Hourly output** = base output of the site level × (1 + wheel bonus), for every village. Base output per site = 12 × 1.4^(level − 1): 24 per resource per hour at the start (v8: +50% from 8, after a 15-day playtest showed armies only arriving on day 11; now on day 8, with twice the raids, while Town Hall 5 still comes on day 15 because SEED paces it).
 - **Wheel bonus of the day** = Squeektoshi's settled passes ÷ 4,320 (11,000 passes ≈ +255%), capped by the Wheelhouse: +25% per level, +250% at level 10.
 - If the hamster does not run, base output continues.
 - **Food upkeep:** each upkeep point eats 0.5 Food every hour (v2; it was 1.0, which capped armies far too early).
