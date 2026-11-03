@@ -7,7 +7,7 @@ const RES = ['wood', 'food', 'stone', 'iron'];
 const RES_NAME = { wood: 'Wood', food: 'Food', stone: 'Stone', iron: 'Iron' };
 const NIGHTS = [11182, 10891, 10587, 13297, 12561, 8505, 8984];      // Squeektoshi's real nights (settled passes)
 const PASS_PER_BONUS = 4320;
-const FIELD = { base: 12, g: 1.4, cg: 1.6, t1: 0.4, tg: 1.4, cost: [[30, 50, 45, 40], [45, 20, 50, 45], [45, 45, 20, 50], [50, 45, 45, 10]] };
+const FIELD = { base: 18, g: 1.4, cg: 1.6, t1: 0.4, tg: 1.4, cost: [[30, 50, 45, 40], [45, 20, 50, 45], [45, 45, 20, 50], [50, 45, 45, 10]] };
 const FIELD_RES = [0, 0, 1, 1, 2, 2, 3, 3];
 const FIELD_NAME = ['Forest', 'Forest', 'Sunflower Farm', 'Sunflower Farm', 'Quarry', 'Quarry', 'Iron Mine', 'Iron Mine'];
 const FIELD_SPRITE = ['site_forest', 'site_forest', 'site_sunflower_farm', 'site_sunflower_farm', 'site_quarry', 'site_quarry', 'site_iron_mine', 'site_iron_mine'];
@@ -137,8 +137,9 @@ const levelOf = type => S.plots.filter(p => p && p.type === type).reduce((m, p) 
 const plotsOf = type => S.plots.filter(p => p && p.type === type);
 const researched = id => S.research.done.includes(id);
 const openPlots = () => Math.min(12, 3 + S.th);
-const storage = () => 1000 + plotsOf('storehouse').reduce((a, p) => a + (p.lvl ? 1200 * 1.22 ** (p.lvl - 1) : 0), 0);
-const protect = () => 150 + plotsOf('vault').reduce((a, p) => a + (p.lvl ? 250 * 1.22 ** (p.lvl - 1) : 0), 0);
+const STORE = { base: 1500, per: 1800 }, VAULT = { base: 300, per: 500 };      // v9: storage x1.5 and the Vault x2 with the higher output
+const storage = () => STORE.base + plotsOf('storehouse').reduce((a, p) => a + (p.lvl ? STORE.per * 1.22 ** (p.lvl - 1) : 0), 0);
+const protect = () => VAULT.base + plotsOf('vault').reduce((a, p) => a + (p.lvl ? VAULT.per * 1.22 ** (p.lvl - 1) : 0), 0);
 const popCap = () => 30 + plotsOf('burrow').reduce((a, p) => a + (p.lvl ? 20 * p.lvl * 1.12 ** (p.lvl - 1) : 0), 0);
 const awayUnits = () => {            // own troops on the move or stationed with clan members
   const a = Object.fromEntries(UK.map(k => [k, 0]));
@@ -221,8 +222,8 @@ function botState(b) {
   return S.bots[k];
 }
 const botRegen = b => 2 * fieldBase(botLvl(b)) * (b.active ? 1 : 0.5);      // other raiders share every village's stock
-const botCap = b => 1000 + 1200 * 1.22 ** (botLvl(b) - 1) * (b.active ? 1.5 : 0.6);
-const botProt = b => 150 + (b.active ? 250 * 1.22 ** (botLvl(b) - 1) : 0);
+const botCap = b => STORE.base + STORE.per * 1.22 ** (botLvl(b) - 1) * (b.active ? 1.5 : 0.6);
+const botProt = b => VAULT.base + (b.active ? VAULT.per * 1.22 ** (botLvl(b) - 1) : 0);
 function botStock(b) { const st = botState(b); const r = botRegen(b); return Math.min(botCap(b), st.s0 + r * (S.t - st.t0)); }
 const botLootable = b => 4 * Math.max(0, botStock(b) - botProt(b));
 function botTroops(b) {
@@ -838,8 +839,8 @@ function effects(kind, ref, L, to) {
   if (t === 'walls') F('Defense bonus', l => `+${4 * l}%`);
   if (t === 'field') F(`${RES_NAME[RES[FIELD_RES[ref]]]} base / h`, l => fieldBase(l).toFixed(1));
   if (t === 'wheelhouse') F('Wheel bonus cap', l => `+${25 * l}%`);
-  if (t === 'storehouse') F('Adds storage', l => l ? fmt(1200 * 1.22 ** (l - 1)) : 0);
-  if (t === 'vault') F('Protects (each)', l => l ? fmt(250 * 1.22 ** (l - 1)) : 0);
+  if (t === 'storehouse') F('Adds storage', l => l ? fmt(STORE.per * 1.22 ** (l - 1)) : 0);
+  if (t === 'vault') F('Protects (each)', l => l ? fmt(VAULT.per * 1.22 ** (l - 1)) : 0);
   if (t === 'burrow') F('Troop room', l => l ? fmt(20 * l * 1.12 ** (l - 1)) : 0);
   if (t === 'barracks') F('Training time', l => l ? `×${(0.9 ** (l - 1)).toFixed(2)}` : '–');
   if (t === 'academy') F('Research tiers open', l => { let n = 0; while (n < 5 && TIER_AT[n + 1] <= l) n++; return n; });

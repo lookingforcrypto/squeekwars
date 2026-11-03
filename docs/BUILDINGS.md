@@ -42,16 +42,16 @@ Starts at level 1. If an attack wins (≥ 2× defense), every 20 surviving Catap
 
 | Level | Base output / h | With Wheelhouse at same level, normal night / h | Resources | Time |
 |---|---|---|---|---|
-| 1 | 12.0 | 15 | – | – |
-| 2 | 16.8 | 25 | 256 | 34 min |
-| 3 | 23.5 | 41 | 410 | 47 min |
-| 4 | 32.9 | 66 | 655 | 1.1 h |
-| 5 | 46.1 | 104 | 1,049 | 1.5 h |
-| 6 | 64.5 | 161 | 1,678 | 2.2 h |
-| 7 | 90.4 | 248 | 2,684 | 3.0 h |
-| 8 | 126.5 | 379 | 4,295 | 4.2 h |
-| 9 | 177.1 | 576 | 6,872 | 5.9 h |
-| 10 | 247.9 | 868 | 10,995 | 8.3 h |
+| 1 | 18.0 | 22 | – | – |
+| 2 | 25.2 | 38 | 256 | 34 min |
+| 3 | 35.3 | 62 | 410 | 47 min |
+| 4 | 49.4 | 99 | 655 | 1.1 h |
+| 5 | 69.1 | 156 | 1,049 | 1.5 h |
+| 6 | 96.8 | 242 | 1,678 | 2.2 h |
+| 7 | 135.5 | 373 | 2,684 | 3.0 h |
+| 8 | 189.7 | 569 | 4,295 | 4.2 h |
+| 9 | 265.6 | 863 | 6,872 | 5.9 h |
+| 10 | 371.9 | 1,302 | 10,995 | 8.3 h |
 
 All start at level 1. Output = base × (1 + wheel bonus). The daily wheel bonus comes from Squeektoshi's settled passes (11,000 passes ≈ +255%) and is capped by the Wheelhouse. If the hamster does not run, base output continues.
 
@@ -74,55 +74,55 @@ All start at level 1. Output = base × (1 + wheel bonus). The daily wheel bonus 
 
 | Level | Added capacity (per resource) | Resources | Time | Look |
 |---|---|---|---|---|
-| 1 | 1,200 | 400 | 27 min | cardboard |
-| 2 | 1,464 | 512 | 32 min | cardboard |
-| 3 | 1,786 | 655 | 39 min | cardboard |
-| 4 | 2,179 | 839 | 47 min | cardboard |
-| 5 | 2,658 | 1,074 | 56 min | wood |
-| 6 | 3,243 | 1,374 | 1.1 h | wood |
-| 7 | 3,957 | 1,759 | 1.3 h | wood |
-| 8 | 4,827 | 2,252 | 1.6 h | wood |
-| 9 | 5,889 | 2,882 | 1.9 h | plaster & timber |
-| 10 | 7,185 | 3,689 | 2.3 h | plaster & timber |
-| 11 | 8,766 | 4,722 | 2.8 h | plaster & timber |
-| 12 | 10,694 | 6,045 | 3.3 h | plaster & timber |
-| 13 | 13,047 | 7,737 | 4.0 h | stone |
-| 14 | 15,917 | 9,904 | 4.8 h | stone |
-| 15 | 19,419 | 12,677 | 5.8 h | stone |
-| 16 | 23,691 | 16,226 | 6.9 h | stone |
-| 17 | 28,903 | 20,769 | 8.3 h | marble & gold |
-| 18 | 35,261 | 26,585 | 10.0 h | marble & gold |
-| 19 | 43,019 | 34,028 | 12 h | marble & gold |
-| 20 | 52,483 | 43,556 | 14 h | marble & gold |
+| 1 | 1,800 | 400 | 27 min | cardboard |
+| 2 | 2,196 | 512 | 32 min | cardboard |
+| 3 | 2,679 | 655 | 39 min | cardboard |
+| 4 | 3,269 | 839 | 47 min | cardboard |
+| 5 | 3,988 | 1,074 | 56 min | wood |
+| 6 | 4,865 | 1,374 | 1.1 h | wood |
+| 7 | 5,935 | 1,759 | 1.3 h | wood |
+| 8 | 7,241 | 2,252 | 1.6 h | wood |
+| 9 | 8,834 | 2,882 | 1.9 h | plaster & timber |
+| 10 | 10,777 | 3,689 | 2.3 h | plaster & timber |
+| 11 | 13,148 | 4,722 | 2.8 h | plaster & timber |
+| 12 | 16,041 | 6,045 | 3.3 h | plaster & timber |
+| 13 | 19,570 | 7,737 | 4.0 h | stone |
+| 14 | 23,875 | 9,904 | 4.8 h | stone |
+| 15 | 29,128 | 12,677 | 5.8 h | stone |
+| 16 | 35,536 | 16,226 | 6.9 h | stone |
+| 17 | 43,354 | 20,769 | 8.3 h | marble & gold |
+| 18 | 52,892 | 26,585 | 10.0 h | marble & gold |
+| 19 | 64,528 | 34,028 | 12 h | marble & gold |
+| 20 | 78,724 | 43,556 | 14 h | marble & gold |
 
-Without a Storehouse the village holds 1,000 of each resource. Output above capacity is lost.
+Without a Storehouse the village holds 1,500 of each resource. Output above capacity is lost.
 
 ## Vault (several allowed, Academy tier 1, 20 levels)
 
 | Level | Protected amount (per resource) | Resources | Time | Look |
 |---|---|---|---|---|
-| 1 | 250 | 260 | 27 min | cardboard |
-| 2 | 305 | 333 | 32 min | cardboard |
-| 3 | 372 | 426 | 39 min | cardboard |
-| 4 | 454 | 545 | 47 min | cardboard |
-| 5 | 554 | 698 | 56 min | wood |
-| 6 | 676 | 893 | 1.1 h | wood |
-| 7 | 824 | 1,143 | 1.3 h | wood |
-| 8 | 1,006 | 1,464 | 1.6 h | wood |
-| 9 | 1,227 | 1,873 | 1.9 h | plaster & timber |
-| 10 | 1,497 | 2,398 | 2.3 h | plaster & timber |
-| 11 | 1,826 | 3,070 | 2.8 h | plaster & timber |
-| 12 | 2,228 | 3,929 | 3.3 h | plaster & timber |
-| 13 | 2,718 | 5,029 | 4.0 h | stone |
-| 14 | 3,316 | 6,437 | 4.8 h | stone |
-| 15 | 4,046 | 8,240 | 5.8 h | stone |
-| 16 | 4,936 | 10,547 | 6.9 h | stone |
-| 17 | 6,021 | 13,500 | 8.3 h | marble & gold |
-| 18 | 7,346 | 17,280 | 10.0 h | marble & gold |
-| 19 | 8,962 | 22,118 | 12 h | marble & gold |
-| 20 | 10,934 | 28,311 | 14 h | marble & gold |
+| 1 | 500 | 260 | 27 min | cardboard |
+| 2 | 610 | 333 | 32 min | cardboard |
+| 3 | 744 | 426 | 39 min | cardboard |
+| 4 | 908 | 545 | 47 min | cardboard |
+| 5 | 1,108 | 698 | 56 min | wood |
+| 6 | 1,351 | 893 | 1.1 h | wood |
+| 7 | 1,649 | 1,143 | 1.3 h | wood |
+| 8 | 2,011 | 1,464 | 1.6 h | wood |
+| 9 | 2,454 | 1,873 | 1.9 h | plaster & timber |
+| 10 | 2,994 | 2,398 | 2.3 h | plaster & timber |
+| 11 | 3,652 | 3,070 | 2.8 h | plaster & timber |
+| 12 | 4,456 | 3,929 | 3.3 h | plaster & timber |
+| 13 | 5,436 | 5,029 | 4.0 h | stone |
+| 14 | 6,632 | 6,437 | 4.8 h | stone |
+| 15 | 8,091 | 8,240 | 5.8 h | stone |
+| 16 | 9,871 | 10,547 | 6.9 h | stone |
+| 17 | 12,043 | 13,500 | 8.3 h | marble & gold |
+| 18 | 14,692 | 17,280 | 10.0 h | marble & gold |
+| 19 | 17,924 | 22,118 | 12 h | marble & gold |
+| 20 | 21,868 | 28,311 | 14 h | marble & gold |
 
-Even without a Vault, 150 of each resource is protected. Protected amounts cannot be raided.
+Even without a Vault, 300 of each resource is protected. Protected amounts cannot be raided.
 
 ## Burrow (several allowed, unlocked)
 

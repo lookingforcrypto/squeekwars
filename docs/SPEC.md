@@ -1,4 +1,4 @@
-# Squeek Wars · Contract specification (draft v8)
+# Squeek Wars · Contract specification (draft v9)
 
 The rules the contracts enforce, written for the IMD build. [GAME_DESIGN.md](GAME_DESIGN.md) explains the game; [BUILDINGS.md](BUILDINGS.md) lists every level; `sim/params.py` holds every constant; `prototype/app.js` is a working reference implementation. Where they differ, this file wins.
 
@@ -57,10 +57,10 @@ Constructors take only static values, `$owner` and `$contract:EarlierName`, and 
 
 Before any action on a village, the contract settles it from `lastSettled` to now, in time order, through each finished build order and each day boundary in between:
 
-- Output per site = `12 × 1.4^(L−1) × (1 + bonus)`; two sites per resource (forests Wood, farms Food, quarries Stone, mines Iron).
+- Output per site = `18 × 1.4^(L−1) × (1 + bonus)`; two sites per resource (forests Wood, farms Food, quarries Stone, mines Iron).
 - **bonus** for day d = `min(dayWork(d) / 4,320, 0.25 × Wheelhouse level)`, for every village.
 - Food also pays upkeep: `0.5 × Σ units × room` per hour, own units at home or away. If Food would go below 0, it stops at 0 and the units at home shrink by the share that could not be fed.
-- Each resource is capped at storage: `1,000 + Σ Storehouses 1,200 × 1.22^(L−1)`. Output above the cap is lost.
+- Each resource is capped at storage: `1,500 + Σ Storehouses 1,800 × 1.22^(L−1)`. Output above the cap is lost.
 - Settlement of more than 30 days at once uses each day's bonus for the first 30 days and base output after.
 
 ### Buildings and the build queue
@@ -138,7 +138,7 @@ Before any action on a village, the contract settles it from `lastSettled` to no
 - **Defense** `D = (Σ defense of units at home and support × (1 + 0.02 × Forge) + Might if the champion is home and not injured) × (1 + champion defense bonus) × (1 + 0.04 × Walls) + 40 × Town Hall`.
 - **Losses:** the attacker loses `min(1, 0.5 × D / A)` of each unit, the defender (and its support) `min(1, 0.5 × A / D)`. Field Medicine returns 10% of each side's fallen units.
 - **Win** only if `A ≥ 2 × D`: every defender falls, and
-  - **loot** = survivors' carry × (1 + Logistics + champion carry bonus), taken evenly from the 4 resources above the Vault's protected amount (`150 + Σ Vaults 250 × 1.22^(L−1)` each);
+  - **loot** = survivors' carry × (1 + Logistics + champion carry bonus), taken evenly from the 4 resources above the Vault's protected amount (`300 + Σ Vaults 500 × 1.22^(L−1)` each);
   - every 20 surviving Catapults lower the Walls by 1 level (max 2 per attack); lowered Walls come back 1 level per 12 h.
 - **Pick on someone your size:** if the target's Town Hall is 3 or more levels below the attacker's, loot is halved and there are no ranking points and no champion XP.
 - **Champion:** XP = resource value of the enemy units it helped kill ÷ 20. If its side loses a bigger share than the enemy, it is injured for 12 h (no Might, no bonuses). It never dies.
