@@ -67,6 +67,9 @@ const NAME_A = ['Iron', 'Amber', 'Grey', 'Silent', 'Swift', 'Golden', 'Dusk', 'S
 const NAME_B = ['paw', 'crest', 'burrow', 'tail', 'seed', 'runner', 'claw', 'fang', 'wheel', 'mill', 'ridge', 'grove', 'barrow', 'spark', 'hold', 'thorn'];
 const cap1 = s => s[0].toUpperCase() + s.slice(1);
 function nameFrom(r1, r2, r3) { return NAME_A[Math.floor(r1 * NAME_A.length)] + cap1(NAME_B[Math.floor(r2 * NAME_B.length)]) + (r3 < 0.6 ? Math.floor(r3 * 150) + 2 : ''); }
+const shortAddr = a => a ? `${a.slice(0, 6)}…${a.slice(-4)}` : '';      // 0x1a2b…9f3c
+const addrOf = (x, y) => '0x' + Array.from({ length: 5 }, (_, k) => Math.floor(hash(x, y, 90 + k) * 2 ** 32).toString(16).padStart(8, '0')).join('');
+const who = (name, addr) => `${esc(name)} <span class="addr">${shortAddr(addr)}</span>`;
 const randomName = () => nameFrom(Math.random(), Math.random(), Math.random());
 const NPC_CLAN = { tag: 'ASH', name: 'Ashen Paws' };
 const SQUEEK_ID = 4821;          // the demo wallet's first Squeek
@@ -103,7 +106,7 @@ function newGame() {
     training: null, champ: { xp: 0, pts: { might: 0, atk: 0, def: 0, carry: 0 }, inj: 0, home: true },
     moves: [], bots: {}, reports: [], log: [], nights: { 1: 11182 }, nextNight: 13297, shieldUntil: 8 + 7 * 24, nextIncoming: 8 + 7 * 24 + 20,
     seq: 1, sel: { kind: 'th' }, wsel: [...RIVAL], unread: 0, lastReal: Date.now(), cam: { x: OWN[0] + 0.5, y: OWN[1] + 0.5 },
-    test: { free: true, instant: true, prod: 1, squeeks: 3 }, ui: { min: {} }, username: null, clan: null, invites: [], localReports: [],
+    test: { free: true, instant: true, prod: 1, squeeks: 3 }, ui: { min: {} }, wallet: null, username: null, clan: null, invites: [], localReports: [],
     stats: { atk: 0, def: 0, loot: 0, wins: 0, scouts: 0, wk: {} }, intel: {}, quests: [], abroad: [], helpers: [],
     peaceUntil: 0, peaceNext: 0, boost: [0, 0, 0, 0], banner: '#f2c14e',
     // one village per wallet; the demo wallet holds three Squeeks and #4821 leads (champion XP belongs to each Squeek)
@@ -196,11 +199,11 @@ function bot(x, y) {
   const key = x + ',' + y;
   if (BOT[key] !== undefined) return BOT[key];
   let b = null;
-  if (x === RIVAL[0] && y === RIVAL[1]) b = { x, y, id: 777, holder: true, name: 'Ironpaw', rival: true, lvl0: 5, active: true, npc: false, shield: 0, sp: 60, sb: 20, walls: 4 };
+  if (x === RIVAL[0] && y === RIVAL[1]) b = { x, y, id: 777, holder: true, name: 'Ironpaw', addr: addrOf(x, y), rival: true, lvl0: 5, active: true, npc: false, shield: 0, sp: 60, sb: 20, walls: 4 };
   else if (x >= 0 && y >= 0 && x < WORLD && y < WORLD && !(x === OWN[0] && y === OWN[1]) && hash(x, y, 1) < 0.42) {
     const h = k => hash(x, y, k);
     const active = h(3) > 0.3, lvl = 1 + Math.floor(h(2) * 7);
-    b = { x, y, id: 1 + Math.floor(h(9) * 9971), holder: active && h(13) < 0.55, lvl0: lvl, active, npc: h(8) < 0.06, name: nameFrom(h(21), h(22), h(23)), shield: h(7) < 0.08 ? 24 * (1 + Math.floor(h(10) * 6)) : 0,
+    b = { x, y, id: 1 + Math.floor(h(9) * 9971), holder: active && h(13) < 0.55, lvl0: lvl, active, npc: h(8) < 0.06, name: nameFrom(h(21), h(22), h(23)), addr: addrOf(x, y), shield: h(7) < 0.08 ? 24 * (1 + Math.floor(h(10) * 6)) : 0,
       sp: Math.round(lvl * (active ? 10 : 3) * (0.5 + h(4))), sb: active && lvl >= 3 ? Math.round(lvl * 6 * h(5)) : 0, walls: active ? Math.max(1, lvl - 1 - Math.floor(h(6) * 2)) : 1 };
   }
   BOT[key] = b; return b;
@@ -512,7 +515,7 @@ function resolveScout(m) {
   const b = bot(m.to[0], m.to[1]); const key = m.to.join(',');
   const tr = botTroops(b), w = botWalls(b), stock = botStock(b), D = botDefense(b);
   S.intel[key] = { t: S.t }; addStat('scouts', 1);
-  report('s', `Scouting ${b.name} (${b.x}|${b.y})`,
+  report('s', `Scouting ${b.name} · ${shortAddr(b.addr)} (${b.x}|${b.y})`,
     [`Weak spots found: your attacks on this village get +${pct(SCOUT_BONUS)} attack for the next ${SCOUT_HOURS} h.`, `Defense ${fmt(D)} · Walls level ${w} (+${4 * w}%) · Town Hall ${botLvl(b)}.`, `About ${fmt(botLootable(b))} can be looted (stock ${fmt(stock)} of each, ${fmt(botProt(b))} of each is in the Vault).`, `${botClan(b) ? `Clan [${botClan(b).tag}]. ` : ''}Your scouts were not seen.`],
     [{ title: `Defenders · ${b.name}`, rows: [['Spearman', tr.spearman, 0, tr.spearman], ['Shieldbearer', tr.shieldbearer, 0, tr.shieldbearer]].filter(r => r[1] > 0) }], { kind: 'scout', target: m.to });
   S.moves.push({ id: S.seq++, kind: 'return', from: m.to, units: m.units, champ: false, loot: [0, 0, 0, 0], depart: S.t, arrive: S.t + m.back });
@@ -544,7 +547,7 @@ function resolveAttack(m) {
     addStat('wins', 1); addStat('loot', loot.reduce((a, x) => a + x, 0));
   }
   const tot = loot.reduce((a, x) => a + x, 0);
-  report(win ? 'w' : 'l', `Attack on ${b.name} (${b.x}|${b.y})`,
+  report(win ? 'w' : 'l', `Attack on ${b.name} · ${shortAddr(b.addr)} (${b.x}|${b.y})`,
     [`Your attack ${fmt(A)}${sb ? ` (with +${pct(sb)} from scouting)` : ''} vs defense ${fmt(D)}${win ? ' · at least 2×: defenders wiped' : A >= D ? ' · not 2×: no loot' : ''}.`,
      `You lost ${pct(fa)} of your army (${unitList(lost)}). They lost ${pct(fd)} of their defenders.${catapult}`,
      win ? `Loot: ${fmt(tot)} (${loot.map((x, i) => `${fmt(x)} ${RES_NAME[RES[i]]}`).join(', ')})${low ? '. Town Hall 3+ levels below yours: half loot and no attack points.' : ''}` : 'No loot.'],
@@ -609,7 +612,7 @@ function resolveIncoming(m) {
     for (let i = 0; i < 4; i++) { const x = Math.min(Math.max(0, S.res[i] - prot), carry / (4 - i)); S.res[i] -= x; carry -= x; loot += x; }
   }
   const nm = m.name || (atkB ? atkB.name : '');
-  report(win ? 'l' : 'w', `Defense against ${nm} (${m.from[0]}|${m.from[1]})${m.revenge ? ' · revenge' : ''}`,
+  report(win ? 'l' : 'w', `Defense against ${nm}${atkB ? ' · ' + shortAddr(atkB.addr) : ''} (${m.from[0]}|${m.from[1]})${m.revenge ? ' · revenge' : ''}`,
     [`Their attack ${fmt(A)} vs your defense ${fmt(D)}${win ? ' · they had 2×: your defenders fell' : ' · they did not have 2×'}.`,
      `You lost ${pct(fd)} of your defenders (${unitList(lost)}). They lost ${pct(fa)}.`,
      win ? `They took ${fmt(loot)} resources. The Vault kept ${fmt(protect())} of each safe.` : 'Nothing was taken.'],
@@ -641,7 +644,8 @@ function route() {
   if (v === 'reports') S.unread = 0;
   if (v === 'home' && SECT.includes(h)) document.getElementById(h)?.scrollIntoView();
   if (v !== 'home' && !S.ui.net) { $('#netbox').hidden = false; }
-  else if (v !== 'home' && !S.username) { const nb = $('#namebox'); nb.hidden = false; const i = $('#nm-in'); i.placeholder = i.placeholder || randomName(); if (innerWidth > 900) setTimeout(() => i.focus(), 50); }
+  else if (v !== 'home' && !S.wallet) { $('#walletbox').hidden = false; $('#wb-msg').textContent = window.ethereum ? '' : 'No wallet extension found in this browser. The prototype can use a demo wallet instead.'; }
+  else if (v !== 'home' && !S.username) { $('#nm-wallet').textContent = shortAddr(S.wallet); const nb = $('#namebox'); nb.hidden = false; const i = $('#nm-in'); i.placeholder = i.placeholder || randomName(); if (innerWidth > 900) setTimeout(() => i.focus(), 50); }
   sceneDirty = true; needFull = true; layout(); render(true);
 }
 
@@ -659,7 +663,7 @@ function renderBar() {
   const sb = S.test.free || S.test.instant || S.test.prod > 1 ? ` · <b class="gold">TEST:</b> ${[S.test.free && 'free', S.test.instant && 'instant', S.test.prod > 1 && `output ×${S.test.prod}`].filter(Boolean).join(', ')}` : '';
   const extra = [RES.map((r, i) => boosted(i) ? `<b class="ok">${RES_NAME[r]} +25%</b> ${dur(S.boost[i] - S.t)}` : '').filter(Boolean).join(' · '), S.t < S.peaceUntil ? `<b class="ok">Peace shield</b> ${dur(S.peaceUntil - S.t)}` : ''].filter(Boolean).join(' · ');
   setHTML($('#wheelchip'), `<span class="dot ${running ? 'run' : ''}"></span> ${running ? `Squeektoshi running · ${fmt(laps)} laps` : `Squeektoshi resting · ${fmt(lastPasses())} laps last night`} · Wheel bonus <b class="gold">+${pct(wheelBonus())}</b>${levelOf('wheelhouse') ? '' : ' (needs a Wheelhouse)'}${squeekBuild() ? ` · ${held().length} Squeek${held().length > 1 ? 's' : ''}: build −${pct(squeekBuild())}` : ''}${extra ? ' · ' + extra : ''} · Day ${day(S.t)} ${clock(S.t)} · ×${S.speed}${sb}`);
-  const lg = $('#logoHome small'); if (lg) lg.textContent = `${S.username || 'New player'} · ${held().length ? `${held().length} Squeek${held().length > 1 ? 's' : ''}` : 'no Squeek'}`;
+  const lg = $('#logoHome small'); if (lg) lg.textContent = `${S.username || 'New player'} · ${shortAddr(S.wallet)} · ${held().length ? `${held().length} Squeek${held().length > 1 ? 's' : ''}` : 'no Squeek'}`;
   const rt = $('#tabs a[data-v="reports"]'); setHTML(rt, 'Reports' + (S.unread ? `<span class="badge">${S.unread}</span>` : ''));
   // incoming attack banner
   const inc = S.moves.filter(m => m.kind === 'incoming').sort((a, b) => a.arrive - b.arrive)[0];
@@ -1047,7 +1051,7 @@ function drawMini() {
 function goTo(x, y) { S.cam = { x: x + 0.5, y: y + 0.5 }; S.wsel = [x, y]; S.ui.min.wright = false; openSheet('#wright'); drawWorld(); drawMini(); dirty(); }
 function worldLeft() {
   return `<h3>World map</h3><canvas id="minimap" class="mm" width="180" height="180"></canvas>
-  <div class="mkt goto"><label>Go to<input id="goto" maxlength="24" placeholder="x|y or a player name" autocomplete="off"></label><button class="btn sm" data-act="goto">Go</button></div>
+  <div class="mkt goto"><label>Go to<input id="goto" maxlength="24" placeholder="x|y, a name or 0x… wallet" autocomplete="off"></label><button class="btn sm" data-act="goto">Go</button></div>
   <div class="row" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap"><button class="btn sm" data-act="home">My village</button><button class="btn sm alt" data-act="rival">Rival (${RIVAL[0]}|${RIVAL[1]})</button></div>
   <h3 style="margin-top:12px">Armies</h3><div class="list">${movesHtml()}</div>
   <h3 style="margin-top:12px">Legend</h3><div class="muted" style="font-size:17px">100 × 100 tiles, one village per wallet. Drag to move, tap a tile. Plate = Town Hall level · your flag = you · blue flag = your clan · other flags = other clans · bubble = beginner shield · green i = scouting bonus active · dashed lines: gold attack, white scouts, blue support, green return, red incoming</div>`;
@@ -1059,11 +1063,11 @@ function worldRight() {
   const sel = S.wsel; let h = '<button class="btn ghost sm sheet-close" data-act="close">Close</button>';
   if (!sel) return h + `<h3>Pick a tile</h3><p class="muted">Tap a village to see what you know about it and to send troops.</p>`;
   const [x, y] = sel;
-  if (x === OWN[0] && y === OWN[1]) return h + `<h3>Your village (${x}|${y})</h3><p class="muted">${esc(S.username || '')} · ${holder() ? `${held().length} Squeek${held().length > 1 ? 's' : ''}` : 'no Squeek'} · Town Hall ${S.th} · Walls ${S.walls}<br>Defense now: ${fmt(defense())}${S.helpers.length ? ` (with clan support)` : ''}</p><a class="btn sm" href="#village" style="text-decoration:none">Open village</a>`;
+  if (x === OWN[0] && y === OWN[1]) return h + `<h3>Your village (${x}|${y})</h3><p class="muted">${who(S.username || '', S.wallet)} · ${holder() ? `${held().length} Squeek${held().length > 1 ? 's' : ''}` : 'no Squeek'} · Town Hall ${S.th} · Walls ${S.walls}<br>Defense now: ${fmt(defense())}${S.helpers.length ? ` (with clan support)` : ''}</p><a class="btn sm" href="#village" style="text-decoration:none">Open village</a>`;
   const b = bot(x, y);
   if (!b) return h + `<h3>Empty tile (${x}|${y})</h3><p class="muted">Free land. New villages are placed here as more wallets join.</p>`;
   const L = botLvl(b), d = dist(OWN, [x, y]), cl = botClan(b), key = x + ',' + y, sl = scoutLeft(b);
-  h += `<h3>${esc(b.name)} (${x}|${y})</h3><div class="vhead"><img src="${spr('town_hall_' + Math.ceil(L / 2))}" alt=""><div class="muted">${b.holder ? 'Squeek champion' : 'Champion without a Squeek'}${b.rival ? ' · <span class="bad">rival</span>' : ''}<br>Town Hall ${L} · ${d.toFixed(1)} tiles away<br>${cl ? `[${esc(cl.tag)}] ${esc(cl.name)}${cl.mine ? ' (yours)' : ''}` : 'No clan'} · ${botShielded(b) ? 'beginner shield' : b.active ? 'active' : 'inactive'}</div></div>`;
+  h += `<h3>${esc(b.name)} (${x}|${y})</h3><div class="addr big">${b.addr}</div><div class="vhead"><img src="${spr('town_hall_' + Math.ceil(L / 2))}" alt=""><div class="muted">${b.holder ? 'Squeek champion' : 'Champion without a Squeek'}${b.rival ? ' · <span class="bad">rival</span>' : ''}<br>Town Hall ${L} · ${d.toFixed(1)} tiles away<br>${cl ? `[${esc(cl.tag)}] ${esc(cl.name)}${cl.mine ? ' (yours)' : ''}` : 'No clan'} · ${botShielded(b) ? 'beginner shield' : b.active ? 'active' : 'inactive'}</div></div>`;
   { const tr = botTroops(b), w = botWalls(b); h += `<table class="kv"><tr><td>Defenders</td><td>${tr.spearman} Spearmen${tr.shieldbearer ? `, ${tr.shieldbearer} Shieldbearers` : ''}</td></tr><tr><td>Walls</td><td>Lv ${w} (+${4 * w}%)${w < b.walls ? ' · rebuilding' : ''}</td></tr><tr><td>Defense</td><td>${fmt(botDefense(b))}</td></tr><tr><td>Lootable now</td><td>~${fmt(botLootable(b) * (gapLow(b) ? 0.5 : 1))}</td></tr><tr><td>Scouting bonus</td><td>${sl ? `<span class="ok">+${pct(SCOUT_BONUS)} · ${dur(sl)} left</span>` : '<span class="muted">none</span>'}</td></tr></table>`; }
   if (gapLow(b)) h += `<p class="why">Town Hall ${L} is 3+ levels below yours: raids here give half loot and no attack points.</p>`;
   if (S.clan && !cl) h += `<div class="row" style="margin:8px 0;justify-content:flex-start"><button class="btn sm alt" data-act="invite" ${S.invites.some(iv => iv.key === key) ? 'disabled' : ''}>${S.invites.some(iv => iv.key === key) ? 'Invite sent' : `Invite to [${esc(S.clan.tag)}]`}</button></div>`;
@@ -1101,10 +1105,10 @@ function updatePrediction() {
   box.innerHTML = `Attack <b>${fmt(A)}</b>${sb ? ` (+${pct(sb)} scouted)` : ''} vs defense <b>${fmt(D)}</b><br>You lose ~${pct(fa)} · they lose ${pct(fd)}<br>${win ? `<span class="ok">Win · loot ~${fmt(Math.min(botLootable(b) * (gapLow(b) ? 0.5 : 1), carryOf(surv, champ)))}</span>` : `<span class="bad">No win: under 2× their defense</span>`} · ${S.test.instant ? 'arrives instantly' : `arrives in ${dur(tt)}`}${late}`;
 }
 function tileTip(x, y) {
-  if (x === OWN[0] && y === OWN[1]) return `<b>${esc(S.username || 'You')}</b> · your village<br>Town Hall ${S.th}`;
+  if (x === OWN[0] && y === OWN[1]) return `<b>${who(S.username || 'You', S.wallet)}</b> · your village<br>Town Hall ${S.th}`;
   const b = bot(x, y); if (!b) return `(${x}|${y}) · empty`;
   const cl = botClan(b), sl = scoutLeft(b);
-  return `<b>${esc(b.name)}</b>${cl ? ` [${esc(cl.tag)}]` : ''} · (${x}|${y})<br>Town Hall ${botLvl(b)} · ${dist(OWN, [x, y]).toFixed(1)} tiles · ${botShielded(b) ? 'shield' : b.active ? 'active' : 'inactive'}<br>Defense ${fmt(botDefense(b))} · loot ~${fmt(botLootable(b))}${sl ? `<br><span class="ok">Scouted: +${pct(SCOUT_BONUS)} attack, ${dur(sl)} left</span>` : ''}`;
+  return `<b>${who(b.name, b.addr)}</b>${cl ? ` [${esc(cl.tag)}]` : ''} · (${x}|${y})<br>Town Hall ${botLvl(b)} · ${dist(OWN, [x, y]).toFixed(1)} tiles · ${botShielded(b) ? 'shield' : b.active ? 'active' : 'inactive'}<br>Defense ${fmt(botDefense(b))} · loot ~${fmt(botLootable(b))}${sl ? `<br><span class="ok">Scouted: +${pct(SCOUT_BONUS)} attack, ${dur(sl)} left</span>` : ''}`;
 }
 
 // ------------------------------------------------------------------ UI: pages
@@ -1197,8 +1201,8 @@ function clanPage() {
     if (L < 3) return h + `<div class="px box"><p class="muted">Clan Hall level ${L}. Upgrade it to level 3 to found your own clan. Invites from other players would arrive here.</p></div>`;
     return h + `<div class="px box"><h3>Found a clan</h3><div class="mkt"><label>Clan name<input id="cl-name" maxlength="24" placeholder="The Night Wheel"></label><label>Tag<input id="cl-tag" maxlength="4" placeholder="NW"></label><button class="btn" data-act="found">Found clan</button></div><p class="muted">Up to ${clanCap()} members at Clan Hall level ${L} (3 per level).</p></div>`;
   }
-  const members = [`<tr><td><b class="gold" style="font-weight:400">${esc(S.username || 'You')}</b> (founder)</td><td>(${OWN[0]}|${OWN[1]})</td><td class="r">${S.th}</td><td class="r">0.0</td><td></td></tr>`]
-    .concat(S.clan.members.map(k => { const [x, y] = k.split(',').map(Number); const b = bot(x, y); const sup = S.abroad.filter(st => st.key === k).length; return `<tr><td>${esc(b.name)}${sup ? ' <span class="ok">⛨</span>' : ''}</td><td><button class="lnk" data-act="goclan" data-k="${k}">(${x}|${y})</button></td><td class="r">${botLvl(b)}</td><td class="r">${dist(OWN, [x, y]).toFixed(1)}</td><td class="r"><button class="btn ghost sm" data-act="kick" data-k="${k}">Remove</button></td></tr>`; }));
+  const members = [`<tr><td><b class="gold" style="font-weight:400">${who(S.username || 'You', S.wallet)}</b> (founder)</td><td>(${OWN[0]}|${OWN[1]})</td><td class="r">${S.th}</td><td class="r">0.0</td><td></td></tr>`]
+    .concat(S.clan.members.map(k => { const [x, y] = k.split(',').map(Number); const b = bot(x, y); const sup = S.abroad.filter(st => st.key === k).length; return `<tr><td>${who(b.name, b.addr)}${sup ? ' <span class="ok">⛨</span>' : ''}</td><td><button class="lnk" data-act="goclan" data-k="${k}">(${x}|${y})</button></td><td class="r">${botLvl(b)}</td><td class="r">${dist(OWN, [x, y]).toFixed(1)}</td><td class="r"><button class="btn ghost sm" data-act="kick" data-k="${k}">Remove</button></td></tr>`; }));
   h += `<div class="grid2"><div class="px box"><h3>[${esc(S.clan.tag)}] ${esc(S.clan.name)} · ${S.clan.members.length + 1} / ${clanCap()}</h3><div class="tblwrap"><table class="tbl"><thead><tr><th>Player</th><th>Village</th><th>TH</th><th>Tiles</th><th></th></tr></thead><tbody>${members.join('')}</tbody></table></div>
   <p class="muted">Tap a member's village to send support. ⛨ = your troops are there.</p><p style="margin-top:12px"><button class="btn ghost sm" data-act="disband">Disband clan</button></p></div>`;
   h += `<div class="px box"><h3>Invite a player</h3><div class="mkt"><label>Player name<input id="cl-inv" maxlength="20" placeholder="e.g. ${esc((nearbyPlayers(1)[0] || {}).name || 'AmberPaw42')}"></label><button class="btn" data-act="invname">Send invite</button></div>
@@ -1229,10 +1233,10 @@ function rankRows(cat, wk) {
   const rows = [];
   for (let dx = -15; dx <= 15; dx++) for (let dy = -15; dy <= 15; dy++) {
     const b = bot(OWN[0] + dx, OWN[1] + dy); if (!b) continue; const cl = botClan(b);
-    rows.push({ name: b.name, at: [b.x, b.y], clan: cl ? cl.tag : '', v: cat === 'pts' ? botPoints(b) : botStat(b, cat, wk) });
+    rows.push({ name: b.name, addr: b.addr, at: [b.x, b.y], clan: cl ? cl.tag : '', v: cat === 'pts' ? botPoints(b) : botStat(b, cat, wk) });
   }
   const mine = cat === 'pts' ? villagePoints() : wk ? (S.stats.wk[wk] || {})[cat] || 0 : S.stats[cat];
-  rows.push({ name: S.username || 'You', at: OWN, clan: S.clan ? S.clan.tag : '', v: Math.round(mine), me: true });
+  rows.push({ name: S.username || 'You', addr: S.wallet, at: OWN, clan: S.clan ? S.clan.tag : '', v: Math.round(mine), me: true });
   return rows.sort((a, b) => b.v - a.v || (a.me ? -1 : 1));
 }
 function clanRows() {
@@ -1254,7 +1258,7 @@ function rankingPage() {
     return h + `<div class="px box"><div class="tblwrap"><table class="tbl rank"><thead><tr><th>#</th><th>Clan</th><th>Members here</th><th>Points</th></tr></thead><tbody>${rows.map((r, i) => `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td>[${esc(r.tag)}] ${esc(r.name)}</td><td class="r">${r.n}</td><td class="r">${fmt(r.pts)}</td></tr>`).join('')}</tbody></table></div>${S.clan ? '' : '<p class="muted">Found or join a clan to appear here.</p>'}</div>`;
   }
   const rows = rankRows(cat, wk), me = rows.findIndex(r => r.me), top = rows.slice(0, 20);
-  const row = (r, i) => `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td>${r.me ? `<span class="swdot" style="--c:${S.banner}"></span>` : ''}${esc(r.name)}${r.clan ? ` <span class="muted">[${esc(r.clan)}]</span>` : ''}</td><td><button class="lnk" data-act="gorank" data-x="${r.at[0]}" data-y="${r.at[1]}">(${r.at[0]}|${r.at[1]})</button></td><td class="r">${fmt(r.v)}</td></tr>`;
+  const row = (r, i) => `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td>${r.me ? `<span class="swdot" style="--c:${S.banner}"></span>` : ''}${who(r.name, r.addr)}${r.clan ? ` <span class="muted">[${esc(r.clan)}]</span>` : ''}</td><td><button class="lnk" data-act="gorank" data-x="${r.at[0]}" data-y="${r.at[1]}">(${r.at[0]}|${r.at[1]})</button></td><td class="r">${fmt(r.v)}</td></tr>`;
   h += `<div class="px box"><div class="tblwrap"><table class="tbl rank"><thead><tr><th>#</th><th>Player</th><th>Village</th><th>${{ pts: 'Points', atk: 'Attack pts', def: 'Defense pts', loot: 'Looted' }[cat]}</th></tr></thead><tbody>${top.map(row).join('')}${me >= 20 ? `<tr><td colspan="4" class="muted">…</td></tr>${row(rows[me], me)}` : ''}</tbody></table></div><p class="muted">You are #${me + 1} of ${rows.length}.</p></div>`;
   return h;
 }
@@ -1276,6 +1280,7 @@ function testPanel() {
   const tg = (act, on, label) => `<button class="btn sm ${on ? '' : 'ghost'}" data-act="${act}" aria-pressed="${on}">${on ? 'On' : 'Off'} · ${label}</button>`;
   const perm = typeof Notification === 'undefined' ? 'unsupported' : Notification.permission;
   return `<div class="row"><h3 style="margin:0">Settings</h3><button class="btn ghost sm" data-act="closetest">Close</button></div>
+  <div class="row card" style="margin-top:8px"><span>${who(S.username || '', S.wallet)}</span><button class="btn ghost sm" data-act="wb-off">Disconnect</button></div>
   <div class="list" style="margin:8px 0 12px">${tg('set-sound', S.ui.sound !== false, 'Sound')}${tg('set-night', S.ui.replay !== false, 'Show the night run')}${tg('set-notify', !!S.ui.notify && perm === 'granted', perm === 'unsupported' ? 'Notifications (not supported here)' : perm === 'denied' ? 'Notifications (blocked in browser)' : 'Notify me when something finishes')}</div>
   <h3 style="margin:0 0 6px">Prototype test controls</h3>
   <div class="list" style="margin:0 0 8px">${tg('tg-free', S.test.free, 'Free: nothing costs resources')}${tg('tg-instant', S.test.instant, 'Instant: no build, research, training or travel time')}${tg('tg-prod', S.test.prod > 1, 'Production ×1000')}</div>
@@ -1417,7 +1422,7 @@ function onClick(e) {
   if (a === 'cancelres') return cancelResearch();
   if (a === 'canceltr') return cancelTraining();
   if (a === 'dismiss') return dismiss(t.dataset.u, +$('#ds-' + t.dataset.u).value);
-  if (a === 'goto') { const v = $('#goto').value.trim(); const m = v.match(/^\(?\s*(\d{1,2})\s*[|,; ]\s*(\d{1,2})\s*\)?$/); if (m) return goTo(+m[1], +m[2]); const b = findPlayer(v); if (b) return goTo(b.x, b.y); return note(v ? `No village at "${v}". Use x|y like 48|71, or a player name.` : 'Type x|y or a player name.', 'bad'); }
+  if (a === 'goto') { const v = $('#goto').value.trim(); const m = v.match(/^\(?\s*(\d{1,2})\s*[|,; ]\s*(\d{1,2})\s*\)?$/); if (m) return goTo(+m[1], +m[2]); if (/^0x[0-9a-f]{4,}$/i.test(v)) { for (let r = 0; r <= 30; r++) for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) { if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const bb = bot(OWN[0] + dx, OWN[1] + dy); if (bb && bb.addr.startsWith(v.toLowerCase())) return goTo(bb.x, bb.y); } } const b = findPlayer(v); if (b) return goTo(b.x, b.y); return note(v ? `No village at "${v}". Use x|y like 48|71, or a player name.` : 'Type x|y or a player name.', 'bad'); }
   if (a === 'showatk') { location.hash = 'world'; return goTo(+t.dataset.x, +t.dataset.y); }
   if (a === 'gorank' || a === 'goclan') { const [x, y] = a === 'goclan' ? t.dataset.k.split(',').map(Number) : [+t.dataset.x, +t.dataset.y]; location.hash = 'world'; return goTo(x, y); }
   if (a === 'again' || a === 'strike') { const r = S.reports.find(x => x.id === +t.dataset.id); if (!r || !r.target) return; if (a === 'again') S.ui.prefill = r.sent; location.hash = 'world'; return goTo(r.target[0], r.target[1]); }
@@ -1453,6 +1458,15 @@ function onClick(e) {
   if (a === 'found') { const nm = $('#cl-name').value.trim(), tag = $('#cl-tag').value.trim().toUpperCase(); if (nm.length < 3 || nm.length > 24) return note('Clan name: 3 to 24 characters.', 'bad'); if (!/^[A-Z0-9]{2,4}$/.test(tag)) return note('Clan tag: 2 to 4 letters or digits.', 'bad'); if ([NPC_CLAN, ...CLANS].some(c => c.tag === tag)) return note(`[${tag}] is taken by another clan.`, 'bad'); S.clan = { name: nm, tag, members: [], founded: S.t }; note(`Clan [${tag}] ${nm} founded`, 'ok'); sceneDirty = true; dirty(); return; }
   if (a === 'kick') { const k = t.dataset.k; S.clan.members = S.clan.members.filter(x => x !== k); S.abroad.filter(st => st.key === k).forEach(() => recall(S.abroad.findIndex(st => st.key === k))); note('Member removed'); dirty(); return; }
   if (a === 'disband') { while (S.abroad.length) recall(0); S.clan = null; S.invites = []; S.helpers = []; note('Clan disbanded'); sceneDirty = true; dirty(); return; }
+  if (a === 'wb-connect') {
+    if (!window.ethereum) { $('#wb-msg').textContent = 'No wallet extension found in this browser. Use a demo wallet to try the prototype.'; return; }
+    $('#wb-msg').textContent = 'Waiting for your wallet…';
+    window.ethereum.request({ method: 'eth_requestAccounts' }).then(acc => { if (!acc || !acc[0]) throw new Error('no account'); S.wallet = acc[0].toLowerCase(); $('#walletbox').hidden = true; note(`Wallet ${shortAddr(S.wallet)} connected`, 'ok'); route(); })
+      .catch(e => { $('#wb-msg').textContent = `Not connected (${(e && e.message || 'refused').slice(0, 60)}).`; });
+    return;
+  }
+  if (a === 'wb-demo') { S.wallet = addrOf(OWN[0], OWN[1]); $('#walletbox').hidden = true; note(`Demo wallet ${shortAddr(S.wallet)} connected`, 'ok'); route(); return; }
+  if (a === 'wb-off') { S.wallet = null; $('#testpanel').hidden = true; note('Wallet disconnected'); route(); return; }
   if (a === 'net-test') { S.ui.net = 'testnet'; $('#netbox').hidden = true; if (view === 'home') { location.hash = 'village'; return; } route(); return; }
   if (a === 'nm-ok') { const v = $('#nm-in').value.trim(); if (!/^[A-Za-z0-9_]{3,16}$/.test(v)) { $('#nm-why').textContent = 'Use 3 to 16 letters, digits or _.'; return; } S.username = v; $('#namebox').hidden = true; scrollTo(0, 0); note(`Welcome, ${v}!`, 'ok'); dirty(); return; }
   if (a === 'nm-rand') { S.username = $('#nm-in').placeholder || randomName(); $('#namebox').hidden = true; scrollTo(0, 0); note(`Welcome, ${S.username}!`, 'ok'); dirty(); return; }
@@ -1490,7 +1504,7 @@ async function initCaps() {
 async function submitReport(sfx_) {
   const st = $('#rp-st' + sfx_), type = $('#rp-type' + sfx_).value, who = $('#rp-who' + sfx_).value.trim(), text = $('#rp-text' + sfx_).value.trim();
   if (text.length < 5) { st.textContent = 'Please describe it in a few words.'; return; }
-  const rec = { type, who: who.slice(0, 60), text: text.slice(0, 2000), player: S.username || '', squeeks: held().length, gameDay: day(S.t), view, at: new Date().toISOString(), v: 'prototype-4' };
+  const rec = { type, who: who.slice(0, 60), text: text.slice(0, 2000), player: S.username || '', wallet: S.wallet || '', squeeks: held().length, gameDay: day(S.t), view, at: new Date().toISOString(), v: 'prototype-4' };
   st.textContent = 'Sending…';
   if (DB && myId) {
     try {
@@ -1516,7 +1530,7 @@ function init() {
   const away = (Date.now() - (S.lastReal || Date.now())) / 1000 * S.speed / 3600;
   if (away > 0.01) { catching = true; advance(S.t + Math.min(MAX_OFFLINE_H, away)); catching = false; }
   $('#unitCards').innerHTML = UK.map(k => `<div class="unit px"><img src="${spr(U[k].sprite)}" alt="${U[k].name}"><b>${U[k].name}</b><span>${U[k].a} attack · ${U[k].d} defense<br>speed ${U[k].s} · carry ${U[k].c}</span></div>`).join('');
-  $('#connectBtn').addEventListener('click', () => { $('#walletNote').hidden = false; });
+  $('#connectBtn').addEventListener('click', () => { location.hash = 'village'; });
   $('#logoHome').addEventListener('click', () => { location.hash = 'home'; });
   document.addEventListener('click', onClick);
   document.addEventListener('input', e => { if (e.target.matches('#wright input')) updatePrediction(); if (e.target.matches('#mk-amt,#mk-to,#mk-from')) mkPreview(); });

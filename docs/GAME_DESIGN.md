@@ -1,4 +1,4 @@
-# Squeek Wars · Game design (draft v6)
+# Squeek Wars · Game design (draft v7)
 
 Squeek Wars is a browser strategy game for Squeekchain. Every wallet can found one village. Squeektoshi, the real hamster whose wheel runs drive Squeekchain, powers the economy: every village earns SEED from his settled work, and each night's run boosts production everywhere. Every village has a champion. Holding Squeeks adds two modest extras: a Squeek champion (+10% XP and stats) and faster construction after good runs.
 
@@ -7,6 +7,7 @@ Numbers marked as draft come from the economy simulation in `sim/` and can still
 ## 1. Core rules
 
 - **Two seasons, one game.** The game runs now on the Sepolia testnet as a practice season (**Testnet**). **Mainnet Season 1** opens after the official Squeek mint, with the same contracts deployed again on mainnet; testnet progress does not carry over. The site shows both choices side by side; Mainnet stays disabled until then.
+- **A wallet is required (v7).** Nobody enters the game without connecting a wallet; every action is a transaction the wallet signs. The player picks a name when founding (3–16 letters, digits or _, unique ignoring case, never changed). Everywhere a player appears, the name shows with the short wallet address, like `IronPaw · 0x1a2b…9f3c`.
 - **One village per wallet, open to everyone.** Any wallet can found one village; a second village needs a second wallet. Production, SEED and the wheel bonus are the same with or without a Squeek. A village appears on the world map with its founding transaction.
 - **Squeek holders build faster (v4).** Construction time × (1 − bonus) with bonus = 30% × (1 − 0.5^n) × min(1, last night's laps ÷ 11,000), where n is the number of Squeeks (ERC-721 `0xcb98349c134ab983da5bfd80527dfe2552bdb70f` on Sepolia) the wallet holds when it places the order. Each extra Squeek adds half as much as the one before:
 

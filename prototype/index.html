@@ -206,6 +206,8 @@ table.kv td.up{color:var(--green)}
 .netb{max-width:560px}
 .netbadge{font-family:var(--f-display);font-size:12px;letter-spacing:.08em;color:#1c1006;background:#8fd16a;border:2px solid #0b0806;padding:2px 6px;align-self:center;flex:none}
 .sqtag{display:inline-block;font-size:16px;color:#1c1006;background:linear-gradient(#ffe08a,#f2c14e);border:2px solid #0b0806;padding:0 6px;margin:2px 0 4px}
+.addr{font-family:var(--f-body);color:var(--mute);font-size:.85em;letter-spacing:0;white-space:nowrap}
+.addr.big{font-size:16px;margin:-6px 0 6px}
 .sqk img{width:34px;vertical-align:middle;margin-right:6px}
 .pts{display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center}
 .report{padding:10px;margin-bottom:10px}
@@ -417,6 +419,7 @@ table.kv td.up{color:var(--green)}
     <h2>FAQ</h2>
     <div class="faq">
       <div class="px"><b>Where does it run?</b><p>Season 1 runs on the Sepolia testnet, next to Squeekchain's own contracts.</p></div>
+      <div class="px"><b>Do I need a wallet?</b><p>Yes. Your village, your name and your Squeeks belong to your wallet, and every action is signed on Sepolia. Players are shown as their name with a short address, like IronPaw · 0x1a2b…9f3c.</p></div>
       <div class="px"><b>Do I need a Squeek?</b><p>No. Every wallet plays one village with the same production and SEED. A Squeek makes your champion 10% stronger and faster to level, and Squeeks speed up building; more Squeeks help less and less.</p></div>
       <div class="px"><b>Testnet or mainnet?</b><p>The game runs on the Sepolia testnet now as a practice season. Mainnet Season 1 opens after the official Squeek mint, and testnet progress does not carry over.</p></div>
       <div class="px"><b>Can someone take my Squeek?</b><p>No. Raids only take Wood, Food, Stone and Iron. SEED, NFTs and buildings are never taken.</p></div>
@@ -474,11 +477,18 @@ table.kv td.up{color:var(--green)}
   <div id="testpanel" class="px" hidden></div>
   <div id="namebox" class="modal" hidden><div class="px box">
     <h3>Choose your player name</h3>
-    <p class="muted">Other players see it on the World Map, in battle reports and in clan invites. Skip it and we pick one for you.</p>
+    <p class="muted">Your name is linked to your wallet <span class="addr" id="nm-wallet"></span> and cannot be changed later. Other players see both on the World Map, in reports, rankings and clans. Skip it and we pick one for you.</p>
     <label for="nm-in" class="muted">Player name (3–16 letters, digits or _)</label>
     <input id="nm-in" maxlength="16" autocomplete="off">
     <div class="row" style="justify-content:flex-start"><button class="btn" data-act="nm-ok" type="button">Start playing</button><button class="btn ghost" data-act="nm-rand" type="button">Pick one for me</button></div>
     <p class="why" id="nm-why"></p>
+  </div></div>
+  <div id="walletbox" class="modal" hidden><div class="px box">
+    <h3>Connect your wallet</h3>
+    <p class="muted">Squeek Wars needs a wallet: your village, your player name and your Squeeks belong to it. Other players see your name with your address, like <span class="addr">0x1a2b…9f3c</span>.</p>
+    <div class="row" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn" data-act="wb-connect" type="button">Connect wallet</button><button class="btn ghost" data-act="wb-demo" type="button">Use a demo wallet</button></div>
+    <p class="why" id="wb-msg"></p>
+    <p class="muted" style="font-size:16px">Prototype: nothing is signed or sent. In the live game your wallet signs every action on Sepolia.</p>
   </div></div>
   <div id="netbox" class="modal" hidden><div class="px box netb">
     <h3>Where do you want to play?</h3>

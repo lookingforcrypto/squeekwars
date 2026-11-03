@@ -1,4 +1,4 @@
-# Squeek Wars · Contract specification (draft v6)
+# Squeek Wars · Contract specification (draft v7)
 
 The rules the contracts enforce, written for the IMD build. [GAME_DESIGN.md](GAME_DESIGN.md) explains the game; [BUILDINGS.md](BUILDINGS.md) lists every level; `sim/params.py` holds every constant; `prototype/app.js` is a working reference implementation. Where they differ, this file wins.
 
@@ -7,6 +7,7 @@ The rules the contracts enforce, written for the IMD build. [GAME_DESIGN.md](GAM
 - **Chain:** Sepolia (11155111) for the Testnet season. Mainnet Season 1 deploys the same contracts again after the official Squeek mint, with mainnet addresses; nothing carries over. Contracts are final once deployed: no proxies, no upgrade path, no self-destruct.
 - **No money:** the contracts hold no ETH and no tokens, take no fees and pay nobody.
 - **No randomness:** every result follows from public state and the formulas below.
+- **No test or cheat functions:** the prototype's test controls (free, instant, production ×1000, game speed, extra resources or SEED, ending the shield, Squeek count) are demo-only and exist in no contract and not on the live site.
 - **Everything is public:** troops, Walls and stock of every village can be read. Scouting gives an attack bonus, not hidden information.
 
 ## 2. Outside contracts (read-only)
@@ -44,7 +45,7 @@ Constructors take only static values, `$owner` and `$contract:EarlierName`, and 
 
 ### Founding, Squeeks and the champion
 
-- `found(name)`: any wallet without a village founds one. One village per wallet, forever (a village is never deleted).
+- `found(name)`: any wallet without a village founds one. One village per wallet, forever (a village is never deleted). The name is 3–16 characters of `A–Z a–z 0–9 _`, unique ignoring case, stored with the village and never changed; the `Founded` event carries the wallet, the name and the tile. The site shows every player as name plus short address (`0x1a2b…9f3c`) and offers no play without a connected wallet.
 - Start: 750 of each resource, 1,500 SEED, Town Hall 1, Walls 1, 8 production sites at level 1, 12 empty plots, a 7-day beginner shield.
 - Tile: the n-th founded village gets tile `shuffle(n)` of the 100 × 100 grid (a fixed bijection, so consecutive villages are not neighbours). From the 10,001st village the grid grows by rings.
 - No Squeek is needed to found or to play. Production, SEED and the wheel bonus are the same for every village.
