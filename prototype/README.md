@@ -27,7 +27,7 @@ Then open http://localhost:8000.
 - **Clans:** research and build a Clan Hall; at level 3 found a clan and invite players by name, from the Clan tab or from the World Map. Send troops to defend a member and recall them later; members near you send help when you are attacked. The Clan Hall raises banners in your clan colour at levels 3, 5 and 7.
 - **Reports:** battle and scouting reports with sent / lost / left tables, filters, **Attack again** (same troops) and **Strike back**.
 - **Ranking:** villages, attackers, defenders, raiders and clans in your region, for the whole season or this week, plus last week's titles.
-- **Treasury:** in the Town Hall panel, spend SEED on a Wheel Festival (+20% output for 24 h), a Peace shield (12 h) or a banner colour.
+- **SEED:** earned every night, never sent or looted. Spend it on the Town Hall, the Wheelhouse and research, exchange it one way into resources at the Market, or in the Town Hall's treasury: a +25% boost for one resource for 24 h (500 SEED each), a Peace shield (12 h) or a banner colour.
 - **Settings** (top bar): sound, the night-run replay, browser notifications, and the **test controls**. Test mode is on by default: nothing costs resources and everything is instant. Turn either off to play with the real costs and times; production ×1000, game speed ×1 to ×3600, extra resources or SEED, ending the beginner shield, replaying the night run and a restart are there too.
 - **Rival:** Ironpaw (Squeek #777) at (48|71) is a neighbour with a real army to attack; it strikes back if you raid it.
 - **Buildings:** Move a building to another empty plot or Demolish it (no refund). The Walls look changes with their level.

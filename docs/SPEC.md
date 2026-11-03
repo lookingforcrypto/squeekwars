@@ -1,4 +1,4 @@
-# Squeek Wars · Contract specification (draft v5)
+# Squeek Wars · Contract specification (draft v6)
 
 The rules the contracts enforce, written for the IMD build. [GAME_DESIGN.md](GAME_DESIGN.md) explains the game; [BUILDINGS.md](BUILDINGS.md) lists every level; `sim/params.py` holds every constant; `prototype/app.js` is a working reference implementation. Where they differ, this file wins.
 
@@ -92,12 +92,12 @@ Before any action on a village, the contract settles it from `lastSettled` to no
 
 ### Market and treasury
 
-- `exchange(from, to, amount)`: needs a Market; gives `amount × rate / 100` with rate `25 + 5 × (L − 1)` (75 at level 10). Only the village's own resources; SEED is never exchanged.
+- `exchange(from, to, amount)`: needs a Market; gives `amount × rate / 100` with rate `25 + 5 × (L − 1)` (75 at level 10). Only the village's own resources. SEED can be the side given (at the same rate), never the side received, so no resource ever becomes SEED.
 - Treasury (SEED burned):
 
   | Item | SEED | Effect |
   |---|---|---|
-  | Wheel Festival | 2,500 | Output × 1.2 for 24 h; not while one runs |
+  | Resource boost (Wood, Food, Stone or Iron) | 500 each | That resource's output × 1.25 for 24 h; not while the same boost runs |
   | Peace shield | 4,000 | No attack can be sent at the village for 12 h; cancels attacks already on the way; once per 72 h; ends when the village attacks |
   | Banner colour | 1,000 | One of 7 colours, shown on the map and the ranking |
 
@@ -105,7 +105,7 @@ Before any action on a village, the contract settles it from `lastSettled` to no
 
 - `checkpoint()`: anyone, at most once per game day, after 04:00 UTC. `dayWork(d) = SqueekCore.cumulativeWork − cumulativeWork at the previous checkpoint`. Missed days record 0 and their work lands on the day of the next checkpoint.
 - `claim(village)`: adds `dayWork(d) / 10` SEED for every recorded day d after the village's last claimed day (bounded per call). Every village gets the same SEED, with or without Squeeks. The village's champion also gets `min(150, dayWork(d) / 100)` XP per day claimed (× 1.1 for a Squeek champion).
-- SEED is an in-game balance per village: no transfer function, no approval, no ERC-20 interface. Only the game contracts can burn it.
+- SEED is an in-game balance per village: no transfer function, no approval, no ERC-20 interface, never part of loot. Only the game contracts can burn it (costs, Market exchange, treasury).
 
 ## 7. Army
 

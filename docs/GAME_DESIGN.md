@@ -1,4 +1,4 @@
-# Squeek Wars · Game design (draft v5)
+# Squeek Wars · Game design (draft v6)
 
 Squeek Wars is a browser strategy game for Squeekchain. Every wallet can found one village. Squeektoshi, the real hamster whose wheel runs drive Squeekchain, powers the economy: every village earns SEED from his settled work, and each night's run boosts production everywhere. Every village has a champion. Holding Squeeks adds two modest extras: a Squeek champion (+10% XP and stats) and faster construction after good runs.
 
@@ -16,7 +16,7 @@ Numbers marked as draft come from the economy simulation in `sim/` and can still
 
   The bonus never passes 30%, applies to buildings and production sites (not research or training) and is fixed when the order is placed.
 - **Every village has a champion (v5).** If the wallet holds at least one Squeek, it is a **Squeek champion**: +10% XP and +10% to every stat, with a golden glow. One Squeek is enough; more Squeeks only speed up construction. The champion and its XP belong to the village.
-- **SEED:** 1 SEED per 10 settled wheel passes, the same for every village, with or without Squeeks. +200 for a zoomies witness, at most once a day. SEED is an in-game balance of the village, not an ERC-20: it cannot be transferred (so extra wallets cannot funnel SEED into one village). SEED spent on upgrades, research and the treasury is burned. SEED cannot be exchanged in the Market.
+- **SEED:** 1 SEED per 10 settled wheel passes, the same for every village, with or without Squeeks. +200 for a zoomies witness, at most once a day. SEED is an in-game balance of the village, not an ERC-20: it can never be transferred or looted (so extra wallets cannot funnel SEED into one village). It pays for the Town Hall, the Wheelhouse, research and the treasury, and can be exchanged one way into resources at the Market (v6). Spent SEED is burned.
 - **Resources:** Wood, Food, Stone, Iron. They are in-game balances, not tokens, and cannot be sent to other players.
 - **Raids take resources only.** SEED, NFTs and buildings are never taken. The only structure that can lose levels is the Walls (Catapults).
 - **No rarity caps.** Any number of villages can reach any level.
@@ -65,7 +65,7 @@ Numbers marked as draft come from the economy simulation in `sim/` and can still
 | Vault | Amount protected from raids | Academy tier 1 | several |
 | Forge | +2% attack and defense for all units per level | Academy tier 2 | 1 |
 | Clan Hall | Join (Lv1) or found (Lv3) a clan, send and receive support troops | Academy tier 2 | 1 |
-| Market | Exchange your own resources (100 → 25 at Lv1, +5 per level, 75 at Lv10) | Town Hall 2 | 1 |
+| Market | Exchange your own resources (100 → 25 at Lv1, +5 per level, 75 at Lv10); SEED can be given at the same rate, never received | Town Hall 2 | 1 |
 
 There are 9 plot buildings for 12 plots, so the last 3 plots are a strategic choice (more Storehouses, Burrows or Vaults).
 
@@ -141,7 +141,7 @@ A maxed village grows about 1,150 Food an hour, enough for about 2,300 upkeep, s
 - **Peace shield** (bought with SEED, see section 13): 12 hours without attacks, once every 3 days; it ends if you attack.
 - A village can be raided successfully at most 3 times a day.
 - The Vault protects a fixed amount from raids.
-- No trading between players, and clan members cannot send resources to each other. The Market only exchanges a player's own resources.
+- No trading between players, and clan members cannot send resources to each other. The Market only exchanges a player's own resources. SEED goes into resources one way only, so loot can never become SEED; an extra wallet's daily SEED is worth at most 275–825 resources, and raids on it stay limited as above.
 - **One village per wallet.** Squeek extras are capped (build speed at most −30%, the champion bonus +10% from the first Squeek on), so many Squeeks or many wallets add little.
 - Known gap: wallets are free, so a player can still run extra villages and raid them. They gain no SEED transfers, no resource transfers and no clan sending; raids on them are limited to 3 a day and give half loot and no points once they fall 3 Town Hall levels behind.
 
@@ -164,7 +164,7 @@ A maxed village grows about 1,150 Food an hour, enough for about 2,300 upkeep, s
 
   | Item | SEED | Effect |
   |---|---|---|
-  | Wheel Festival | 2,500 | +20% output of every resource for 24 h |
+  | Wood, Food, Stone or Iron boost | 500 each | +25% output of that resource for 24 h; one running boost per resource (v6, replaces the Wheel Festival) |
   | Peace shield | 4,000 | No attacks for 12 h, once every 3 days, ends if you attack |
   | Banner colour | 1,000 | Your flag colour on the map and in the ranking |
 

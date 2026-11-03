@@ -230,7 +230,7 @@ Clan members cannot send resources to each other (anti multi-account); they can 
 | 9 | 100 → 65 | 30,834 | 12 h | marble & gold |
 | 10 | 100 → 75 | 49,951 | 17 h | marble & gold |
 
-No trading between players. The Market only converts your own resources: give 100 of one, receive the listed amount of another. +5 per level, level 10 gets a final bonus to 75. SEED cannot be exchanged.
+No trading between players. The Market only converts your own resources: give 100 of one, receive the listed amount of another. +5 per level, level 10 gets a final bonus to 75. SEED can be given at the same rate and turns into resources, never the other way.
 
 ## Squeek build speed
 

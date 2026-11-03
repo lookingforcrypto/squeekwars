@@ -105,7 +105,7 @@ function newGame() {
     seq: 1, sel: { kind: 'th' }, wsel: [...RIVAL], unread: 0, lastReal: Date.now(), cam: { x: OWN[0] + 0.5, y: OWN[1] + 0.5 },
     test: { free: true, instant: true, prod: 1, squeeks: 3 }, ui: { min: {} }, username: null, clan: null, invites: [], localReports: [],
     stats: { atk: 0, def: 0, loot: 0, wins: 0, scouts: 0, wk: {} }, intel: {}, quests: [], abroad: [], helpers: [],
-    peaceUntil: 0, peaceNext: 0, festUntil: 0, banner: '#f2c14e',
+    peaceUntil: 0, peaceNext: 0, boost: [0, 0, 0, 0], banner: '#f2c14e',
     // one village per wallet; the demo wallet holds three Squeeks and #4821 leads (champion XP belongs to each Squeek)
     squeeks: demoSqueeks(),
   };
@@ -117,6 +117,7 @@ function load() {
     const d = newGame(); for (const k in d) if (s[k] === undefined) s[k] = d[k];      // older saves: fill new fields
     for (const k in d.stats) if (s.stats[k] === undefined) s.stats[k] = d.stats[k];
     if (!s.ui) s.ui = { min: {} };
+    if (!Array.isArray(s.boost)) s.boost = [0, 0, 0, 0];
     if (s.test.squeeks === undefined) s.test.squeeks = s.test.noSqueek ? 0 : 3;
     for (const q of demoSqueeks()) if (!s.squeeks.some(x => x.id === q.id)) s.squeeks.push(q);
     return s;
@@ -158,8 +159,9 @@ const wheelBonus = () => Math.min(wheelCap(), lastPasses() / PASS_PER_BONUS);
 // Squeek holders build faster after a good run; each extra Squeek adds half as much as the one before (max 30%)
 const squeekBuildFor = (n, laps) => n > 0 ? 0.3 * (1 - 0.5 ** n) * Math.min(1, laps / 11000) : 0;
 const squeekBuild = () => squeekBuildFor(held().length, lastPasses());
-const festival = () => S.t < S.festUntil ? 0.2 : 0;
-const rate = r => baseRate(r) * (1 + wheelBonus()) * (1 + festival()) * (S.test.prod || 1);
+const BOOST = 0.25, BOOST_SEED = 500, BOOST_H = 24;     // SEED buys +25% of one resource for 24 h
+const boosted = r => S.t < (S.boost || [])[r];
+const rate = r => baseRate(r) * (1 + wheelBonus()) * (1 + (boosted(r) ? BOOST : 0)) * (S.test.prod || 1);
 const netRate = r => rate(r) - (r === 1 ? foodUse() : 0);
 const forge = () => 0.02 * levelOf('forge');
 const thSpeed = () => (1 - 0.03 * (S.th - 1)) * (1 - squeekBuild());
@@ -429,13 +431,15 @@ function doTrain(k, n) {
   if (S.test.instant) { S.units[k] += n; note(`${n} ${U[k].name}${n > 1 ? 's' : ''} trained`, 'ok'); dirty(); return; }
   S.training = { unit: k, n, start: S.t, end: S.t + h, paid: S.test.free ? null : cost }; note(`Training ${n} ${U[k].name}${n > 1 ? 's' : ''}`); dirty();
 }
-function doExchange(from, to, amt) {
+function doExchange(from, to, amt) {          // from 0-3 = a resource, 4 = SEED (one way: SEED never comes back out)
   const L = levelOf('market'); if (!L) return note('Build a Market first.', 'bad');
-  amt = Math.floor(amt); if (from === to || amt <= 0) return note('Choose two different resources and an amount.', 'bad');
-  if (S.res[from] < amt) return note(`Not enough ${RES_NAME[RES[from]]}.`, 'bad');
+  amt = Math.floor(amt); if (from === to || amt <= 0 || to > 3) return note('Choose what to give, a resource to get and an amount.', 'bad');
+  const seed = from === 4, name = seed ? 'SEED' : RES_NAME[RES[from]];
+  if ((seed ? S.seed : S.res[from]) < amt) return note(`Not enough ${name}.`, 'bad');
   const get = amt * MARKET(L) / 100; const room = storage() - S.res[to];
   if (get > room) return note(`Your Storehouse has room for only ${fmt(room)} more ${RES_NAME[RES[to]]}.`, 'bad');
-  S.res[from] -= amt; S.res[to] += get; note(`Exchanged ${fmt(amt)} ${RES_NAME[RES[from]]} for ${fmt(get)} ${RES_NAME[RES[to]]}`, 'ok'); dirty();
+  if (seed) S.seed -= amt; else S.res[from] -= amt;
+  S.res[to] += get; note(`Exchanged ${fmt(amt)} ${name} for ${fmt(get)} ${RES_NAME[RES[to]]}`, 'ok'); dirty();
 }
 function doPoint(k) { if (hfree() <= 0) return; if (k !== 'might' && S.champ.pts[k] >= 20) return note('That bonus is already at its cap.', 'bad'); S.champ.pts[k]++; dirty(); }
 const week = t => Math.floor((day(t) - 1) / 7) + 1;
@@ -653,7 +657,7 @@ function renderBar() {
   const h = ((S.t % 24) + 24) % 24, running = h < 4;
   const laps = running ? Math.round(S.nextNight * h / 4) : lastPasses();
   const sb = S.test.free || S.test.instant || S.test.prod > 1 ? ` · <b class="gold">TEST:</b> ${[S.test.free && 'free', S.test.instant && 'instant', S.test.prod > 1 && `output ×${S.test.prod}`].filter(Boolean).join(', ')}` : '';
-  const extra = [festival() ? `<b class="ok">Festival +20%</b> ${dur(S.festUntil - S.t)}` : '', S.t < S.peaceUntil ? `<b class="ok">Peace shield</b> ${dur(S.peaceUntil - S.t)}` : ''].filter(Boolean).join(' · ');
+  const extra = [RES.map((r, i) => boosted(i) ? `<b class="ok">${RES_NAME[r]} +25%</b> ${dur(S.boost[i] - S.t)}` : '').filter(Boolean).join(' · '), S.t < S.peaceUntil ? `<b class="ok">Peace shield</b> ${dur(S.peaceUntil - S.t)}` : ''].filter(Boolean).join(' · ');
   setHTML($('#wheelchip'), `<span class="dot ${running ? 'run' : ''}"></span> ${running ? `Squeektoshi running · ${fmt(laps)} laps` : `Squeektoshi resting · ${fmt(lastPasses())} laps last night`} · Wheel bonus <b class="gold">+${pct(wheelBonus())}</b>${levelOf('wheelhouse') ? '' : ' (needs a Wheelhouse)'}${squeekBuild() ? ` · ${held().length} Squeek${held().length > 1 ? 's' : ''}: build −${pct(squeekBuild())}` : ''}${extra ? ' · ' + extra : ''} · Day ${day(S.t)} ${clock(S.t)} · ×${S.speed}${sb}`);
   const lg = $('#logoHome small'); if (lg) lg.textContent = `${S.username || 'New player'} · ${held().length ? `${held().length} Squeek${held().length > 1 ? 's' : ''}` : 'no Squeek'}`;
   const rt = $('#tabs a[data-v="reports"]'); setHTML(rt, 'Reports' + (S.unread ? `<span class="badge">${S.unread}</span>` : ''));
@@ -849,7 +853,7 @@ function looks(kind, ref, L, to) {
   return `<div class="thumbs"><img src="${spr(bb.sprite + '_' + a)}" alt="">${b !== a ? `<span class="arrow">▶</span><img src="${spr(bb.sprite + '_' + b)}" alt="">` : ''}</div>`;
 }
 const SEED_SHOP = [
-  { id: 'festival', name: 'Wheel Festival', d: '+20% output of every resource for 24 h', seed: 2500 },
+  ...RES.map((r, i) => ({ id: 'boost' + i, r: i, name: `${RES_NAME[r]} boost`, d: `+25% ${RES_NAME[r]} output for 24 h`, seed: BOOST_SEED })),
   { id: 'peace', name: 'Peace shield', d: 'No one attacks you for 12 h. Ends if you attack. Once every 3 days.', seed: 4000 },
   { id: 'banner', name: 'Village banner colour', d: 'Your flag colour on the World Map and in the rankings', seed: 1000 },
 ];
@@ -858,7 +862,7 @@ function treasuryHtml() {
   let h = `<h3 style="margin-top:14px">Treasury · spend SEED</h3><div class="opts">`;
   for (const it of SEED_SHOP) {
     let why = !S.test.free && S.seed < it.seed ? `Needs ${fmt(it.seed - S.seed)} more SEED.` : '';
-    if (it.id === 'festival' && festival()) why = `Running: ${dur(S.festUntil - S.t)} left.`;
+    if (it.r !== undefined && boosted(it.r)) why = `Running: ${dur(S.boost[it.r] - S.t)} left.`;
     if (it.id === 'peace' && S.t < S.peaceUntil) why = `Active: ${dur(S.peaceUntil - S.t)} left.`;
     else if (it.id === 'peace' && S.t < S.peaceNext) why = `Available again in ${dur(S.peaceNext - S.t)}.`;
     h += `<div class="opt shop"><div><div class="row"><span class="n">${it.name}</span>${it.id === 'banner' ? '' : `<button class="btn sm" data-act="shop" data-k="${it.id}" ${why ? 'disabled' : ''}>Buy</button>`}</div><div class="d">${it.d}</div><div class="c">${icon('seed')} ${fmt(it.seed)} SEED</div>${it.id === 'banner' ? `<div class="swatches">${BANNERS.map(c => `<button class="sw ${S.banner === c ? 'on' : ''}" style="--c:${c}" data-act="banner" data-c="${c}" aria-label="Banner colour ${c}" ${S.banner === c ? 'disabled' : ''}></button>`).join('')}</div>` : ''}${why && it.id !== 'banner' ? `<div class="why">${why}</div>` : ''}</div></div>`;
@@ -1145,10 +1149,10 @@ function academyPage() {
 }
 function marketPage() {
   const L = levelOf('market');
-  let h = `<h2>Market</h2><p class="sub">No trading between players. The Market exchanges your own resources: give 100 of one, get 25 to 75 of another, depending on its level${L ? ` (yours gives ${MARKET(L)})` : ''}.</p>`;
+  let h = `<h2>Market</h2><p class="sub">No trading between players. The Market exchanges your own resources: give 100 of one, get 25 to 75 of another, depending on its level${L ? ` (yours gives ${MARKET(L)})` : ''}. SEED can be given at the same rate, but no resource ever turns back into SEED.</p>`;
   if (!L) return h + `<div class="px box"><p class="muted">${S.th >= 2 ? 'Build a Market on a plot in your village.' : 'The Market opens at Town Hall level 2: upgrade the Town Hall, then build it on a plot.'}</p></div>`;
   h += `<div class="px box"><h3>Exchange · Market level ${L} · 100 → ${MARKET(L)}</h3><div class="mkt">
-    <label>Give<select id="mk-from">${RES.map((r, i) => `<option value="${i}">${RES_NAME[r]} (${fmt(S.res[i])})</option>`).join('')}</select></label>
+    <label>Give<select id="mk-from">${RES.map((r, i) => `<option value="${i}">${RES_NAME[r]} (${fmt(S.res[i])})</option>`).join('')}<option value="4">SEED (${fmt(S.seed)}), one way</option></select></label>
     <label>Get<select id="mk-to">${RES.map((r, i) => `<option value="${i}" ${i === 3 ? 'selected' : ''}>${RES_NAME[r]}</option>`).join('')}</select></label>
     <label>Amount<input type="number" id="mk-amt" min="0" step="100" value="1000"></label>
     <button class="btn" data-act="exchange">Exchange</button></div><p class="muted" id="mk-out"></p></div>`;
@@ -1386,7 +1390,7 @@ function claimQuest(id) {
 function buyShop(k) {
   const it = SEED_SHOP.find(x => x.id === k); if (!it) return;
   if (!S.test.free && S.seed < it.seed) return note(`Needs ${fmt(it.seed - S.seed)} more SEED.`, 'bad');
-  if (k === 'festival') { if (festival()) return note('The festival is already running.', 'bad'); S.festUntil = S.t + 24; note('Wheel Festival: +20% output for 24 h', 'ok'); }
+  if (it.r !== undefined) { if (boosted(it.r)) return note(`The ${RES_NAME[RES[it.r]]} boost is already running.`, 'bad'); S.boost[it.r] = S.t + BOOST_H; note(`${RES_NAME[RES[it.r]]} +25% for 24 h`, 'ok'); }
   if (k === 'peace') { if (S.t < S.peaceNext) return note(`Available again in ${dur(S.peaceNext - S.t)}.`, 'bad'); S.peaceUntil = S.t + 12; S.peaceNext = S.t + 72; S.moves = S.moves.filter(m => m.kind !== 'incoming'); note('Peace shield up for 12 h: attacks on the way turned back', 'ok'); }
   if (!S.test.free) S.seed -= it.seed; sfx('ok'); dirty();
 }
