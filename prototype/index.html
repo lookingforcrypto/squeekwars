@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Squeek Wars</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=VT323&display=swap">
+<style>
+/* Layout: a single dark "lantern-lit village" look. Game views are a full-bleed scene with floating wood panels;
+   the site (home) is a scrolling page. Phones get a pannable scene and a bottom sheet for details. */
+:root{
+  --bg:#16100b; --bg2:#100b07; --panel:#1f1711f2; --panel-solid:#1f1711; --well:#0f0b08; --edge:#6b4a2b; --edge-in:#24190f; --line:#3b2a1a;
+  --ink:#f3e6c8; --dim:#c4ae88; --mute:#8f7c60; --gold:#f2c14e; --gold-d:#c98a2e; --gold-dd:#8a5a1a; --green:#8fd16a; --red:#ff6a58; --blue:#6aa8ff;
+  --f-display:"Pixelify Sans","Trebuchet MS",system-ui,sans-serif; --f-body:"VT323","Courier New",ui-monospace,monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+.how{margin:-4px 0 12px;color:var(--dim)}.how summary{cursor:pointer;color:var(--gold);width:max-content}.how ul{margin:6px 0 0;padding-left:20px}.how li{margin:2px 0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:20px;line-height:1.15;overflow-x:hidden}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+img.i{width:20px;height:20px;image-rendering:pixelated;vertical-align:-4px}
+.px{background:var(--panel);border:3px solid var(--edge-dark,#0b0806);box-shadow:inset 0 0 0 2px var(--edge),inset 0 0 0 4px var(--edge-in),0 4px 0 #0009}
+h1,h2,h3,.disp{font-family:var(--f-display);text-wrap:balance}
+h3{font-size:15px;color:var(--gold);letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px}
+.btn{font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.04em;background:var(--gold-d);color:#1c1006;border:3px solid #0b0806;box-shadow:inset 0 -4px 0 var(--gold-dd),inset 0 3px 0 #f2c97a;padding:7px 14px;cursor:pointer;text-transform:uppercase}
+.btn:hover{filter:brightness(1.08)} .btn:active{transform:translateY(1px)}
+.btn[disabled]{background:#4a4036;color:#9a8c78;box-shadow:inset 0 -4px 0 #2e2721;cursor:not-allowed;filter:none}
+.btn.alt{background:#3a5a8a;color:#eef4ff;box-shadow:inset 0 -4px 0 #233a5e,inset 0 3px 0 #7fa6e0}
+.btn.ghost{background:var(--well);color:var(--dim);box-shadow:none;border-color:var(--line)}
+.btn.sm{font-size:13px;padding:4px 9px}
+.why{font-size:17px;color:var(--mute);margin-top:4px}
+.ok{color:var(--green)} .bad{color:var(--red)} .gold{color:var(--gold)}
+.muted{color:var(--dim)}
+table.kv{width:100%;border-collapse:collapse;font-size:19px;font-variant-numeric:tabular-nums}
+table.kv td{padding:3px 2px;border-bottom:1px dashed #4a3622;vertical-align:top}
+table.kv td:not(:first-child){text-align:right;white-space:nowrap}
+table.kv td.up{color:var(--green)}
+.cost{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:20px;margin:6px 0 10px;font-variant-numeric:tabular-nums}
+.cost .short{color:var(--red)}
+.prog{height:8px;background:var(--line);border:1px solid #000;margin-top:5px}
+.prog i{display:block;height:100%;background:linear-gradient(var(--gold),var(--gold-d))}
+.list{display:flex;flex-direction:column;gap:6px}
+.card{background:#0f0b08b0;border:2px solid var(--line);padding:8px}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.chip{background:#0f0b08cc;border:2px solid var(--line);padding:3px 9px;font-size:19px;white-space:nowrap}
+
+/* ---------- game bar ---------- */
+#bar{position:fixed;left:0;right:0;top:0;z-index:30;padding:8px max(12px,env(safe-area-inset-right,0px)) 6px max(12px,env(safe-area-inset-left,0px));padding-top:calc(8px + env(safe-area-inset-top,0px));display:flex;flex-wrap:wrap;row-gap:4px;gap:10px;align-items:center;background:linear-gradient(#0b0806,#0b0806e8);border-bottom:3px solid #0b0806;box-shadow:0 2px 0 var(--edge)}
+#bar .logo{font-family:var(--f-display);font-weight:700;font-size:22px;color:var(--gold);text-shadow:0 2px 0 #000;white-space:nowrap;cursor:pointer}
+#bar .logo small{display:block;font-size:11px;color:var(--dim);font-weight:400;letter-spacing:.04em}
+.res{display:flex;gap:6px;min-width:0;flex:1;overflow-x:auto;scrollbar-width:none}
+.res::-webkit-scrollbar{display:none}
+.r{background:#0f0b08cc;border:2px solid var(--line);padding:2px 8px;min-width:128px;flex:none}
+.r b{font-size:22px;font-weight:400;font-variant-numeric:tabular-nums} .r s{text-decoration:none;color:var(--mute);font-size:16px}
+.r em{font-style:normal;font-size:16px;color:var(--green);display:block;margin-left:26px;margin-top:-2px}
+.r em.low{color:var(--gold)} .r em.neg{color:var(--red)}
+.r .bar{height:3px;background:var(--line);margin:2px 0 0 26px} .r .bar i{display:block;height:100%;background:var(--green)}
+.r.full .bar i{background:var(--red)}
+.r.soon{border-color:var(--gold-d)} .r.full{border-color:var(--red);animation:fullp 1.2s steps(2) infinite} .r.full em{color:var(--red)}
+@keyframes fullp{50%{border-color:#5a2a20}}
+.alert{flex-basis:100%;order:4;display:flex;align-items:center;justify-content:space-between;gap:6px 10px;flex-wrap:wrap;background:#3a0f0a;border:2px solid var(--red);padding:3px 8px;font-size:18px;line-height:1.15}
+.alert b{font-weight:400;color:#ffd6cc} .alert .btn{text-decoration:none}
+.r.seedr b{color:var(--gold)}
+.res{order:1}
+.wheel{flex-basis:100%;order:3;font-size:17px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1}
+.wheel b{font-weight:400}
+.dot{width:9px;height:9px;background:var(--mute);display:inline-block}
+.dot.run{background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.35}}
+#tabs .lg{display:inline}
+#tabs{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:30;display:flex;gap:5px;padding:7px;max-width:calc(100% - 24px);overflow-x:auto;scrollbar-width:none}
+#tabs a{font-family:var(--f-display);white-space:nowrap;display:block;padding:9px 15px;font-size:15px;color:var(--dim);background:#0f0b08b0;border:2px solid var(--line);text-decoration:none}
+#tabs a.on{color:#1c1006;background:var(--gold);border-color:#0b0806;box-shadow:inset 0 -3px 0 var(--gold-d)}
+#tabs .badge{display:inline-block;min-width:18px;padding:0 4px;margin-left:5px;background:var(--red);color:#fff;font-family:var(--f-body);font-size:16px;line-height:18px;text-align:center}
+
+/* ---------- game views ---------- */
+.view{display:none}
+.view.on{display:block}
+.stage{position:fixed;left:0;right:0;top:var(--barh,78px);bottom:0;overflow:hidden;background:#2a4a22;touch-action:none;cursor:grab}
+.stage.drag{cursor:grabbing}
+.scene{position:absolute;left:0;top:0;width:1920px;height:1200px;transform-origin:0 0;background:url(assets/village_bg_w1.webp) 0 0/1920px 1200px no-repeat}
+.scene .spr{position:absolute;transform:translateX(-50%);pointer-events:none;image-rendering:auto}
+.scene .spr.build{opacity:.55;filter:saturate(.5)}
+#sbase,#life,#splates{position:absolute;left:0;top:0;width:1920px;height:1200px}
+#splates{pointer-events:none}
+#splates .hit{pointer-events:auto}
+#life{pointer-events:none}
+.walker{position:absolute;left:0;top:0;width:32px;pointer-events:none}
+.nightfx{position:absolute;inset:0;background:#0a1532;mix-blend-mode:multiply;opacity:calc(var(--night,0) * .66);z-index:1500;pointer-events:none}
+.glow{position:absolute;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(closest-side,#ffc46ecc,#ff9a3a55 45%,#ff9a3a00);mix-blend-mode:screen;opacity:calc(var(--night,0) * .9);z-index:1510;pointer-events:none}
+.banner{position:absolute;width:4px;height:86px;background:#3a2414;transform:translate(-50%,-100%);pointer-events:none}
+.banner::before{content:"";position:absolute;left:4px;top:8px;width:24px;height:32px;background:var(--c);clip-path:polygon(0 0,100% 0,100% 100%,50% 76%,0 100%);transform-origin:0 0;animation:wave 2.4s ease-in-out infinite}
+.banner::after{content:"";position:absolute;left:-3px;top:-6px;width:10px;height:10px;background:#9a7a4a;border-radius:50%}
+.banner.gold::after{background:var(--gold);box-shadow:0 0 8px var(--gold)}
+@keyframes wave{50%{transform:skewY(5deg) scaleX(.9)}}
+.smoke{position:absolute;width:0;height:0;z-index:1300;pointer-events:none}
+.smoke i{position:absolute;left:-7px;top:-7px;width:14px;height:14px;border-radius:50%;background:#d9d4cb;opacity:0;animation:puff 3.6s linear infinite}
+.smoke i:nth-child(2){animation-delay:1.2s} .smoke i:nth-child(3){animation-delay:2.4s}
+@keyframes puff{0%{transform:translate(0,0) scale(.5);opacity:.55}100%{transform:translate(16px,-64px) scale(1.9);opacity:0}}
+.wspin{position:absolute;z-index:1520;border-radius:50%;overflow:hidden;pointer-events:none;opacity:0;transition:opacity .6s}
+.wspin i{position:absolute;left:50%;top:50%;border-radius:50%;transform:translate(-50%,-50%);background:repeating-conic-gradient(#0000 0deg 24deg,#1c0f0688 24deg 30deg)}
+.scene.running .wspin{opacity:1;box-shadow:0 0 18px 5px #ffd27a99}
+.scene.running .wspin i{animation:spin .5s linear infinite}
+@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.scaf{pointer-events:none}
+.hit{position:absolute;z-index:1600;transform:translate(-50%,-50%);border-radius:50%;cursor:pointer;background:transparent;border:0}
+.hit:hover,.hit.sel{background:radial-gradient(closest-side,#f2c14e30,#f2c14e10 70%,transparent);box-shadow:0 0 0 4px #f2c14e inset}
+.hit.empty{background:radial-gradient(closest-side,#0000,#0000 55%,#f2c14e25)}
+.hit.locked{cursor:pointer;background:#140f0b70}
+.plate{position:absolute;z-index:1700;transform:translateX(-50%);font-family:var(--f-body);font-size:24px;line-height:24px;padding:0 7px;background:#1c1510ee;border:3px solid var(--edge);color:var(--ink);pointer-events:none;white-space:nowrap}
+.plate.max{border-color:var(--gold);color:var(--gold)}
+.plate.busy{border-color:var(--green)}
+.plate.lockp{font-size:19px;line-height:17px;text-align:center;padding:3px 6px;color:var(--dim);background:#1c1510cc}
+.zoom{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:25;display:flex;flex-direction:column;gap:4px}
+.zoom .btn{width:40px;height:38px;padding:0;font-size:22px;line-height:1;background:#0f0b08dd}
+#village{position:relative}
+#village.on{display:flow-root}
+.nightb .row label{white-space:nowrap}
+.right.closed{display:none}
+.plusmark{position:absolute;z-index:1650;transform:translate(-50%,-50%);font-family:var(--f-display);font-size:44px;color:#f2c14e;text-shadow:0 3px 0 #000;pointer-events:none}
+.lockmark{position:absolute;transform:translate(-50%,-50%);font-size:34px;pointer-events:none;filter:drop-shadow(0 2px 0 #000)}
+.left,.right{position:fixed;top:calc(var(--barh,78px) + 12px);z-index:20;padding:12px 14px;max-height:calc(100% - var(--barh,78px) - 110px);overflow:auto}
+.left{left:max(12px,env(safe-area-inset-left,0px));width:300px}
+.right{right:max(12px,env(safe-area-inset-right,0px));width:340px}
+.sheet-close{display:none}
+.ph{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.ph h3{margin:0;min-width:0}
+.pbtn{display:flex;gap:6px;flex:none}
+.slot{background:#0f0b08aa;border:2px solid var(--line);padding:7px 8px}
+.slot .t{display:flex;justify-content:space-between;gap:8px}
+.slot .q{font-size:17px;color:var(--dim);margin-top:5px;border-top:1px dashed #4a3622;padding-top:4px}
+.ov{font-size:18px}
+.ov button{all:unset;cursor:pointer;display:flex;justify-content:space-between;width:100%;padding:2px 0;border-bottom:1px dashed #3a2a1a}
+.ov button:hover{color:var(--gold)}
+.ov button:focus-visible{outline:2px solid var(--gold)}
+.thumbs{display:flex;align-items:flex-end;justify-content:center;gap:12px;background:#0f0b08aa;border:2px solid var(--line);padding:8px;min-height:110px}
+.thumbs img{max-height:104px;max-width:120px}
+.thumbs .arrow{font-family:var(--f-display);font-size:20px;color:var(--gold);padding-bottom:36px}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:center;background:#0f0b08aa;border:2px solid var(--line);padding:6px}
+.opt img{max-width:64px;max-height:64px;justify-self:center}
+.opt .n{font-family:var(--f-display);font-size:15px;color:var(--ink)}
+.opt .d{font-size:17px;color:var(--dim)}
+.opt .c{font-size:17px;font-variant-numeric:tabular-nums}
+
+#worldcv{position:absolute;inset:0;width:100%;height:100%;display:block}
+.mm{display:block;margin:0 auto 6px;border:2px solid #0b0806;image-rendering:pixelated;cursor:pointer;width:180px;height:180px}
+.unitsel{display:grid;grid-template-columns:40px 1fr 70px;gap:4px 8px;align-items:center;font-size:18px}
+.unitsel img{width:36px}
+.unitsel input{width:70px;background:var(--well);border:2px solid var(--line);color:var(--ink);font:inherit;padding:1px 4px;text-align:right}
+.pred{background:#0f0b08aa;border:2px solid var(--line);padding:8px;margin:8px 0;font-size:18px}
+.stickgo{position:sticky;bottom:-12px;background:var(--panel-solid);padding:6px 0 10px;margin-top:4px;z-index:2}
+.vhead{display:grid;grid-template-columns:60px 1fr;gap:10px;align-items:center;margin-bottom:8px;font-size:18px}
+.vhead img{width:60px}
+.goto{grid-template-columns:1fr auto;margin-top:6px}
+.wtip{position:fixed;z-index:70;pointer-events:none;background:#0f0b08f2;border:2px solid var(--edge);padding:4px 8px;font-size:17px;max-width:280px;line-height:1.15}
+.quest{background:#0f0b08aa;border:2px solid var(--line);padding:7px 8px;font-size:18px}
+.quest.done{border-color:var(--green)}
+.quest b{font-family:var(--f-display);font-size:14px;font-weight:600}
+.quest .row{margin-top:4px}
+.x{all:unset;cursor:pointer;color:var(--red);font-size:15px;padding:0 4px;margin-left:2px}
+.x:hover{color:#fff} .x:focus-visible{outline:2px solid var(--gold)}
+.lnk{all:unset;cursor:pointer;color:var(--blue);text-decoration:underline}
+.lnk:focus-visible{outline:2px solid var(--gold)}
+.unitsel .pbtn input,.pbtn input,.numin,.utbl input{width:60px;background:var(--well);border:2px solid var(--line);color:var(--ink);font:inherit;padding:1px 4px}
+
+/* ---------- content pages ---------- */
+.page{padding:calc(var(--barh,78px) + 18px) max(16px,env(safe-area-inset-right,0px)) 110px max(16px,env(safe-area-inset-left,0px));max-width:1100px;margin:0 auto}
+.page h2{font-size:26px;color:var(--gold);margin:0 0 4px}
+.page .sub{color:var(--dim);margin:0 0 16px;max-width:65ch}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
+.grid2 .wide{grid-column:1/-1}
+.box{padding:14px}
+.tbl{width:100%;border-collapse:collapse;font-size:19px;font-variant-numeric:tabular-nums}
+.tbl th{font-family:var(--f-display);font-size:13px;color:var(--dim);text-align:left;font-weight:500;letter-spacing:.04em;border-bottom:2px solid var(--edge);padding:5px 6px;text-transform:uppercase}
+.tbl td{padding:5px 6px;border-bottom:1px dashed #3a2a1a;vertical-align:middle}
+.tbl td.r{text-align:right}
+.tblwrap{overflow-x:auto}
+.tier{margin-bottom:12px}
+.tier h4{font-family:var(--f-display);font-size:14px;color:var(--dim);margin:0 0 6px;letter-spacing:.05em}
+.rsrch{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.rs{padding:9px;background:#0f0b08b0;border:2px solid var(--line)}
+.rs.done{border-color:#4f7a3a}
+.rs.cur{border-color:var(--gold)}
+.rs.lock{opacity:.55}
+.rs b{font-family:var(--f-display);font-size:15px;font-weight:600}
+.champ{display:grid;grid-template-columns:160px 1fr;gap:16px;align-items:center}
+.champ img{width:160px}
+.num{font-family:var(--f-body);font-size:22px;letter-spacing:0}
+.netpick{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:520px;width:100%}
+.net{font:inherit;text-align:left;padding:12px 14px;border:3px solid #0b0806;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.net b{font-family:var(--f-display);font-size:20px;letter-spacing:.04em;text-transform:uppercase}
+.net span{font-size:17px;line-height:1.1}
+.net.on{background:var(--gold-d);color:#1c1006;box-shadow:inset 0 -4px 0 var(--gold-dd),inset 0 3px 0 #f2c97a}
+.net.on:hover{filter:brightness(1.08)}
+.net.off{background:#2a231c;color:#8f7c60;cursor:not-allowed;box-shadow:inset 0 0 0 2px #3b2a1a}
+.net.off b::after{content:" 🔒";font-size:15px}
+.hero .cta{flex-direction:column;align-items:flex-start}
+.netb{max-width:560px}
+.netbadge{font-family:var(--f-display);font-size:12px;letter-spacing:.08em;color:#1c1006;background:#8fd16a;border:2px solid #0b0806;padding:2px 6px;align-self:center;flex:none}
+.sqtag{display:inline-block;font-size:16px;color:#1c1006;background:linear-gradient(#ffe08a,#f2c14e);border:2px solid #0b0806;padding:0 6px;margin:2px 0 4px}
+.addr{font-family:var(--f-body);color:var(--mute);font-size:.85em;letter-spacing:0;white-space:nowrap}
+.addr.big{font-size:16px;margin:-6px 0 6px}
+.sqk img{width:34px;vertical-align:middle;margin-right:6px}
+.pts{display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center}
+.report{padding:10px;margin-bottom:10px}
+.report .h{display:flex;justify-content:space-between;gap:10px;font-family:var(--f-display);font-size:15px}
+.report .h .w{color:var(--green)} .report .h .l{color:var(--red)}
+.report p{margin:4px 0 0;color:var(--dim);font-size:18px}
+.mkt{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end}
+.mkt label{display:flex;flex-direction:column;gap:4px;font-size:18px;color:var(--dim)}
+.mkt select,.mkt input{background:var(--well);border:2px solid var(--line);color:var(--ink);font:inherit;font-size:20px;padding:4px 6px}
+
+/* ---------- toasts & test controls ---------- */
+#toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:min(520px,calc(100% - 32px))}
+.toast{background:#0f0b08e0;border:2px solid var(--gold);padding:3px 10px;font-size:17px;box-shadow:0 3px 0 #000;animation:tin .25s ease-out}
+.toast.bad{border-color:var(--red)} .toast.ok{border-color:var(--green)}
+@keyframes tin{from{transform:translateY(-6px);opacity:0}}
+#testbtn{order:2;flex:none;align-self:flex-start}
+#testpanel{position:fixed;top:calc(var(--barh,78px) + 8px);right:max(12px,env(safe-area-inset-right,0px));z-index:41;width:330px;padding:12px 14px;max-height:calc(100% - var(--barh,78px) - 24px);overflow:auto}
+#testpanel .speeds{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+#testpanel .speeds .btn.on{background:var(--gold)}
+
+/* ---------- site (home) ---------- */
+#home{background:var(--bg)}
+.site-h{position:sticky;top:env(safe-area-inset-top,0px);z-index:25;display:flex;align-items:center;gap:18px;padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));background:#0b0806f0;border-bottom:3px solid #0b0806;box-shadow:0 2px 0 var(--edge)}
+.site-h .logo{font-family:var(--f-display);font-weight:700;font-size:24px;color:var(--gold);text-shadow:0 2px 0 #000;white-space:nowrap}
+.site-h nav{display:flex;gap:16px;margin-left:auto;flex-wrap:wrap}
+.site-h nav a{color:var(--dim);text-decoration:none;font-size:20px}
+.site-h nav a:hover{color:var(--gold)}
+.hero{position:relative;min-height:min(78vh,720px);display:flex;align-items:center;background:#2a4a22 url(assets/hero.webp) 0% 46%/max(144%,1100px) auto no-repeat;border-bottom:3px solid #0b0806}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#0b0806f5 0%,#0b0806dd 30%,#0b080670 52%,#0b080600 68%),linear-gradient(180deg,#0b080600 75%,#16100b)}
+.hero .in{position:relative;z-index:1;padding:28px max(16px,env(safe-area-inset-right,0px)) 34px max(16px,env(safe-area-inset-left,0px));max-width:1100px;margin:0 auto;width:100%}
+.hero .in > *{max-width:560px}
+.hero h1{font-size:clamp(34px,6vw,64px);line-height:1.02;margin:0 0 12px;color:var(--ink);text-shadow:0 3px 0 #000;max-width:16ch}
+.hero h1 span{color:var(--gold)}
+.hero p{font-size:23px;max-width:56ch;color:var(--ink);margin:0 0 18px;text-shadow:0 2px 0 #000}
+.hero .cta{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.hero .cta .btn{font-size:17px;padding:10px 18px}
+.wnote{font-size:18px;color:var(--dim);margin-top:10px;max-width:56ch}
+.sec{scroll-margin-top:70px;padding:44px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));max-width:1100px;margin:0 auto}
+.sec h2{font-size:28px;color:var(--gold);margin:0 0 6px}
+.sec .lead{color:var(--dim);max-width:62ch;margin:0 0 18px;font-size:21px}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.step{padding:14px;display:flex;flex-direction:column;gap:8px}
+.step img{height:110px;object-fit:contain;align-self:center}
+.step h3{margin:0}
+.step p{margin:0;color:var(--dim);font-size:19px}
+.wheelbox{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px;padding:18px;align-items:center}
+.formula{font-size:24px;line-height:1.35}
+.formula b{color:var(--gold);font-weight:400}
+.looks{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;justify-content:space-between;padding:16px}
+.looks figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:110px}
+.looks img{height:120px;object-fit:contain}
+.looks figcaption{font-size:18px;color:var(--dim);text-align:center}
+.units{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.unit{padding:12px;text-align:center}
+.unit img{height:96px;object-fit:contain}
+.unit b{display:block;font-family:var(--f-display);font-size:16px;margin:4px 0}
+.unit span{font-size:18px;color:var(--dim)}
+.faq{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.faq div{padding:14px}
+.faq b{font-family:var(--f-display);font-size:16px;display:block;margin-bottom:6px;color:var(--ink)}
+.faq p{margin:0;color:var(--dim);font-size:19px}
+.foot{padding:30px 16px 60px;text-align:center;color:var(--mute);font-size:18px}
+
+/* ---------- phones ---------- */
+@media (max-width: 900px){
+  body{font-size:19px}
+  #bar{flex-wrap:wrap;row-gap:6px}
+  #bar .logo{font-size:18px}
+  #bar .logo small{display:none}
+  .res{order:3;flex-basis:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;overflow:visible}
+  #testbtn{order:1;margin-left:auto}
+  .wheel{font-size:16px;white-space:normal;order:4}
+  .alert{order:5;font-size:17px}
+  .r{min-width:0;padding:1px 5px}
+  .r s{display:none}
+  .r b{font-size:19px}
+  .r em{font-size:14px;margin-left:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .r .bar{margin-left:24px}
+  #tabs{left:6px;right:6px;transform:none;max-width:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:5px;bottom:calc(6px + env(safe-area-inset-bottom,0px))}
+  #tabs a{padding:8px 1px;font-size:12px;text-align:center;letter-spacing:0}
+  #tabs .lg{display:none}
+  #tabs .badge{font-size:14px;min-width:14px;margin-left:2px}
+  .page{padding-bottom:140px}
+  #toasts{bottom:calc(104px + env(safe-area-inset-bottom,0px))}
+  .zoom{position:absolute;top:calc(var(--barh,78px) + 8px);bottom:auto;right:8px;flex-direction:row}
+  .wtip{display:none}
+  .left{position:static;width:auto;max-height:none;margin:0}
+  .village-below,.world-below{padding:12px max(16px,env(safe-area-inset-right,0px)) 140px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px}
+  .stage{position:relative;top:auto;height:58vh;margin-top:var(--barh,78px)}
+  .right{position:fixed;left:0;right:0;top:auto;bottom:0;width:auto;max-height:66vh;border-bottom:0;padding:14px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));z-index:45;box-shadow:0 -4px 0 #0009,inset 0 0 0 2px var(--edge)}
+  .right.closed{display:none}
+  .sheet-close{display:inline-block}
+  .wheelbox{grid-template-columns:1fr}
+  .champ{grid-template-columns:1fr;justify-items:center}
+  .site-h nav{display:none}
+  .hero{min-height:0;align-items:flex-end;padding-top:78vw;background-position:50% 0;background-size:180% auto}
+  .hero::after{background:linear-gradient(180deg,#0b080600 0%,#0b080600 34%,#0b0806ee 56%,#16100b 100%)}
+  #testpanel{width:auto;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px))}
+}
+/* ---------- modal, forms, report tables ---------- */
+.modal{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:#000b;padding:16px}
+.modal .box{max-width:440px;width:100%}
+.modal input{width:100%;background:var(--well);border:2px solid var(--line);color:var(--ink);font:inherit;font-size:22px;padding:6px 8px;margin:6px 0 10px}
+.plusmark.tgt{color:#8fd16a;animation:blink 1s steps(2) infinite}
+.rpt{display:flex;flex-direction:column;gap:4px;font-size:18px;color:var(--dim);margin-top:10px}
+.rpt textarea{background:var(--well);border:2px solid var(--line);color:var(--ink);font:inherit;font-size:19px;padding:6px;resize:vertical;width:100%}
+.mkt input{min-width:0}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.rank tr.me td{background:#3a2a10;color:var(--gold)}
+.titles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;font-size:18px}
+.swdot{display:inline-block;width:10px;height:10px;background:var(--c);margin-right:6px;border:1px solid #000}
+.swatches{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.sw{width:28px;height:28px;background:var(--c);border:2px solid #0b0806;cursor:pointer;padding:0}
+.sw.on{outline:3px solid var(--ink);cursor:default}
+.opt.shop{grid-template-columns:1fr}
+.utbl td.un{white-space:nowrap}
+.utbl td.un img{width:30px;vertical-align:middle;margin-right:6px}
+.utbl .pbtn{align-items:center}
+.nightb{max-width:480px;text-align:center}
+.wheelanim{position:relative;width:170px;height:170px;margin:8px auto 12px}
+.wheelanim .wh{position:absolute;inset:0;border-radius:50%;border:10px solid #8a5a2b;box-shadow:0 0 0 3px #2a1a0e,inset 0 0 0 3px #2a1a0e,0 0 30px #f2c14e55;background:repeating-conic-gradient(#0000 0 40deg,#6b4a2b 40deg 44deg);animation:spin2 .8s linear infinite}
+@keyframes spin2{to{transform:rotate(360deg)}}
+.wheelanim img{position:absolute;left:50%;bottom:14px;width:72px;transform:translateX(-50%);animation:hop .28s ease-in-out infinite alternate}
+@keyframes hop{to{transform:translateX(-50%) translateY(-7px)}}
+.nstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px}
+.nstats b{display:block;font-size:30px;font-weight:400;color:var(--gold);font-variant-numeric:tabular-nums}
+.nstats span{font-size:16px;color:var(--dim)}
+@media (max-width:600px){ .rpf{grid-template-columns:1fr} }
+.rtbl{margin-top:8px}
+.rtbl th:first-child{color:var(--gold)}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.rules ol{margin:0;padding-left:22px;color:var(--dim);font-size:19px;display:flex;flex-direction:column;gap:6px}
+.rules li b{color:var(--ink);font-weight:400}
+@media (prefers-reduced-motion: reduce){ *{animation:none!important;transition:none!important} }
+</style>
+
+<div id="home" class="view">
+  <header class="site-h">
+    <div class="logo">SQUEEK WARS</div>
+    <nav aria-label="Site"><a href="#how">How it works</a><a href="#wheel">The wheel</a><a href="#units">Units</a><a href="#rules">Rules</a><a href="#faq">FAQ</a><a href="#report">Report</a></nav>
+    <a class="btn" href="#village" style="text-decoration:none">Play on testnet</a>
+  </header>
+  <section class="hero">
+    <div class="in">
+      <h1>Build a hamster village. <span>Grow with a real wheel.</span></h1>
+      <p>Squeek Wars is a strategy game on Squeekchain. Every wallet can found one village, and Squeektoshi's nightly runs pay SEED and boost production for everyone. Every village has a champion; holding a Squeek makes it a little stronger and your building faster.</p>
+      <div class="cta">
+        <div class="netpick">
+          <button class="net on" data-act="net-test" type="button"><b>Testnet</b><span>Practice season on Sepolia · play now</span></button>
+          <button class="net off" type="button" disabled aria-disabled="true"><b>Mainnet</b><span>Opens after the official Squeek mint</span></button>
+        </div>
+        <button class="btn alt" id="connectBtn" type="button">Connect wallet</button>
+      </div>
+      <div class="wnote" id="walletNote" hidden>The live game reads your wallet and the Squeeks in it. This demo has no wallet or chain: you play a wallet holding three Squeeks, and time runs 60× faster.</div>
+    </div>
+  </section>
+  <section class="sec" id="how">
+    <h2>How it works</h2>
+    <p class="lead">One village per wallet. Build it up, let the hamster boost it, and raid neighbours who are at least twice as weak.</p>
+    <div class="steps">
+      <div class="step px"><img src="assets/sprites/town_hall_3.webp" alt="Town Hall"><h3>Build</h3><p>Town Hall, Walls, 8 production sites and 12 plots for Barracks, Academy, Storehouses, Vaults and more.</p></div>
+      <div class="step px"><img src="assets/sprites/wheelhouse_3.webp" alt="Wheelhouse"><h3>Grow with the wheel</h3><p>Every night Squeektoshi runs. His laps pay SEED to every village and boost Wood, Food, Stone and Iron output.</p></div>
+      <div class="step px"><img src="assets/sprites/unit_berserker.webp" alt="Berserker"><h3>Fight</h3><p>Train seven unit types, scout and raid on a 100 × 100 world map. Win only with twice the defender's power.</p></div>
+      <div class="step px"><img src="assets/sprites/champion_3.webp" alt="Champion"><h3>Lead with a champion</h3><p>Every village has a champion that levels up to 30 from battles and the hamster's runs. Hold a Squeek and it becomes a Squeek champion: +10% XP and stats, and Squeeks speed up building.</p></div>
+    </div>
+  </section>
+  <section class="sec" id="wheel">
+    <h2>The wheel bonus</h2>
+    <div class="wheelbox px">
+      <div class="formula">Output per hour = base × (1 + <b>wheel bonus</b>)<br>Wheel bonus = last night's laps ÷ 4,320<br>capped at <b>+25% per Wheelhouse level</b></div>
+      <div class="muted" style="font-size:20px">Last recorded night: <b class="gold">11,182 laps</b> → +259% before the cap. A village with a level 6 Wheelhouse gets +150%. Every village also receives <b class="gold">1,118 SEED</b> from the same run. If the hamster rests, base output keeps going.</div>
+    </div>
+    <div class="looks px" style="margin-top:14px">
+      <figure><img src="assets/sprites/town_hall_1.webp" alt="Town Hall, cardboard"><figcaption>Lv 1–2 · cardboard</figcaption></figure>
+      <figure><img src="assets/sprites/town_hall_2.webp" alt="Town Hall, wood"><figcaption>Lv 3–4 · wood</figcaption></figure>
+      <figure><img src="assets/sprites/town_hall_3.webp" alt="Town Hall, plaster"><figcaption>Lv 5–6 · plaster &amp; timber</figcaption></figure>
+      <figure><img src="assets/sprites/town_hall_4.webp" alt="Town Hall, stone"><figcaption>Lv 7–8 · stone</figcaption></figure>
+      <figure><img src="assets/sprites/town_hall_5.webp" alt="Town Hall, marble"><figcaption>Lv 9–10 · marble &amp; gold</figcaption></figure>
+    </div>
+  </section>
+  <section class="sec" id="units">
+    <h2>Units</h2>
+    <p class="lead">Attack and defense power decide every battle. There is no luck: the battle calculator shows the result before you send. Scouts find weak spots for +10% attack on a village for 12 hours.</p>
+    <div class="units" id="unitCards"></div>
+  </section>
+  <section class="sec" id="rules">
+    <h2>Rules</h2>
+    <p class="lead">The game rules are enforced by the contracts. The fair-play rules are ours: villages that break them can be hidden from the site's leaderboards and season rewards.</p>
+    <div class="rules">
+      <div class="px box"><h3>How the game works</h3><ol>
+        <li><b>One village per wallet, open to everyone.</b> Production, SEED and the wheel bonus are the same with or without a Squeek. Every village has a champion. Holding a Squeek gives it +10% XP and stats, and Squeeks speed up construction after good runs (up to −30%, each extra Squeek adding less).</li>
+        <li><b>Raids take resources only:</b> Wood, Food, Stone and Iron. SEED, NFTs and buildings are never taken.</li>
+        <li><b>You win only with twice the defense.</b> Then every defender falls and you can loot; otherwise both sides lose troops and nothing is taken.</li>
+        <li><b>New villages get a 7-day shield.</b> They cannot attack or be attacked.</li>
+        <li><b>A village can be raided successfully at most 3 times a day.</b> What sits in its Vault is safe.</li>
+        <li><b>Pick on someone your size.</b> Raids on villages 3 or more Town Hall levels below yours give half loot and no ranking points.</li>
+        <li><b>No trading between players.</b> The Market only exchanges your own resources. SEED can be exchanged into resources there, never the other way, and SEED can never be sent or looted.</li>
+      </ol></div>
+      <div class="px box"><h3>Fair play</h3><ol>
+        <li><b>No feeder accounts.</b> Don't run extra wallets just to be raided by, or to feed, a main village.</li>
+        <li><b>No bug abuse.</b> If something gives you resources or wins it shouldn't, report it instead of using it.</li>
+        <li><b>Keep names clean.</b> No offensive, hateful or impersonating player or clan names.</li>
+        <li><b>Leave the site alone.</b> Don't attack or overload the website, the contracts' readers or other players' devices.</li>
+        <li><b>Report, don't retaliate.</b> Use the report form below for bugs and rule-breakers.</li>
+      </ol></div>
+    </div>
+  </section>
+  <section class="sec" id="faq">
+    <h2>FAQ</h2>
+    <div class="faq">
+      <div class="px"><b>Where does it run?</b><p>Season 1 runs on the Sepolia testnet, next to Squeekchain's own contracts.</p></div>
+      <div class="px"><b>Do I need a wallet?</b><p>Yes. Your village, your name and your Squeeks belong to your wallet, and every action is signed on Sepolia. Players are shown as their name with a short address, like IronPaw · 0x1a2b…9f3c.</p></div>
+      <div class="px"><b>Do I need a Squeek?</b><p>No. Every wallet plays one village with the same production and SEED. A Squeek makes your champion 10% stronger and faster to level, and Squeeks speed up building; more Squeeks help less and less.</p></div>
+      <div class="px"><b>Testnet or mainnet?</b><p>The game runs on the Sepolia testnet now as a practice season. Mainnet Season 1 opens after the official Squeek mint, and testnet progress does not carry over.</p></div>
+      <div class="px"><b>Can someone take my Squeek?</b><p>No. Raids only take Wood, Food, Stone and Iron. SEED, NFTs and buildings are never taken.</p></div>
+      <div class="px"><b>Do I need to be online to defend?</b><p>No. Battles resolve on arrival with the troops and Walls you have at home.</p></div>
+      <div class="px"><b>Can I trade with other players?</b><p>No player trading. The Market only exchanges your own resources, which keeps multi-accounts from feeding a main village.</p></div>
+    </div>
+  </section>
+  <section class="sec" id="report">
+    <h2>Report a problem</h2>
+    <p class="lead">Found a bug, or a player breaking the rules? Tell us here. Your player name and game day are attached.</p>
+    <div class="px box" id="reportForm"></div>
+  </section>
+  <div class="foot">Squeek Wars prototype · no wallet, no chain · numbers are draft v2</div>
+</div>
+
+<div id="game" hidden>
+  <header id="bar">
+    <div class="logo" id="logoHome" title="Back to the site">SQUEEK WARS<small>3 Squeeks</small></div>
+    <span class="netbadge" title="Practice season on Sepolia. Mainnet opens after the official Squeek mint.">TESTNET</span>
+    <div class="res" id="resbar"></div>
+    <button class="btn ghost sm" id="testbtn" type="button" aria-label="Settings and test controls">⚙ Settings</button>
+    <div class="wheel" id="wheelchip"></div>
+    <div id="alert" class="alert" role="alert" hidden></div>
+  </header>
+
+  <div id="village" class="view">
+    <div class="stage" id="vstage"><div class="scene" id="scene"><div id="sbase"></div><div id="life"></div><div id="splates"></div></div></div>
+    <div class="zoom" id="zoombar"><button class="btn ghost" data-act="zin" type="button" aria-label="Zoom in">+</button><button class="btn ghost" data-act="zout" type="button" aria-label="Zoom out">−</button><button class="btn ghost" data-act="zfit" type="button" aria-label="Whole village or close up">⤢</button></div>
+    <div class="village-below">
+      <aside class="left px" id="vleft"></aside>
+    </div>
+    <aside class="right px" id="vright"></aside>
+  </div>
+
+  <div id="world" class="view">
+    <div class="stage" id="wstage"><canvas id="worldcv"></canvas></div>
+    <div class="world-below">
+      <aside class="left px" id="wleft"></aside>
+    </div>
+    <aside class="right px" id="wright"></aside>
+  </div>
+
+  <div id="army" class="view page"></div>
+  <div id="academy" class="view page"></div>
+  <div id="market" class="view page"></div>
+  <div id="clan" class="view page"></div>
+  <div id="champion" class="view page"></div>
+  <div id="ranking" class="view page"></div>
+  <div id="reports" class="view page"></div>
+
+  <nav id="tabs" class="px" aria-label="Game">
+    <a href="#village" data-v="village">Village</a><a href="#world" data-v="world"><span class="lg">World </span>Map</a><a href="#army" data-v="army">Army</a><a href="#academy" data-v="academy">Academy</a><a href="#market" data-v="market">Market</a><a href="#clan" data-v="clan">Clan</a><a href="#champion" data-v="champion">Champion</a><a href="#ranking" data-v="ranking">Ranking</a><a href="#reports" data-v="reports">Reports</a>
+  </nav>
+  <div id="wtip" class="wtip" hidden></div>
+  <div id="testpanel" class="px" hidden></div>
+  <div id="namebox" class="modal" hidden><div class="px box">
+    <h3>Choose your player name</h3>
+    <p class="muted">Your name is linked to your wallet <span class="addr" id="nm-wallet"></span> and cannot be changed later. Other players see both on the World Map, in reports, rankings and clans. Skip it and we pick one for you.</p>
+    <label for="nm-in" class="muted">Player name (3–16 letters, digits or _)</label>
+    <input id="nm-in" maxlength="16" autocomplete="off">
+    <div class="row" style="justify-content:flex-start"><button class="btn" data-act="nm-ok" type="button">Start playing</button><button class="btn ghost" data-act="nm-rand" type="button">Pick one for me</button></div>
+    <p class="why" id="nm-why"></p>
+  </div></div>
+  <div id="walletbox" class="modal" hidden><div class="px box">
+    <h3>Connect your wallet</h3>
+    <p class="muted">Squeek Wars needs a wallet: your village, your player name and your Squeeks belong to it. Other players see your name with your address, like <span class="addr">0x1a2b…9f3c</span>.</p>
+    <div class="row" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn" data-act="wb-connect" type="button">Connect wallet</button><button class="btn ghost" data-act="wb-demo" type="button">Use a demo wallet</button></div>
+    <p class="why" id="wb-msg"></p>
+    <p class="muted" style="font-size:16px">Prototype: nothing is signed or sent. In the live game your wallet signs every action on Sepolia.</p>
+  </div></div>
+  <div id="netbox" class="modal" hidden><div class="px box netb">
+    <h3>Where do you want to play?</h3>
+    <div class="netpick">
+          <button class="net on" data-act="net-test" type="button"><b>Testnet</b><span>Practice season on Sepolia · play now</span></button>
+          <button class="net off" type="button" disabled aria-disabled="true"><b>Mainnet</b><span>Opens after the official Squeek mint</span></button>
+        </div>
+    <p class="muted" style="font-size:17px;margin:10px 0 0">Testnet progress does not carry over to mainnet.</p>
+  </div></div>
+  <div id="nightbox" class="modal" hidden><div class="px box nightb">
+    <h3>Squeektoshi's night run</h3>
+    <div class="wheelanim" aria-hidden="true"><div class="wh"></div><img src="assets/sprites/villager_plain.webp" alt=""></div>
+    <div class="nstats"><div><b id="nb-laps">0</b><span>laps</span></div><div><b id="nb-seed">+0</b><span>SEED for every village</span></div><div><b id="nb-bonus">+0%</b><span>wheel bonus</span></div></div>
+    <p class="muted" id="nb-cap"></p>
+    <div class="row"><label class="muted" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="nb-again" checked> Show this every night</label><button class="btn" data-act="nb-close" type="button">Continue</button></div>
+  </div></div>
+  <div id="tabbox" class="modal" hidden><div class="px box">
+    <h3>Open in another tab</h3>
+    <p class="muted">Your village is being played in another browser tab, so this tab paused to keep your save safe.</p>
+    <div class="row" style="justify-content:flex-start"><button class="btn" data-act="tab-here" type="button">Play here instead</button></div>
+  </div></div>
+</div>
+<div id="toasts" aria-live="polite"></div>
+<script src="app.js"></script>
+</body>
+</html>

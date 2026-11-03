@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+sim/res*.json
+sim/o*.txt
+.DS_Store
