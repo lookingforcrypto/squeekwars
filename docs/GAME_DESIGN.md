@@ -1,4 +1,4 @@
-# Squeek Wars · Game design (draft v9)
+# Squeek Wars · Game design (draft v10)
 
 Squeek Wars is a browser strategy game for Squeekchain. Every wallet can found one village. Squeektoshi, the real hamster whose wheel runs drive Squeekchain, powers the economy: every village earns SEED from his settled work, and each night's run boosts production everywhere. Every village has a champion. Holding Squeeks adds two modest extras: a Squeek champion (+10% XP and stats) and faster construction after good runs.
 
@@ -136,6 +136,16 @@ A maxed village grows about 1,150 Food an hour, enough for about 2,300 upkeep, s
 - Markers: own village, clan members, beginner shield, armies on the move, incoming attacks.
 - Selecting a village shows its owner, clan, Town Hall level, distance, defenders, Walls, defense, lootable amount and any running scouting bonus. Travel time per unit, scouting, attack and clan support start from the same panel. Desktop shows the same summary on hover; a box jumps to x|y or a player name.
 - Everything is public on-chain by design: there is no fog of war. Hidden troop counts would need commit-reveal (defenders would have to be online) or encrypted computation (FHE); both were ruled out for Season 1.
+
+### Wild camps (v10)
+
+The live game has no bots: every village is a real wallet. So that the map has something to fight while players are few, about 200 **wild camps** sit on fixed tiles (one tile in 50), in three sizes (×0.6, ×1, ×1.5).
+
+- **They grow with the season, gently:** a medium camp defends with `min(4,000, 150 + 40 × day)`: 190 on day 1, 550 on day 10, 1,350 on day 30, 4,000 from day 97 (large camps up to 6,000, small up to 2,400). 60% of that defense is Shieldbearers, 40% Spearmen. No Walls, no Vault, no Town Hall guard.
+- **Stock:** each resource fills by `(20 + 2 × day)` per hour × size, up to 24 hours' worth (a medium camp holds about 3,800 in total on day 10).
+- **After a battle** the defenders grow back to full over 24 hours.
+- **Rules:** they never attack and join no clan; the 3-raids-a-day limit applies; a raid gives loot and champion XP but no ranking points, and their loot does not count in the raiders' ranking.
+- **Is it worth it?** On day 10 a raid with an army that fits the camp nets about +350 to +2,800 resources after losses (for example 25 Spearmen + 20 Foragers on a medium camp: 1,540 lost, 3,840 looted). Foragers alone lose. With one full raid a camp per day, nearby camps add roughly 10–20% to a village's own output.
 
 ## 11. Protection and anti multi-account
 

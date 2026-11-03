@@ -10,6 +10,7 @@ A browser strategy game for [Squeekchain](https://squeekchain.com). Every wallet
 - **Grow with the hamster:** SEED from Squeektoshi's runs pays for Town Hall upgrades and research, and the Wheelhouse turns his nightly runs into a production bonus of up to +250%, in every village.
 - **Fight** on a 100 × 100 world map, one village per wallet: train seven unit types, scout, raid villages that are at least twice as weak, defend with Walls, Shieldbearers and your clan.
 - **Champion and Squeeks:** every village has a champion that levels up from battles and the hamster's runs. Holding a Squeek makes it a Squeek champion (+10% XP and stats, golden glow), and Squeeks cut construction time after good runs (−15% with one, at most −30% however many you hold).
+- **Wild camps:** about 200 camps on the map that never attack and grow gently over the season, so there is always something to raid while the player base grows. No bots: every village is a real wallet.
 - **Fair by design:** one village per wallet, no player trading, SEED and resources never move between villages, no rarity caps, a beginner shield, raid limits and fully public on-chain state.
 
 ![World map](art/mockups/world_map_screen.png)

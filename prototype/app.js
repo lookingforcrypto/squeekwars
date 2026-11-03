@@ -207,8 +207,17 @@ function bot(x, y) {
     b = { x, y, id: 1 + Math.floor(h(9) * 9971), holder: active && h(13) < 0.55, lvl0: lvl, active, npc: h(8) < 0.06, name: nameFrom(h(21), h(22), h(23)), addr: addrOf(x, y), shield: h(7) < 0.08 ? 24 * (1 + Math.floor(h(10) * 6)) : 0,
       sp: Math.round(lvl * (active ? 10 : 3) * (0.5 + h(4))), sb: active && lvl >= 3 ? Math.round(lvl * 6 * h(5)) : 0, walls: active ? Math.max(1, lvl - 1 - Math.floor(h(6) * 2)) : 1 };
   }
+  else if (x >= 0 && y >= 0 && x < WORLD && y < WORLD && !(x === OWN[0] && y === OWN[1]) && hash(x, y, 1) < 0.44) {     // about 1 tile in 50: a wild camp
+    const kind = Math.floor(hash(x, y, 14) * 3);
+    b = { x, y, camp: true, kind, id: 0, name: CAMP_NAME[kind], addr: '', active: false, holder: false, npc: false, shield: 0, sp: 0, sb: 0, walls: 0, lvl0: 1 };
+  }
   BOT[key] = b; return b;
 }
+// Wild camps (PvE): never attack, never join clans, not ranked. They grow with the season, but gently.
+const CAMP_NAME = ['Small Wild Camp', 'Wild Camp', 'Large Wild Camp'], CAMP_SIZE = [0.6, 1, 1.5];
+const seasonDay = () => Math.max(0, (S.t - 8) / 24);
+const campDef = b => CAMP_SIZE[b.kind] * Math.min(4000, 150 + 40 * seasonDay());      // target defense
+const campRegen = b => CAMP_SIZE[b.kind] * (20 + 2 * seasonDay());                     // per resource per hour
 const CLANS = [{ tag: 'IRV', name: 'Iron Vanguard' }, { tag: 'DSK', name: 'Dusk Runners' }, { tag: 'OAK', name: 'Oakshield' }, { tag: 'EMB', name: 'Ember Pact' }];
 function botClan(b) {                // which clan a bot belongs to (null = none)
   if (!b) return null; if (myClan(b)) return { tag: S.clan.tag, name: S.clan.name, mine: true };
@@ -221,13 +230,14 @@ function botState(b) {
   if (!S.bots[k]) { const L = botLvl(b); const r = botRegen(b); S.bots[k] = { s0: Math.min(botCap(b), r * 48), t0: 8, loss: 0, lossAt: 0, raids: {} }; }
   return S.bots[k];
 }
-const botRegen = b => 2 * fieldBase(botLvl(b)) * (b.active ? 1 : 0.5);      // other raiders share every village's stock
-const botCap = b => STORE.base + STORE.per * 1.22 ** (botLvl(b) - 1) * (b.active ? 1.5 : 0.6);
-const botProt = b => VAULT.base + (b.active ? VAULT.per * 1.22 ** (botLvl(b) - 1) : 0);
+const botRegen = b => b.camp ? campRegen(b) : 2 * fieldBase(botLvl(b)) * (b.active ? 1 : 0.5);      // other raiders share every village's stock
+const botCap = b => b.camp ? 24 * campRegen(b) : STORE.base + STORE.per * 1.22 ** (botLvl(b) - 1) * (b.active ? 1.5 : 0.6);
+const botProt = b => b.camp ? 0 : VAULT.base + (b.active ? VAULT.per * 1.22 ** (botLvl(b) - 1) : 0);
 function botStock(b) { const st = botState(b); const r = botRegen(b); return Math.min(botCap(b), st.s0 + r * (S.t - st.t0)); }
 const botLootable = b => 4 * Math.max(0, botStock(b) - botProt(b));
 function botTroops(b) {
-  const st = botState(b); const keep = 1 - st.loss * Math.max(0, 1 - (S.t - st.lossAt) / (b.rival ? 4 : 20));
+  const st = botState(b);
+  if (b.camp) { const keep = 1 - st.loss * Math.max(0, 1 - (S.t - st.lossAt) / 24), D = campDef(b) * keep; return { spearman: Math.round(0.4 * D / 35), shieldbearer: Math.round(0.6 * D / 70) }; } const keep = 1 - st.loss * Math.max(0, 1 - (S.t - st.lossAt) / (b.rival ? 4 : 20));
   const grow = b.active && !b.rival ? 1 + S.t / 24 / 30 : 1;
   return { spearman: Math.round(b.sp * keep * grow), shieldbearer: Math.round(b.sb * keep * grow) };
 }
@@ -235,7 +245,7 @@ function botWalls(b) {               // catapult damage is saved; bots rebuild o
   const st = botState(b); if (st.walls === undefined) return b.walls;
   return Math.min(b.walls, st.walls + Math.floor((S.t - st.wallAt) / 12));
 }
-function botDefense(b) { const tr = botTroops(b); return (tr.spearman * 35 + tr.shieldbearer * 70) * (1 + 0.04 * botWalls(b)) + 40 * botLvl(b); }
+function botDefense(b) { const tr = botTroops(b); return (tr.spearman * 35 + tr.shieldbearer * 70) * (1 + 0.04 * botWalls(b)) + (b.camp ? 0 : 40 * botLvl(b)); }
 function botArmy(b) {                // the troops a neighbour sends when it raids you
   const st = botState(b); const keep = 1 - (st.aloss || 0) * Math.max(0, 1 - (S.t - (st.alossAt || 0)) / 24);
   const grow = b.rival ? 1 : 1 + S.t / 24 / 30;
@@ -448,7 +458,7 @@ function doExchange(from, to, amt) {          // from 0-3 = a resource, 4 = SEED
 function doPoint(k) { if (hfree() <= 0) return; if (k !== 'might' && S.champ.pts[k] >= 20) return note('That bonus is already at its cap.', 'bad'); S.champ.pts[k]++; dirty(); }
 const week = t => Math.floor((day(t) - 1) / 7) + 1;
 function addStat(k, v) { S.stats[k] += v; const w = week(S.t); S.stats.wk[w] = S.stats.wk[w] || { atk: 0, def: 0, loot: 0 }; if (k in S.stats.wk[w]) S.stats.wk[w][k] += v; }
-const gapLow = b => S.th - botLvl(b) >= 3;          // target 3+ Town Hall levels below you: half loot, no points
+const gapLow = b => !b.camp && S.th - botLvl(b) >= 3;          // target 3+ Town Hall levels below you: half loot, no points
 function pickUnits(units, keys) { const out = {}; for (const k of keys) { const n = Math.min(S.units[k], Math.max(0, Math.floor(units[k] || 0))); if (n) out[k] = n; } return out; }
 function travel(b, sent) { const d = S.test.instant ? 0 : dist(OWN, [b.x, b.y]); const spd = Math.min(...Object.keys(sent).map(k => U[k].s)) * (researched('march') ? 1.2 : 1); return d / spd; }
 function sendAttack(b, units, champ) {
@@ -516,8 +526,8 @@ function resolveScout(m) {
   const b = bot(m.to[0], m.to[1]); const key = m.to.join(',');
   const tr = botTroops(b), w = botWalls(b), stock = botStock(b), D = botDefense(b);
   S.intel[key] = { t: S.t }; addStat('scouts', 1);
-  report('s', `Scouting ${b.name} · ${shortAddr(b.addr)} (${b.x}|${b.y})`,
-    [`Weak spots found: your attacks on this village get +${pct(SCOUT_BONUS)} attack for the next ${SCOUT_HOURS} h.`, `Defense ${fmt(D)} · Walls level ${w} (+${4 * w}%) · Town Hall ${botLvl(b)}.`, `About ${fmt(botLootable(b))} can be looted (stock ${fmt(stock)} of each, ${fmt(botProt(b))} of each is in the Vault).`, `${botClan(b) ? `Clan [${botClan(b).tag}]. ` : ''}Your scouts were not seen.`],
+  report('s', `Scouting ${b.name}${b.addr ? ' · ' + shortAddr(b.addr) : ''} (${b.x}|${b.y})`,
+    [`Weak spots found: your attacks on this village get +${pct(SCOUT_BONUS)} attack for the next ${SCOUT_HOURS} h.`, b.camp ? `Defense ${fmt(D)} · a wild camp: no Walls, no Vault.` : `Defense ${fmt(D)} · Walls level ${w} (+${4 * w}%) · Town Hall ${botLvl(b)}.`, `About ${fmt(botLootable(b))} can be looted (stock ${fmt(stock)} of each${b.camp ? '' : `, ${fmt(botProt(b))} of each is in the Vault`}).`, `${botClan(b) ? `Clan [${botClan(b).tag}]. ` : ''}Your scouts were not seen.`],
     [{ title: `Defenders · ${b.name}`, rows: [['Spearman', tr.spearman, 0, tr.spearman], ['Shieldbearer', tr.shieldbearer, 0, tr.shieldbearer]].filter(r => r[1] > 0) }], { kind: 'scout', target: m.to });
   S.moves.push({ id: S.seq++, kind: 'return', from: m.to, units: m.units, champ: false, loot: [0, 0, 0, 0], depart: S.t, arrive: S.t + m.back });
   note(`Scout report from (${b.x}|${b.y})`, 'ok');
@@ -537,18 +547,18 @@ function resolveAttack(m) {
   if (!defRows.length) defRows.push(['No troops', 0, 0, 0]);
   st.loss = Math.min(1, fd); st.lossAt = S.t;
   if (b.active && botAtk(botArmy(b)) >= 0.9 * defense()) { st.grudgeUntil = S.t + 48; S.nextIncoming = Math.min(S.nextIncoming, S.t + 4 + hash(b.x, b.y, Math.floor(S.t)) * 10); }     // they can strike back
-  if (!low) { addStat('atk', killedCost); if (m.champ) addXP(killedCost / 20); }
+  if (!low) { if (!b.camp) addStat('atk', killedCost); if (m.champ) addXP(killedCost / 20); }
   if (m.champ && fa > fd) S.champ.inj = S.t + 12;
   let loot = [0, 0, 0, 0], catapult = '';
   if (win) {
     const stock = botStock(b), prot = botProt(b); let carry = carryOf(surv, m.champ); const per = Math.max(0, stock - prot) * (low ? 0.5 : 1);
     for (let i = 0; i < 4; i++) { const x = Math.min(per, carry / (4 - i)); loot[i] = x; carry -= x; }
     st.s0 = stock - loot.reduce((a, x) => a + x, 0) / 4; st.t0 = S.t; st.raids[day(S.t)] = (st.raids[day(S.t)] || 0) + 1;
-    if ((surv.catapult || 0) >= 20) { const dn = Math.min(2, Math.floor(surv.catapult / 20)); const w0 = botWalls(b); st.walls = Math.max(0, w0 - dn); st.wallAt = S.t; catapult = ` Walls lowered from ${w0} to ${st.walls} (they rebuild one level every 12 h).`; }
-    addStat('wins', 1); addStat('loot', loot.reduce((a, x) => a + x, 0));
+    if ((surv.catapult || 0) >= 20 && botWalls(b) > 0) { const dn = Math.min(2, Math.floor(surv.catapult / 20)); const w0 = botWalls(b); st.walls = Math.max(0, w0 - dn); st.wallAt = S.t; catapult = ` Walls lowered from ${w0} to ${st.walls} (they rebuild one level every 12 h).`; }
+    addStat('wins', 1); if (!b.camp) addStat('loot', loot.reduce((a, x) => a + x, 0));
   }
   const tot = loot.reduce((a, x) => a + x, 0);
-  report(win ? 'w' : 'l', `Attack on ${b.name} · ${shortAddr(b.addr)} (${b.x}|${b.y})`,
+  report(win ? 'w' : 'l', `Attack on ${b.name}${b.addr ? ' · ' + shortAddr(b.addr) : ''} (${b.x}|${b.y})`,
     [`Your attack ${fmt(A)}${sb ? ` (with +${pct(sb)} from scouting)` : ''} vs defense ${fmt(D)}${win ? ' · at least 2×: defenders wiped' : A >= D ? ' · not 2×: no loot' : ''}.`,
      `You lost ${pct(fa)} of your army (${unitList(lost)}). They lost ${pct(fd)} of their defenders.${catapult}`,
      win ? `Loot: ${fmt(tot)} (${loot.map((x, i) => `${fmt(x)} ${RES_NAME[RES[i]]}`).join(', ')})${low ? '. Town Hall 3+ levels below yours: half loot and no attack points.' : ''}` : 'No loot.'],
@@ -1008,6 +1018,15 @@ function drawWorld() {
     if (x < 0 || y < 0 || x >= WORLD || y >= WORLD) { const [sx, sy] = w2s(x, y); c.fillStyle = '#1a2a14'; c.fillRect(sx, sy, ts + 1, ts + 1); continue; }
     const [sx, sy] = w2s(x, y); const own = x === OWN[0] && y === OWN[1]; const b = own ? null : bot(x, y);
     if (!own && !b) { if (hash(x, y, 4) < 0.33 && forest.complete) drawImg(forest, sx + ts / 2, sy + ts * 0.92, ts * 0.95, hash(x, y, 5) < 0.5); continue; }
+    if (b && b.camp) {         // wild camp: a ring of earth, a burrow, a red pennant and a "C" plate
+      c.fillStyle = '#7a5a34'; c.beginPath(); c.ellipse(sx + ts / 2, sy + ts * 0.68, ts * 0.38, ts * 0.19, 0, 0, 7); c.fill();
+      drawImg(img(b.kind === 2 ? 'burrow_2' : 'burrow_1'), sx + ts / 2, sy + ts * 0.8, ts * (0.4 + 0.08 * b.kind));
+      c.fillStyle = '#222'; c.fillRect(sx + ts * 0.78, sy + ts * 0.12, 3, ts * 0.36); c.fillStyle = '#c0392b'; c.beginPath(); c.moveTo(sx + ts * 0.78 + 3, sy + ts * 0.12); c.lineTo(sx + ts * 0.98, sy + ts * 0.19); c.lineTo(sx + ts * 0.78 + 3, sy + ts * 0.26); c.fill();
+      if (scoutLeft(b) > 0) { c.fillStyle = '#0b0806cc'; c.fillRect(sx + 3, sy + 3, ts * 0.2, ts * 0.2); c.fillStyle = '#8fd16a'; c.font = `${Math.round(ts * 0.2)}px VT323, monospace`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('i', sx + 3 + ts * 0.1, sy + 3 + ts * 0.1); }
+      const pw = ts * 0.3, ph = ts * 0.22; c.fillStyle = 'rgba(40,10,8,.92)'; c.strokeStyle = '#c0392b'; c.lineWidth = 2; c.fillRect(sx + ts / 2 - pw / 2, sy + ts - ph - 2, pw, ph); c.strokeRect(sx + ts / 2 - pw / 2, sy + ts - ph - 2, pw, ph);
+      c.fillStyle = '#ffb3a8'; c.font = `${Math.round(ts * 0.24)}px VT323, monospace`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('C', sx + ts / 2, sy + ts - ph / 2 - 1);
+      continue;
+    }
     const L = own ? S.th : botLvl(b); const st = Math.ceil(L / 2);
     c.fillStyle = '#9c7a4a'; c.beginPath(); c.ellipse(sx + ts / 2, sy + ts * 0.66, ts * 0.42, ts * 0.22, 0, 0, 7); c.fill();
     c.fillStyle = '#b8966a'; c.beginPath(); c.ellipse(sx + ts / 2, sy + ts * 0.66, ts * 0.36, ts * 0.17, 0, 0, 7); c.fill();
@@ -1055,7 +1074,7 @@ function worldLeft() {
   <div class="mkt goto"><label>Go to<input id="goto" maxlength="24" placeholder="x|y, a name or 0x… wallet" autocomplete="off"></label><button class="btn sm" data-act="goto">Go</button></div>
   <div class="row" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap"><button class="btn sm" data-act="home">My village</button><button class="btn sm alt" data-act="rival">Rival (${RIVAL[0]}|${RIVAL[1]})</button></div>
   <h3 style="margin-top:12px">Armies</h3><div class="list">${movesHtml()}</div>
-  <h3 style="margin-top:12px">Legend</h3><div class="muted" style="font-size:17px">100 × 100 tiles, one village per wallet. Drag to move, tap a tile. Plate = Town Hall level · your flag = you · blue flag = your clan · other flags = other clans · bubble = beginner shield · green i = scouting bonus active · dashed lines: gold attack, white scouts, blue support, green return, red incoming</div>`;
+  <h3 style="margin-top:12px">Legend</h3><div class="muted" style="font-size:17px">100 × 100 tiles, one village per wallet. Drag to move, tap a tile. Plate = Town Hall level · your flag = you · blue flag = your clan · other flags = other clans · bubble = beginner shield · red C = wild camp (never attacks, loot and XP but no ranking points) · green i = scouting bonus active · dashed lines: gold attack, white scouts, blue support, green return, red incoming</div>`;
 }
 function picker(keys, prefix) {
   return `<div class="unitsel">${keys.map(k => `<img src="${spr(U[k].sprite)}" alt=""><span>${U[k].name} <button class="btn ghost sm" data-act="amax" data-u="${k}">all ${S.units[k]}</button></span><input type="number" min="0" max="${S.units[k]}" value="0" id="${prefix}-${k}" data-u="${k}" inputmode="numeric">`).join('')}</div><div class="row" style="justify-content:flex-start;margin-top:6px"><button class="btn ghost sm" data-act="aall">Everyone</button><button class="btn ghost sm" data-act="anone">Clear</button></div>`;
@@ -1068,10 +1087,16 @@ function worldRight() {
   const b = bot(x, y);
   if (!b) return h + `<h3>Empty tile (${x}|${y})</h3><p class="muted">Free land. New villages are placed here as more wallets join.</p>`;
   const L = botLvl(b), d = dist(OWN, [x, y]), cl = botClan(b), key = x + ',' + y, sl = scoutLeft(b);
+  if (b.camp) {
+    const tr = botTroops(b);
+    h += `<h3>${esc(b.name)} (${x}|${y})</h3><div class="vhead"><img src="${spr(b.kind === 2 ? 'burrow_2' : 'burrow_1')}" alt=""><div class="muted">Wild camp · ${d.toFixed(1)} tiles away<br>It never attacks and joins no clan. Raids give loot and champion XP, but no ranking points.</div></div>
+    <table class="kv"><tr><td>Spearmen</td><td>${tr.spearman}</td></tr><tr><td>Shieldbearers</td><td>${tr.shieldbearer}</td></tr><tr><td>Defense</td><td>${fmt(botDefense(b))}</td></tr><tr><td>Lootable now</td><td>~${fmt(botLootable(b))}</td></tr><tr><td>Defenders regrow</td><td>in 24 h</td></tr><tr><td>Scouting bonus</td><td>${sl ? `<span class="ok">+${pct(SCOUT_BONUS)} · ${dur(sl)} left</span>` : '<span class="muted">none</span>'}</td></tr></table>`;
+  } else {
   h += `<h3>${esc(b.name)} (${x}|${y})</h3><div class="addr big">${b.addr}</div><div class="vhead"><img src="${spr('town_hall_' + Math.ceil(L / 2))}" alt=""><div class="muted">${b.holder ? 'Squeek champion' : 'Champion without a Squeek'}${b.rival ? ' · <span class="bad">rival</span>' : ''}<br>Town Hall ${L} · ${d.toFixed(1)} tiles away<br>${cl ? `[${esc(cl.tag)}] ${esc(cl.name)}${cl.mine ? ' (yours)' : ''}` : 'No clan'} · ${botShielded(b) ? 'beginner shield' : b.active ? 'active' : 'inactive'}</div></div>`;
   { const tr = botTroops(b), w = botWalls(b); h += `<table class="kv"><tr><td>Defenders</td><td>${tr.spearman} Spearmen${tr.shieldbearer ? `, ${tr.shieldbearer} Shieldbearers` : ''}</td></tr><tr><td>Walls</td><td>Lv ${w} (+${4 * w}%)${w < b.walls ? ' · rebuilding' : ''}</td></tr><tr><td>Defense</td><td>${fmt(botDefense(b))}</td></tr><tr><td>Lootable now</td><td>~${fmt(botLootable(b) * (gapLow(b) ? 0.5 : 1))}</td></tr><tr><td>Scouting bonus</td><td>${sl ? `<span class="ok">+${pct(SCOUT_BONUS)} · ${dur(sl)} left</span>` : '<span class="muted">none</span>'}</td></tr></table>`; }
   if (gapLow(b)) h += `<p class="why">Town Hall ${L} is 3+ levels below yours: raids here give half loot and no attack points.</p>`;
-  if (S.clan && !cl) h += `<div class="row" style="margin:8px 0;justify-content:flex-start"><button class="btn sm alt" data-act="invite" ${S.invites.some(iv => iv.key === key) ? 'disabled' : ''}>${S.invites.some(iv => iv.key === key) ? 'Invite sent' : `Invite to [${esc(S.clan.tag)}]`}</button></div>`;
+  }
+  if (S.clan && !cl && !b.camp) h += `<div class="row" style="margin:8px 0;justify-content:flex-start"><button class="btn sm alt" data-act="invite" ${S.invites.some(iv => iv.key === key) ? 'disabled' : ''}>${S.invites.some(iv => iv.key === key) ? 'Invite sent' : `Invite to [${esc(S.clan.tag)}]`}</button></div>`;
   if (myClan(b)) {
     const here = S.abroad.map((st, i) => [st, i]).filter(([st]) => st.key === key);
     h += `<p class="muted">A member of your clan: you cannot attack them, but you can send troops to defend them. Members near you send help when you are attacked.</p>`;
@@ -1109,6 +1134,7 @@ function tileTip(x, y) {
   if (x === OWN[0] && y === OWN[1]) return `<b>${who(S.username || 'You', S.wallet)}</b> · your village<br>Town Hall ${S.th}`;
   const b = bot(x, y); if (!b) return `(${x}|${y}) · empty`;
   const cl = botClan(b), sl = scoutLeft(b);
+  if (b.camp) return `<b>${esc(b.name)}</b> · (${x}|${y})<br>${dist(OWN, [x, y]).toFixed(1)} tiles · never attacks · no ranking points<br>Defense ${fmt(botDefense(b))} · loot ~${fmt(botLootable(b))}${sl ? `<br><span class="ok">Scouted: +${pct(SCOUT_BONUS)} attack, ${dur(sl)} left</span>` : ''}`;
   return `<b>${who(b.name, b.addr)}</b>${cl ? ` [${esc(cl.tag)}]` : ''} · (${x}|${y})<br>Town Hall ${botLvl(b)} · ${dist(OWN, [x, y]).toFixed(1)} tiles · ${botShielded(b) ? 'shield' : b.active ? 'active' : 'inactive'}<br>Defense ${fmt(botDefense(b))} · loot ~${fmt(botLootable(b))}${sl ? `<br><span class="ok">Scouted: +${pct(SCOUT_BONUS)} attack, ${dur(sl)} left</span>` : ''}`;
 }
 
@@ -1233,7 +1259,7 @@ function botStat(b, k, wk) {         // bots' battle stats, deterministic per we
 function rankRows(cat, wk) {
   const rows = [];
   for (let dx = -15; dx <= 15; dx++) for (let dy = -15; dy <= 15; dy++) {
-    const b = bot(OWN[0] + dx, OWN[1] + dy); if (!b) continue; const cl = botClan(b);
+    const b = bot(OWN[0] + dx, OWN[1] + dy); if (!b || b.camp) continue; const cl = botClan(b);
     rows.push({ name: b.name, addr: b.addr, at: [b.x, b.y], clan: cl ? cl.tag : '', v: cat === 'pts' ? botPoints(b) : botStat(b, cat, wk) });
   }
   const mine = cat === 'pts' ? villagePoints() : wk ? (S.stats.wk[wk] || {})[cat] || 0 : S.stats[cat];

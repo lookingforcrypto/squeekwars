@@ -31,7 +31,8 @@ Then open http://localhost:8000.
 - **Ranking:** villages, attackers, defenders, raiders and clans in your region, for the whole season or this week, plus last week's titles.
 - **SEED:** earned every night, never sent or looted. Spend it on the Town Hall, the Wheelhouse and research, exchange it one way into resources at the Market, or in the Town Hall's treasury: a +25% boost for one resource for 24 h (500 SEED each), a Peace shield (12 h) or a banner colour.
 - **Settings** (top bar): sound, the night-run replay, browser notifications, and the **test controls**. Test mode is on by default: nothing costs resources and everything is instant. Turn either off to play with the real costs and times; production ×1000, game speed ×1 to ×3600, extra resources or SEED, ending the beginner shield, replaying the night run and a restart are there too.
-- **Rival:** Ironpaw (Squeek #777) at (48|71) is a neighbour with a real army to attack; it strikes back if you raid it.
+- **Rival and neighbours (prototype only):** Ironpaw at (48|71) and the other villages are simulated so you can test alone; they raid you and strike back. The live game has no bots: every village is a real wallet.
+- **Wild camps:** red **C** tiles on the map. They never attack, grow gently over the season (a medium camp defends with 550 on day 10), give loot and champion XP but no ranking points, and their defenders grow back in 24 h.
 - **Buildings:** Move a building to another empty plot or Demolish it (no refund). The Walls look changes with their level.
 - **Other tabs:** if the same village is opened in a second browser tab, the older tab pauses so the save is never overwritten.
 

@@ -1,4 +1,4 @@
-# Squeek Wars · Contract specification (draft v9)
+# Squeek Wars · Contract specification (draft v10)
 
 The rules the contracts enforce, written for the IMD build. [GAME_DESIGN.md](GAME_DESIGN.md) explains the game; [BUILDINGS.md](BUILDINGS.md) lists every level; `sim/params.py` holds every constant; `prototype/app.js` is a working reference implementation. Where they differ, this file wins.
 
@@ -148,6 +148,15 @@ Before any action on a village, the contract settles it from `lastSettled` to no
 
 - Level `1 + floor(sqrt(XP / 100))`, max 30. 4 points per level: Might `50 + 25 × points`, Attack and Defense +0.5% per point (max 10%), Carry +1% per point (max 20%). A Squeek champion multiplies each of these and every XP gain by 1.1.
 - XP and points belong to the village.
+
+### Wild camps
+
+- No bots or simulated players exist anywhere: every village is a wallet. Wild camps are fixed tiles, not players.
+- **Placement:** every 50th position of the tile shuffle (shuffle index ≡ 49 mod 50) is a camp, so villages skip those tiles. Size `k = (tile hash) mod 3` with factor 0.6, 1 or 1.5.
+- **Defense target** at season day d (days since deployment): `size × min(4,000, 150 + 40 × d)`; 60% Shieldbearers, 40% Spearmen (counts rounded). After a battle, the defenders that fell come back linearly over 24 h.
+- **Stock** per resource: grows by `size × (20 + 2 × d)` per hour, capped at 24 hours' worth; stored as a checkpoint (amount, time), lowered by loot.
+- **Battles** follow section 7 with: no Walls, no Vault, no Town Hall guard, no level-gap rule, the same 3 successful raids per day, champion XP as usual, and no ranking counters (attack points and looted amounts are not recorded).
+- Camps never send armies, never join clans and never appear in rankings.
 
 ## 8. Clans
 
