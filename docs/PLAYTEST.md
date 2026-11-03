@@ -10,6 +10,38 @@ Three sessions, played through the real game code in a headless browser:
 
 No JavaScript errors in any session.
 
+## Status after the fixes (prototype v2)
+
+Everything below was fixed or added, except the daily Champion tasks (dropped on request). Checked again in a headless browser: the same 15-day scripted player on real rules, a feature-by-feature test, and the phone pass.
+
+| Finding | What changed | Checked |
+|---|---|---|
+| 1.1 Raids scaled with your own defense | Raids now come from a real neighbour with its own army. It attacks only when it judges it has 2× your defense, or when it holds a grudge because you raided it. Each neighbour raids you at most once every 2 days and skips you when little sits outside your Vault. | 15 days: 1 raid, repelled (v1: 5 raids, 4 lost). A strong defense now keeps raiders away. |
+| 1.2 Wood starved the game | Costs spread over all four resources. Market opens at Town Hall 2. Research tiers at Academy 1/2/4/6/8. Food upkeep halved to 0.5. | Town Hall 4 on day 11 and Town Hall 5 on day 15 (v1: stuck at 3 from day 6). No resource sits at the cap. |
+| 1.3 Catapult damage lost on reload | Walls damage is saved; bots rebuild one level every 12 h. | Walls 4 → 2, still 2 after a reload, 3 after 12 h, 4 after 36 h. |
+| 1.4 Childish name parts | Replaced. | 565 bot names, none left. |
+| 2.1 Early SEED gate | Start with 1,500 SEED. | |
+| 2.4 Farming tiny villages | Villages 3+ Town Hall levels below you: half loot, no points, no XP. Bots refill their stock half as fast (other raiders share it). | Loot about 1.25× own production for an active raider (v1 before the fix: 2.5×). |
+| 2.5 Exact enemy defense for free | A defense range until scouted or attacked. New **Scout** unit (tier 2). | Range 3,480–5,690 before, exact after scouting. |
+| 2.6 Food ceiling not explained | Army page shows which limit binds (Burrow room or Food) and allows dismissing units. | |
+| 2.7 Full storage silent | Gold border with "full in …" when under 2 h; red blinking "FULL" when full. | |
+| Phone resource bar cut off | 3-column grid: all 4 resources and SEED visible. | 5 of 5 visible, no sideways scroll. |
+| Phone tab bar 4 of 8 | 5 × 2 grid; "World Map" shortens to "Map". | 9 of 9 tabs visible (Ranking added). |
+| Phone opens zoomed in | Opens on the whole village; + / − / fit buttons, pinch zoom, mouse-wheel zoom on desktop. | |
+| Test controls over content | Moved into the top bar as **Settings** (sound, night run, notifications and the test controls). | |
+| Report form, Army table | One column under 600 px; unit icons stay beside the names. | |
+| Market "75–75" | Reads "25 to 75 … (yours gives 75)". | |
+| Plates overlap | The inner north plot's plate moved left of its building. | |
+| "Town Hall 4" on locked plots | "Opens at Town Hall 4". | |
+| Night looks like day | Blue night tint from dusk to dawn, warm window and lamp glow, villagers go home, the Wheelhouse wheel spins during the run. | |
+| No life in the scene | 8 hamster villagers walk the roads; chimney smoke; scaffolding on buildings under construction; Clan Hall banners at levels 3, 5 and 7 in the clan colour. | |
+| Wheelhouse level numbers | Numbers removed from all 5 sprites. | |
+| Desktop panels cover the map | Building panel starts closed; the full building list folds away; zoom out with the buttons or the mouse wheel. | |
+| World panel too long | Compact header, travel times fold away, Attack button sticks to the bottom. | |
+| Two tabs share one save | The newest tab plays; an older tab pauses with "Play here instead". | Both directions checked. |
+| 4 Missing features | First-steps quests (14), shortage message with amounts and time, incoming-attack banner, cancel (80% back) for builds, research and training, dismiss units, Go to x\|y or a name, hover tooltip on the map, Attack again / Strike back from reports, report filters, **Ranking** tab, clan support both ways, SEED treasury (Festival, Peace shield, banner colour), sound, browser notifications, night-run replay. | Each exercised in the feature test. |
+
+
 ---
 
 ## 1. Critical — fix before anything else

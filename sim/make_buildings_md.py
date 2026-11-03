@@ -13,7 +13,7 @@ LOOK = ['cardboard', 'wood', 'plaster & timber', 'stone', 'marble & gold']
 def look10(L): return LOOK[(L - 1) // 2]
 def look20(L): return LOOK[(L - 1) // 4]
 MARKET = {L: 25 + 5 * (L - 1) for L in range(1, 10)}; MARKET[10] = 75
-o = ["# Squeek Wars · Buildings and levels (draft v1)\n",
+o = ["# Squeek Wars · Buildings and levels (draft v2)\n",
      "Costs are the sum of the 4 resources (Wood, Food, Stone, Iron); the per-resource split is in `sim/params.py`. Times are before the Town Hall speed bonus. Sprites change every 2 levels (10-level buildings) or every 4 levels (20-level buildings): cardboard → wood → plaster & timber → stone → marble & gold.\n",
      "**General rules:** no building or field can exceed the Town Hall level; Storehouse and Vault can go up to 2× the Town Hall level. Two build slots run in parallel and each slot holds one queued order. Orders are paid when placed.\n"]
 rows = [[L, min(12, 3 + L), L, min(20, 2 * L), f"-{int(MERKEZ_SPEEDUP*100*(L-1))}%", f0(BASE_DEF_PER_MERKEZ * L), '–' if L == 1 else f0(cost('merkez', L)), '–' if L == 1 else f0(seed('merkez', L)), '–' if L == 1 else hrs(tm('merkez', L)), look10(L)] for L in range(1, 11)]
@@ -33,23 +33,23 @@ o += ["## Storehouse (several allowed, unlocked, 20 levels)\n", tb(['Level', 'Ad
 rows = [[L, f0(YANAK_CAP * YANAK_G ** (L - 1)), f0(cost('yanak', L)), hrs(tm('yanak', L)), look20(L)] for L in range(1, 21)]
 o += ["## Vault (several allowed, Academy tier 1, 20 levels)\n", tb(['Level', 'Protected amount (per resource)', 'Resources', 'Time', 'Look'], rows), f"Even without a Vault, {f0(PROT_BASE)} of each resource is protected. Protected amounts cannot be raided.\n"]
 rows = [[L, f0(yuva_pop(L)), f0(cost('yuva', L)), hrs(tm('yuva', L)), look10(L)] for L in range(1, 11)]
-o += ["## Burrow (several allowed, unlocked)\n", tb(['Level', 'Upkeep capacity', 'Resources', 'Time', 'Look'], rows), "Each unit eats its upkeep in Food per hour and fills Burrow capacity (Spearman, Forager, Shieldbearer, Berserker 1; Charger 2; Catapult 4).\n"]
+o += ["## Burrow (several allowed, unlocked)\n", tb(['Level', 'Upkeep capacity', 'Resources', 'Time', 'Look'], rows), f"Each upkeep point eats {UPKEEP_FOOD} Food per hour and fills Burrow capacity (Spearman, Forager, Shieldbearer, Berserker, Scout 1; Charger 2; Catapult 4).\n"]
 rows = [[L, f"×{f1(KISLA_SPEED**(L-1))}", f0(cost('kisla', L)), hrs(tm('kisla', L)), look10(L)] for L in range(1, 11)]
 o += ["## Barracks (1, unlocked)\n", tb(['Level', 'Training time', 'Resources', 'Time', 'Look'], rows), "One training batch at a time. The Academy decides which units can be trained; Spearman is available from the start.\n"]
 TN = {'akinci': 'Forager', 'yanak': 'Vault', 'kalkan': 'Shieldbearer', 'kemirici': 'Berserker', 'demirci': 'Forge', 'klan': 'Clan Hall', 'buyukyanak': 'Logistics (+20% carry)',
-      'suvari': 'Charger', 'pazar': 'Market', 'mancinik': 'Catapult', 'sargi': 'Field Medicine (10% of fallen units return)', 'buyukyanak2': 'Logistics II', 'hizli': 'Forced March (+20% speed)'}
+      'suvari': 'Charger', 'izci': 'Scout', 'mancinik': 'Catapult', 'sargi': 'Field Medicine (10% of fallen units return)', 'buyukyanak2': 'Logistics II', 'hizli': 'Forced March (+20% speed)'}
 rows = []
 for L in range(1, 11):
-    t = tier_open(L); new = ', '.join(TN[n] for n, tt in RESEARCH.items() if tt == t) if L % 2 == 1 else '–'
+    t = tier_open(L); new = ', '.join(TN[n] for n, tt in RESEARCH.items() if tt == t) if L in TIER_AT else '–'
     rows.append([L, t, new, f"×{f1(0.95**(L-1))}", f0(cost('akademi', L)), hrs(tm('akademi', L)), look10(L)])
 o += ["## Academy (1, unlocked)\n", tb(['Level', 'Open tier', 'Research unlocked at this level', 'Research time', 'Resources', 'Time', 'Look'], rows)]
-o += ["Research cost by tier:\n", tb(['Tier', 'Resources', 'SEED', 'Time'], [[t, f0(sum(research_cost(t))), f0(research_seed(t)), hrs(research_time(t, 2 * t - 1))] for t in range(1, 6)])]
+o += ["Research cost by tier:\n", tb(['Tier', 'Resources', 'SEED', 'Time'], [[t, f0(sum(research_cost(t))), f0(research_seed(t)), hrs(research_time(t, TIER_AT[t]))] for t in range(1, 6)])]
 rows = [[L, f"+{int(DEMIRCI_STEP*100*L)}%", f0(cost('demirci', L)), hrs(tm('demirci', L)), look10(L)] for L in range(1, 11)]
 o += ["## Forge (1, Academy tier 2)\n", tb(['Level', 'Attack and defense, all units', 'Resources', 'Time', 'Look'], rows)]
 rows = [[L, 'join' if L < 3 else 'found', 3 * L, f0(50 * L), f0(cost('klan', L)), hrs(tm('klan', L)), look10(L)] for L in range(1, 11)]
-o += ["## Clan Hall (1, Academy tier 2, phase 2)\n", tb(['Level', 'Clan', 'Member cap (founder)', 'Allied reinforcements (upkeep)', 'Resources', 'Time', 'Look'], rows), "Clan members cannot send resources to each other (anti multi-account); they can only send troops to help defend. Clan chat is off-chain.\n"]
+o += ["## Clan Hall (1, Academy tier 2)\n", tb(['Level', 'Clan', 'Member cap (founder)', 'Allied reinforcements (upkeep)', 'Resources', 'Time', 'Look'], rows), "Clan members cannot send resources to each other (anti multi-account); they can only send troops to help defend. Clan chat is off-chain.\n"]
 rows = [[L, f"100 → {MARKET[L]}", f0(cost('pazar', L)), hrs(tm('pazar', L)), look10(L)] for L in range(1, 11)]
-o += ["## Market (1, Academy tier 3)\n", tb(['Level', 'Exchange rate', 'Resources', 'Time', 'Look'], rows), "No trading between players. The Market only converts your own resources: give 100 of one, receive the listed amount of another. +5 per level, level 10 gets a final bonus to 75. SEED cannot be exchanged.\n"]
+o += ["## Market (1, Town Hall 2)\n", tb(['Level', 'Exchange rate', 'Resources', 'Time', 'Look'], rows), "No trading between players. The Market only converts your own resources: give 100 of one, receive the listed amount of another. +5 per level, level 10 gets a final bonus to 75. SEED cannot be exchanged.\n"]
 o += ["## Champion (the Squeek NFT)\n", tb(['Champion level', 'Look', 'Total XP needed'], [['1–9', 'red scarf, wooden sword', '0–6,400'], ['10–19', 'leather armor, shield', '8,100–32,400'], ['20–29', 'steel armor, blue cape', '36,100–78,400'], ['30', 'golden armor, crown', '84,100']]),
       "4 points per level: Might (+100 power), Attack and Defense (+0.8% per point, max 20%), Carry (+2% per point). XP comes from battles (killed enemy cost ÷ 20) and from the hamster's runs (~110 per day). The champion never dies; after a lost battle it is injured for 12 hours.\n"]
 open('../docs/BUILDINGS.md', 'w').write("\n".join(o)); print('ok')

@@ -11,6 +11,7 @@
   --f-display:"Pixelify Sans","Trebuchet MS",system-ui,sans-serif; --f-body:"VT323","Courier New",ui-monospace,monospace;
   color-scheme:dark;
 }
+[hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:20px;line-height:1.15;overflow-x:hidden}
 *{box-sizing:border-box}
@@ -54,12 +55,18 @@ table.kv td.up{color:var(--green)}
 .r em.low{color:var(--gold)} .r em.neg{color:var(--red)}
 .r .bar{height:3px;background:var(--line);margin:2px 0 0 26px} .r .bar i{display:block;height:100%;background:var(--green)}
 .r.full .bar i{background:var(--red)}
+.r.soon{border-color:var(--gold-d)} .r.full{border-color:var(--red);animation:fullp 1.2s steps(2) infinite} .r.full em{color:var(--red)}
+@keyframes fullp{50%{border-color:#5a2a20}}
+.alert{flex-basis:100%;order:4;display:flex;align-items:center;justify-content:space-between;gap:6px 10px;flex-wrap:wrap;background:#3a0f0a;border:2px solid var(--red);padding:3px 8px;font-size:18px;line-height:1.15}
+.alert b{font-weight:400;color:#ffd6cc} .alert .btn{text-decoration:none}
 .r.seedr b{color:var(--gold)}
+.res{order:1}
 .wheel{flex-basis:100%;order:3;font-size:17px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1}
 .wheel b{font-weight:400}
 .dot{width:9px;height:9px;background:var(--mute);display:inline-block}
 .dot.run{background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 1s steps(2) infinite}
 @keyframes blink{50%{opacity:.35}}
+#tabs .lg{display:inline}
 #tabs{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:30;display:flex;gap:5px;padding:7px;max-width:calc(100% - 24px);overflow-x:auto;scrollbar-width:none}
 #tabs a{font-family:var(--f-display);white-space:nowrap;display:block;padding:9px 15px;font-size:15px;color:var(--dim);background:#0f0b08b0;border:2px solid var(--line);text-decoration:none}
 #tabs a.on{color:#1c1006;background:var(--gold);border-color:#0b0806;box-shadow:inset 0 -3px 0 var(--gold-d)}
@@ -73,14 +80,43 @@ table.kv td.up{color:var(--green)}
 .scene{position:absolute;left:0;top:0;width:1920px;height:1200px;transform-origin:0 0;background:url(assets/village_bg_w1.webp) 0 0/1920px 1200px no-repeat}
 .scene .spr{position:absolute;transform:translateX(-50%);pointer-events:none;image-rendering:auto}
 .scene .spr.build{opacity:.55;filter:saturate(.5)}
-.hit{position:absolute;transform:translate(-50%,-50%);border-radius:50%;cursor:pointer;background:transparent;border:0}
+#sbase,#life,#splates{position:absolute;left:0;top:0;width:1920px;height:1200px}
+#splates{pointer-events:none}
+#splates .hit{pointer-events:auto}
+#life{pointer-events:none}
+.walker{position:absolute;left:0;top:0;width:32px;pointer-events:none}
+.nightfx{position:absolute;inset:0;background:#0a1532;mix-blend-mode:multiply;opacity:calc(var(--night,0) * .66);z-index:1500;pointer-events:none}
+.glow{position:absolute;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(closest-side,#ffc46ecc,#ff9a3a55 45%,#ff9a3a00);mix-blend-mode:screen;opacity:calc(var(--night,0) * .9);z-index:1510;pointer-events:none}
+.banner{position:absolute;width:4px;height:86px;background:#3a2414;transform:translate(-50%,-100%);pointer-events:none}
+.banner::before{content:"";position:absolute;left:4px;top:8px;width:24px;height:32px;background:var(--c);clip-path:polygon(0 0,100% 0,100% 100%,50% 76%,0 100%);transform-origin:0 0;animation:wave 2.4s ease-in-out infinite}
+.banner::after{content:"";position:absolute;left:-3px;top:-6px;width:10px;height:10px;background:#9a7a4a;border-radius:50%}
+.banner.gold::after{background:var(--gold);box-shadow:0 0 8px var(--gold)}
+@keyframes wave{50%{transform:skewY(5deg) scaleX(.9)}}
+.smoke{position:absolute;width:0;height:0;z-index:1300;pointer-events:none}
+.smoke i{position:absolute;left:-7px;top:-7px;width:14px;height:14px;border-radius:50%;background:#d9d4cb;opacity:0;animation:puff 3.6s linear infinite}
+.smoke i:nth-child(2){animation-delay:1.2s} .smoke i:nth-child(3){animation-delay:2.4s}
+@keyframes puff{0%{transform:translate(0,0) scale(.5);opacity:.55}100%{transform:translate(16px,-64px) scale(1.9);opacity:0}}
+.wspin{position:absolute;z-index:1520;border-radius:50%;overflow:hidden;pointer-events:none;opacity:0;transition:opacity .6s}
+.wspin i{position:absolute;left:50%;top:50%;border-radius:50%;transform:translate(-50%,-50%);background:repeating-conic-gradient(#0000 0deg 24deg,#1c0f0688 24deg 30deg)}
+.scene.running .wspin{opacity:1;box-shadow:0 0 18px 5px #ffd27a99}
+.scene.running .wspin i{animation:spin .5s linear infinite}
+@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.scaf{pointer-events:none}
+.hit{position:absolute;z-index:1600;transform:translate(-50%,-50%);border-radius:50%;cursor:pointer;background:transparent;border:0}
 .hit:hover,.hit.sel{background:radial-gradient(closest-side,#f2c14e30,#f2c14e10 70%,transparent);box-shadow:0 0 0 4px #f2c14e inset}
 .hit.empty{background:radial-gradient(closest-side,#0000,#0000 55%,#f2c14e25)}
 .hit.locked{cursor:pointer;background:#140f0b70}
-.plate{position:absolute;transform:translateX(-50%);font-family:var(--f-body);font-size:24px;line-height:24px;padding:0 7px;background:#1c1510ee;border:3px solid var(--edge);color:var(--ink);pointer-events:none;white-space:nowrap}
+.plate{position:absolute;z-index:1700;transform:translateX(-50%);font-family:var(--f-body);font-size:24px;line-height:24px;padding:0 7px;background:#1c1510ee;border:3px solid var(--edge);color:var(--ink);pointer-events:none;white-space:nowrap}
 .plate.max{border-color:var(--gold);color:var(--gold)}
 .plate.busy{border-color:var(--green)}
-.plusmark{position:absolute;transform:translate(-50%,-50%);font-family:var(--f-display);font-size:44px;color:#f2c14e;text-shadow:0 3px 0 #000;pointer-events:none}
+.plate.lockp{font-size:19px;line-height:17px;text-align:center;padding:3px 6px;color:var(--dim);background:#1c1510cc}
+.zoom{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:25;display:flex;flex-direction:column;gap:4px}
+.zoom .btn{width:40px;height:38px;padding:0;font-size:22px;line-height:1;background:#0f0b08dd}
+#village{position:relative}
+#village.on{display:flow-root}
+.nightb .row label{white-space:nowrap}
+.right.closed{display:none}
+.plusmark{position:absolute;z-index:1650;transform:translate(-50%,-50%);font-family:var(--f-display);font-size:44px;color:#f2c14e;text-shadow:0 3px 0 #000;pointer-events:none}
 .lockmark{position:absolute;transform:translate(-50%,-50%);font-size:34px;pointer-events:none;filter:drop-shadow(0 2px 0 #000)}
 .left,.right{position:fixed;top:calc(var(--barh,78px) + 12px);z-index:20;padding:12px 14px;max-height:calc(100% - var(--barh,78px) - 110px);overflow:auto}
 .left{left:max(12px,env(safe-area-inset-left,0px));width:300px}
@@ -112,12 +148,27 @@ table.kv td.up{color:var(--green)}
 .unitsel img{width:36px}
 .unitsel input{width:70px;background:var(--well);border:2px solid var(--line);color:var(--ink);font:inherit;padding:1px 4px;text-align:right}
 .pred{background:#0f0b08aa;border:2px solid var(--line);padding:8px;margin:8px 0;font-size:18px}
+.stickgo{position:sticky;bottom:-12px;background:var(--panel-solid);padding:6px 0 10px;margin-top:4px;z-index:2}
+.vhead{display:grid;grid-template-columns:60px 1fr;gap:10px;align-items:center;margin-bottom:8px;font-size:18px}
+.vhead img{width:60px}
+.goto{grid-template-columns:1fr auto;margin-top:6px}
+.wtip{position:fixed;z-index:70;pointer-events:none;background:#0f0b08f2;border:2px solid var(--edge);padding:4px 8px;font-size:17px;max-width:280px;line-height:1.15}
+.quest{background:#0f0b08aa;border:2px solid var(--line);padding:7px 8px;font-size:18px}
+.quest.done{border-color:var(--green)}
+.quest b{font-family:var(--f-display);font-size:14px;font-weight:600}
+.quest .row{margin-top:4px}
+.x{all:unset;cursor:pointer;color:var(--red);font-size:15px;padding:0 4px;margin-left:2px}
+.x:hover{color:#fff} .x:focus-visible{outline:2px solid var(--gold)}
+.lnk{all:unset;cursor:pointer;color:var(--blue);text-decoration:underline}
+.lnk:focus-visible{outline:2px solid var(--gold)}
+.unitsel .pbtn input,.pbtn input,.numin,.utbl input{width:60px;background:var(--well);border:2px solid var(--line);color:var(--ink);font:inherit;padding:1px 4px}
 
 /* ---------- content pages ---------- */
 .page{padding:calc(var(--barh,78px) + 18px) max(16px,env(safe-area-inset-right,0px)) 110px max(16px,env(safe-area-inset-left,0px));max-width:1100px;margin:0 auto}
 .page h2{font-size:26px;color:var(--gold);margin:0 0 4px}
 .page .sub{color:var(--dim);margin:0 0 16px;max-width:65ch}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
+.grid2 .wide{grid-column:1/-1}
 .box{padding:14px}
 .tbl{width:100%;border-collapse:collapse;font-size:19px;font-variant-numeric:tabular-nums}
 .tbl th{font-family:var(--f-display);font-size:13px;color:var(--dim);text-align:left;font-weight:500;letter-spacing:.04em;border-bottom:2px solid var(--edge);padding:5px 6px;text-transform:uppercase}
@@ -148,8 +199,8 @@ table.kv td.up{color:var(--green)}
 .toast{background:#0f0b08e0;border:2px solid var(--gold);padding:3px 10px;font-size:17px;box-shadow:0 3px 0 #000;animation:tin .25s ease-out}
 .toast.bad{border-color:var(--red)} .toast.ok{border-color:var(--green)}
 @keyframes tin{from{transform:translateY(-6px);opacity:0}}
-#testbtn{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:40}
-#testpanel{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:41;width:300px;padding:12px 14px}
+#testbtn{order:2;flex:none;align-self:flex-start}
+#testpanel{position:fixed;top:calc(var(--barh,78px) + 8px);right:max(12px,env(safe-area-inset-right,0px));z-index:41;width:330px;padding:12px 14px;max-height:calc(100% - var(--barh,78px) - 24px);overflow:auto}
 #testpanel .speeds{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 #testpanel .speeds .btn.on{background:var(--gold)}
 
@@ -202,11 +253,25 @@ table.kv td.up{color:var(--green)}
   #bar{flex-wrap:wrap;row-gap:6px}
   #bar .logo{font-size:18px}
   #bar .logo small{display:none}
-  .res{order:3;flex-basis:100%}
-  .wheel{font-size:16px;white-space:normal}
-  .r{min-width:112px}
+  .res{order:3;flex-basis:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;overflow:visible}
+  #testbtn{order:1;margin-left:auto}
+  .wheel{font-size:16px;white-space:normal;order:4}
+  .alert{order:5;font-size:17px}
+  .r{min-width:0;padding:1px 5px}
+  .r s{display:none}
+  .r b{font-size:19px}
+  .r em{font-size:14px;margin-left:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .r .bar{margin-left:24px}
+  #tabs{left:6px;right:6px;transform:none;max-width:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:5px;bottom:calc(6px + env(safe-area-inset-bottom,0px))}
+  #tabs a{padding:8px 1px;font-size:12px;text-align:center;letter-spacing:0}
+  #tabs .lg{display:none}
+  #tabs .badge{font-size:14px;min-width:14px;margin-left:2px}
+  .page{padding-bottom:140px}
+  #toasts{bottom:calc(104px + env(safe-area-inset-bottom,0px))}
+  .zoom{position:absolute;top:calc(var(--barh,78px) + 8px);bottom:auto;right:8px;flex-direction:row}
+  .wtip{display:none}
   .left{position:static;width:auto;max-height:none;margin:0}
-  .village-below,.world-below{padding:12px max(16px,env(safe-area-inset-right,0px)) 110px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px}
+  .village-below,.world-below{padding:12px max(16px,env(safe-area-inset-right,0px)) 140px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px}
   .stage{position:relative;top:auto;height:58vh;margin-top:var(--barh,78px)}
   .right{position:fixed;left:0;right:0;top:auto;bottom:0;width:auto;max-height:66vh;border-bottom:0;padding:14px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));z-index:45;box-shadow:0 -4px 0 #0009,inset 0 0 0 2px var(--edge)}
   .right.closed{display:none}
@@ -216,7 +281,7 @@ table.kv td.up{color:var(--green)}
   .site-h nav{display:none}
   .hero{min-height:0;align-items:flex-end;padding-top:78vw;background-position:50% 0;background-size:180% auto}
   .hero::after{background:linear-gradient(180deg,#0b080600 0%,#0b080600 34%,#0b0806ee 56%,#16100b 100%)}
-  #testpanel{width:auto;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));transform:none}
+  #testpanel{width:auto;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px))}
 }
 /* ---------- modal, forms, report tables ---------- */
 .modal{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:#000b;padding:16px}
@@ -226,6 +291,27 @@ table.kv td.up{color:var(--green)}
 .rpt{display:flex;flex-direction:column;gap:4px;font-size:18px;color:var(--dim);margin-top:10px}
 .rpt textarea{background:var(--well);border:2px solid var(--line);color:var(--ink);font:inherit;font-size:19px;padding:6px;resize:vertical;width:100%}
 .mkt input{min-width:0}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.rank tr.me td{background:#3a2a10;color:var(--gold)}
+.titles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;font-size:18px}
+.swdot{display:inline-block;width:10px;height:10px;background:var(--c);margin-right:6px;border:1px solid #000}
+.swatches{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.sw{width:28px;height:28px;background:var(--c);border:2px solid #0b0806;cursor:pointer;padding:0}
+.sw.on{outline:3px solid var(--ink);cursor:default}
+.opt.shop{grid-template-columns:1fr}
+.utbl td.un{white-space:nowrap}
+.utbl td.un img{width:30px;vertical-align:middle;margin-right:6px}
+.utbl .pbtn{align-items:center}
+.nightb{max-width:480px;text-align:center}
+.wheelanim{position:relative;width:170px;height:170px;margin:8px auto 12px}
+.wheelanim .wh{position:absolute;inset:0;border-radius:50%;border:10px solid #8a5a2b;box-shadow:0 0 0 3px #2a1a0e,inset 0 0 0 3px #2a1a0e,0 0 30px #f2c14e55;background:repeating-conic-gradient(#0000 0 40deg,#6b4a2b 40deg 44deg);animation:spin2 .8s linear infinite}
+@keyframes spin2{to{transform:rotate(360deg)}}
+.wheelanim img{position:absolute;left:50%;bottom:14px;width:72px;transform:translateX(-50%);animation:hop .28s ease-in-out infinite alternate}
+@keyframes hop{to{transform:translateX(-50%) translateY(-7px)}}
+.nstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px}
+.nstats b{display:block;font-size:30px;font-weight:400;color:var(--gold);font-variant-numeric:tabular-nums}
+.nstats span{font-size:16px;color:var(--dim)}
+@media (max-width:600px){ .rpf{grid-template-columns:1fr} }
 .rtbl{margin-top:8px}
 .rtbl th:first-child{color:var(--gold)}
 .rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
@@ -257,7 +343,7 @@ table.kv td.up{color:var(--green)}
     <div class="steps">
       <div class="step px"><img src="assets/sprites/town_hall_3.webp" alt="Town Hall"><h3>Build</h3><p>Town Hall, Walls, 8 production sites and 12 plots for Barracks, Academy, Storehouses, Vaults and more.</p></div>
       <div class="step px"><img src="assets/sprites/wheelhouse_3.webp" alt="Wheelhouse"><h3>Grow with the wheel</h3><p>Every night Squeektoshi runs. His laps pay SEED to every village and boost Wood, Food, Stone and Iron output.</p></div>
-      <div class="step px"><img src="assets/sprites/unit_berserker.webp" alt="Berserker"><h3>Fight</h3><p>Train six unit types and raid on a 100 × 100 world map. Win only with twice the defender's power.</p></div>
+      <div class="step px"><img src="assets/sprites/unit_berserker.webp" alt="Berserker"><h3>Fight</h3><p>Train seven unit types, scout and raid on a 100 × 100 world map. Win only with twice the defender's power.</p></div>
       <div class="step px"><img src="assets/sprites/champion_3.webp" alt="Champion"><h3>Lead with your Squeek</h3><p>Your NFT is your champion. It levels up from battles and from the hamster's runs, up to level 30.</p></div>
     </div>
   </section>
@@ -277,7 +363,7 @@ table.kv td.up{color:var(--green)}
   </section>
   <section class="sec" id="units">
     <h2>Units</h2>
-    <p class="lead">Attack and defense power decide every battle. There is no luck: the battle calculator shows the result before you send.</p>
+    <p class="lead">Attack and defense power decide every battle. There is no luck, only missing information: scout a village to see its exact defense before you send.</p>
     <div class="units" id="unitCards"></div>
   </section>
   <section class="sec" id="rules">
@@ -290,6 +376,7 @@ table.kv td.up{color:var(--green)}
         <li><b>You win only with twice the defense.</b> Then every defender falls and you can loot; otherwise both sides lose troops and nothing is taken.</li>
         <li><b>New villages get a 7-day shield.</b> They cannot attack or be attacked.</li>
         <li><b>A village can be raided successfully at most 3 times a day.</b> What sits in its Vault is safe.</li>
+        <li><b>Pick on someone your size.</b> Raids on villages 3 or more Town Hall levels below yours give half loot and no ranking points.</li>
         <li><b>No trading between players.</b> The Market only exchanges your own resources, and SEED cannot be exchanged.</li>
       </ol></div>
       <div class="px box"><h3>Fair play</h3><ol>
@@ -322,11 +409,14 @@ table.kv td.up{color:var(--green)}
   <header id="bar">
     <div class="logo" id="logoHome" title="Back to the site">SQUEEK WARS<small>Village of Squeek #4821</small></div>
     <div class="res" id="resbar"></div>
+    <button class="btn ghost sm" id="testbtn" type="button" aria-label="Settings and test controls">⚙ Settings</button>
     <div class="wheel" id="wheelchip"></div>
+    <div id="alert" class="alert" role="alert" hidden></div>
   </header>
 
   <div id="village" class="view">
-    <div class="stage" id="vstage"><div class="scene" id="scene"></div></div>
+    <div class="stage" id="vstage"><div class="scene" id="scene"><div id="sbase"></div><div id="life"></div><div id="splates"></div></div></div>
+    <div class="zoom" id="zoombar"><button class="btn ghost" data-act="zin" type="button" aria-label="Zoom in">+</button><button class="btn ghost" data-act="zout" type="button" aria-label="Zoom out">−</button><button class="btn ghost" data-act="zfit" type="button" aria-label="Whole village or close up">⤢</button></div>
     <div class="village-below">
       <aside class="left px" id="vleft"></aside>
     </div>
@@ -346,12 +436,13 @@ table.kv td.up{color:var(--green)}
   <div id="market" class="view page"></div>
   <div id="clan" class="view page"></div>
   <div id="champion" class="view page"></div>
+  <div id="ranking" class="view page"></div>
   <div id="reports" class="view page"></div>
 
   <nav id="tabs" class="px" aria-label="Game">
-    <a href="#village" data-v="village">Village</a><a href="#world" data-v="world">World Map</a><a href="#army" data-v="army">Army</a><a href="#academy" data-v="academy">Academy</a><a href="#market" data-v="market">Market</a><a href="#clan" data-v="clan">Clan</a><a href="#champion" data-v="champion">Champion</a><a href="#reports" data-v="reports">Reports</a>
+    <a href="#village" data-v="village">Village</a><a href="#world" data-v="world"><span class="lg">World </span>Map</a><a href="#army" data-v="army">Army</a><a href="#academy" data-v="academy">Academy</a><a href="#market" data-v="market">Market</a><a href="#clan" data-v="clan">Clan</a><a href="#champion" data-v="champion">Champion</a><a href="#ranking" data-v="ranking">Ranking</a><a href="#reports" data-v="reports">Reports</a>
   </nav>
-  <button class="btn ghost sm" id="testbtn" type="button">Test controls</button>
+  <div id="wtip" class="wtip" hidden></div>
   <div id="testpanel" class="px" hidden></div>
   <div id="namebox" class="modal" hidden><div class="px box">
     <h3>Choose your player name</h3>
@@ -360,6 +451,18 @@ table.kv td.up{color:var(--green)}
     <input id="nm-in" maxlength="16" autocomplete="off">
     <div class="row" style="justify-content:flex-start"><button class="btn" data-act="nm-ok" type="button">Start playing</button><button class="btn ghost" data-act="nm-rand" type="button">Pick one for me</button></div>
     <p class="why" id="nm-why"></p>
+  </div></div>
+  <div id="nightbox" class="modal" hidden><div class="px box nightb">
+    <h3>Squeektoshi's night run</h3>
+    <div class="wheelanim" aria-hidden="true"><div class="wh"></div><img src="assets/sprites/villager_plain.webp" alt=""></div>
+    <div class="nstats"><div><b id="nb-laps">0</b><span>laps</span></div><div><b id="nb-seed">+0</b><span>SEED for every village</span></div><div><b id="nb-bonus">+0%</b><span>wheel bonus</span></div></div>
+    <p class="muted" id="nb-cap"></p>
+    <div class="row"><label class="muted" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="nb-again" checked> Show this every night</label><button class="btn" data-act="nb-close" type="button">Continue</button></div>
+  </div></div>
+  <div id="tabbox" class="modal" hidden><div class="px box">
+    <h3>Open in another tab</h3>
+    <p class="muted">Your village is being played in another browser tab, so this tab paused to keep your save safe.</p>
+    <div class="row" style="justify-content:flex-start"><button class="btn" data-act="tab-here" type="button">Play here instead</button></div>
   </div></div>
 </div>
 <div id="toasts" aria-live="polite"></div>

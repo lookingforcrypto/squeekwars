@@ -97,3 +97,19 @@ Top-down 3/4 view game map in high-detail 16-bit pixel art, warm afternoon light
 ```
 16-bit pixel art character sprite sheet for a cozy top-down hamster village strategy game: the same hamster hero shown at four ranks side by side from left to right with generous empty space between them, all the same size and on the same baseline, 3/4 top-down RPG angle facing the viewer, a chubby golden-orange and white Syrian hamster standing upright on two legs. Rank 1: a brave young hamster with a red scarf and a small wooden sword. Rank 2: the same hamster in brown leather armor with a round shield. Rank 3: the same hamster in shiny steel armor with a flowing blue cape. Rank 4: the same hamster in golden armor with a red velvet cape and a tiny golden crown. Isolated sprites on a perfectly flat solid magenta #FF00FF background from edge to edge, no shadows on the background, no text.
 ```
+
+## 17 · Clan Hall, 5 looks (to do) · kit: Buildings · 16:9
+
+The prototype has one Clan Hall sprite for all 10 levels and marks levels 3, 5 and 7 with banners. This sheet would give it the same five stages as every other building.
+
+```
+16-bit pixel art sprite sheet: the same Clan Hall shown at five upgrade levels, side by side from left to right with generous empty space between them, all on the same baseline and the same scale, 3/4 top-down view, front facade facing the viewer. The Clan Hall is a wide two-storey meeting hall for a hamster village with a big arched double door, a long banner pole on each side of the door, a round shield emblem above the door, and a chimney. Level 1: cardboard walls with tape, a straw roof, plain cloth banners. Level 2: natural wood planks, a wooden shingle roof, simple painted banners. Level 3: cream plaster with dark timber beams, a red clay tile roof, red banners with a sunflower seed emblem. Level 4: grey stone walls, a copper roof with green verdigris, tall banners and a stone stair to the door. Level 5: white marble walls with gold trim, a golden roof, red velvet banners with gold fringes, a golden shield emblem. Isolated sprites on a perfectly flat solid magenta #FF00FF background from edge to edge: no ground, no grass, no shadow on the background, no text, no numbers.
+```
+
+## 18 · Scout (to do) · kit: Characters · 16:9
+
+The Scout uses the young villager sprite (blue cap, satchel) until it has its own.
+
+```
+16-bit pixel art character sprite for a hamster strategy game: a lean orange-and-cream hamster scout crouching mid-stride, wearing a dark green hooded cloak, a leather satchel and a small brass spyglass in one paw, alert ears, looking to the right. Same scale and style as the other unit sprites, full body, centered, on a perfectly flat solid magenta #FF00FF background from edge to edge, no ground, no shadow on the background, no text.
+```

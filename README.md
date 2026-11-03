@@ -16,7 +16,7 @@ A browser strategy game for [Squeekchain](https://squeekchain.com) on Sepolia. E
 
 ## Play the prototype
 
-Open [`prototype/index.html`](prototype/) in a browser: the site plus a playable village, world map and raids with time running 60× faster. See [prototype/README.md](prototype/README.md).
+Open [`prototype/index.html`](prototype/) in a browser: the site plus a playable village, world map, scouting, raids, clans and a ranking, with time running 60× faster. See [prototype/README.md](prototype/README.md).
 
 ## Repository
 
@@ -24,7 +24,8 @@ Open [`prototype/index.html`](prototype/) in a browser: the site plus a playable
 |---|---|
 | [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) | Rules: economy, buildings, research, units, battle, champion, world map, protection |
 | [docs/BUILDINGS.md](docs/BUILDINGS.md) | Every building level: effects, costs, times, looks |
-| `art/sprites/` | 73 cut-out sprites (buildings in 5 looks, units, champion, villagers, production sites) |
+| [docs/PLAYTEST.md](docs/PLAYTEST.md) | Playtest findings and what was fixed |
+| `art/sprites/` | 74 cut-out sprites (buildings in 5 looks, units, champion, villagers, production sites) |
 | `art/mockups/` | Village and world map screen mockups |
 | `art/map/` | Village map concept |
 | [art/PROMPTS.md](art/PROMPTS.md) | The prompts used to generate the art |
@@ -33,4 +34,4 @@ Open [`prototype/index.html`](prototype/) in a browser: the site plus a playable
 
 ## Status
 
-Design draft v1 with a playable prototype. Next: the contract-level spec (`SPEC.md`) for the IMD build, then contracts and the live site.
+Design draft v2 (after the first playtest) with a playable prototype. Next: the contract-level spec (`SPEC.md`) for the IMD build, then contracts and the live site.

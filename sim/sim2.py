@@ -170,10 +170,10 @@ class V:
             s.pay(cost, seeds); s.q.append((start + tm, kind, ref if kind != 'new' else typ, j)); s.q.sort(key=lambda o: o[0])
         ak = s.lvl('akademi')
         if ak and s.rq is None:
-            pr = {'yagmaci': ['akinci', 'kemirici', 'buyukyanak', 'demirci', 'suvari', 'sargi', 'yanak', 'hizli', 'buyukyanak2', 'mancinik', 'kalkan', 'klan', 'pazar'],
-                  'dengeli': ['akinci', 'kalkan', 'yanak', 'kemirici', 'demirci', 'sargi', 'suvari', 'buyukyanak', 'klan', 'pazar', 'mancinik', 'hizli', 'buyukyanak2'],
-                  'ciftci': ['yanak', 'kalkan', 'demirci', 'sargi', 'klan', 'pazar', 'akinci', 'kemirici', 'buyukyanak', 'suvari', 'mancinik', 'hizli', 'buyukyanak2'],
-                  'gundelik': ['yanak', 'kalkan', 'klan', 'pazar', 'demirci', 'sargi', 'akinci', 'kemirici', 'buyukyanak', 'suvari', 'mancinik', 'hizli', 'buyukyanak2']}[s.arche]
+            pr = {'yagmaci': ['akinci', 'kemirici', 'buyukyanak', 'demirci', 'suvari', 'sargi', 'yanak', 'hizli', 'buyukyanak2', 'mancinik', 'kalkan', 'klan', 'izci'],
+                  'dengeli': ['akinci', 'kalkan', 'yanak', 'kemirici', 'demirci', 'sargi', 'suvari', 'buyukyanak', 'klan', 'izci', 'mancinik', 'hizli', 'buyukyanak2'],
+                  'ciftci': ['yanak', 'kalkan', 'demirci', 'sargi', 'klan', 'izci', 'akinci', 'kemirici', 'buyukyanak', 'suvari', 'mancinik', 'hizli', 'buyukyanak2'],
+                  'gundelik': ['yanak', 'kalkan', 'klan', 'izci', 'demirci', 'sargi', 'akinci', 'kemirici', 'buyukyanak', 'suvari', 'mancinik', 'hizli', 'buyukyanak2']}[s.arche]
             for n in pr:
                 if n in s.research or RESEARCH[n] > tier_open(ak): continue
                 tr = RESEARCH[n]; c = research_cost(tr); sd = research_seed(tr)

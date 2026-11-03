@@ -1,4 +1,4 @@
-# Squeek Wars · Buildings and levels (draft v1)
+# Squeek Wars · Buildings and levels (draft v2)
 
 Costs are the sum of the 4 resources (Wood, Food, Stone, Iron); the per-resource split is in `sim/params.py`. Times are before the Town Hall speed bonus. Sprites change every 2 levels (10-level buildings) or every 4 levels (20-level buildings): cardboard → wood → plaster & timber → stone → marble & gold.
 
@@ -101,26 +101,26 @@ Without a Storehouse the village holds 1,000 of each resource. Output above capa
 
 | Level | Protected amount (per resource) | Resources | Time | Look |
 |---|---|---|---|---|
-| 1 | 250 | 240 | 27 min | cardboard |
-| 2 | 305 | 307 | 32 min | cardboard |
-| 3 | 372 | 393 | 39 min | cardboard |
-| 4 | 454 | 503 | 47 min | cardboard |
-| 5 | 554 | 644 | 56 min | wood |
-| 6 | 676 | 825 | 1.1 h | wood |
-| 7 | 824 | 1,056 | 1.3 h | wood |
-| 8 | 1,006 | 1,351 | 1.6 h | wood |
-| 9 | 1,227 | 1,729 | 1.9 h | plaster & timber |
-| 10 | 1,497 | 2,214 | 2.3 h | plaster & timber |
-| 11 | 1,826 | 2,833 | 2.8 h | plaster & timber |
-| 12 | 2,228 | 3,627 | 3.3 h | plaster & timber |
-| 13 | 2,718 | 4,642 | 4.0 h | stone |
-| 14 | 3,316 | 5,942 | 4.8 h | stone |
-| 15 | 4,046 | 7,606 | 5.8 h | stone |
-| 16 | 4,936 | 9,736 | 6.9 h | stone |
-| 17 | 6,021 | 12,462 | 8.3 h | marble & gold |
-| 18 | 7,346 | 15,951 | 10.0 h | marble & gold |
-| 19 | 8,962 | 20,417 | 12 h | marble & gold |
-| 20 | 10,934 | 26,134 | 14 h | marble & gold |
+| 1 | 250 | 260 | 27 min | cardboard |
+| 2 | 305 | 333 | 32 min | cardboard |
+| 3 | 372 | 426 | 39 min | cardboard |
+| 4 | 454 | 545 | 47 min | cardboard |
+| 5 | 554 | 698 | 56 min | wood |
+| 6 | 676 | 893 | 1.1 h | wood |
+| 7 | 824 | 1,143 | 1.3 h | wood |
+| 8 | 1,006 | 1,464 | 1.6 h | wood |
+| 9 | 1,227 | 1,873 | 1.9 h | plaster & timber |
+| 10 | 1,497 | 2,398 | 2.3 h | plaster & timber |
+| 11 | 1,826 | 3,070 | 2.8 h | plaster & timber |
+| 12 | 2,228 | 3,929 | 3.3 h | plaster & timber |
+| 13 | 2,718 | 5,029 | 4.0 h | stone |
+| 14 | 3,316 | 6,437 | 4.8 h | stone |
+| 15 | 4,046 | 8,240 | 5.8 h | stone |
+| 16 | 4,936 | 10,547 | 6.9 h | stone |
+| 17 | 6,021 | 13,500 | 8.3 h | marble & gold |
+| 18 | 7,346 | 17,280 | 10.0 h | marble & gold |
+| 19 | 8,962 | 22,118 | 12 h | marble & gold |
+| 20 | 10,934 | 28,311 | 14 h | marble & gold |
 
 Even without a Vault, 150 of each resource is protected. Protected amounts cannot be raided.
 
@@ -128,18 +128,18 @@ Even without a Vault, 150 of each resource is protected. Protected amounts canno
 
 | Level | Upkeep capacity | Resources | Time | Look |
 |---|---|---|---|---|
-| 1 | 20 | 280 | 36 min | cardboard |
-| 2 | 45 | 454 | 52 min | cardboard |
-| 3 | 75 | 735 | 1.3 h | wood |
-| 4 | 112 | 1,190 | 1.8 h | wood |
-| 5 | 157 | 1,928 | 2.7 h | plaster & timber |
-| 6 | 211 | 3,124 | 3.8 h | plaster & timber |
-| 7 | 276 | 5,061 | 5.6 h | stone |
-| 8 | 354 | 8,199 | 8.1 h | stone |
-| 9 | 446 | 13,282 | 12 h | marble & gold |
-| 10 | 555 | 21,518 | 17 h | marble & gold |
+| 1 | 20 | 300 | 30 min | cardboard |
+| 2 | 45 | 465 | 44 min | cardboard |
+| 3 | 75 | 721 | 1.1 h | wood |
+| 4 | 112 | 1,117 | 1.5 h | wood |
+| 5 | 157 | 1,732 | 2.2 h | plaster & timber |
+| 6 | 211 | 2,684 | 3.2 h | plaster & timber |
+| 7 | 276 | 4,160 | 4.6 h | stone |
+| 8 | 354 | 6,448 | 6.7 h | stone |
+| 9 | 446 | 9,995 | 9.8 h | marble & gold |
+| 10 | 555 | 15,492 | 14 h | marble & gold |
 
-Each unit eats its upkeep in Food per hour and fills Burrow capacity (Spearman, Forager, Shieldbearer, Berserker 1; Charger 2; Catapult 4).
+Each upkeep point eats 0.5 Food per hour and fills Burrow capacity (Spearman, Forager, Shieldbearer, Berserker, Scout 1; Charger 2; Catapult 4).
 
 ## Barracks (1, unlocked)
 
@@ -163,14 +163,14 @@ One training batch at a time. The Academy decides which units can be trained; Sp
 | Level | Open tier | Research unlocked at this level | Research time | Resources | Time | Look |
 |---|---|---|---|---|---|---|
 | 1 | 1 | Forager, Vault | ×1.0 | 700 | 36 min | cardboard |
-| 2 | 1 | – | ×0.9 | 1,134 | 52 min | cardboard |
-| 3 | 2 | Shieldbearer, Berserker, Forge, Clan Hall, Logistics (+20% carry) | ×0.9 | 1,837 | 1.3 h | wood |
-| 4 | 2 | – | ×0.9 | 2,976 | 1.8 h | wood |
-| 5 | 3 | Charger, Market | ×0.8 | 4,821 | 2.7 h | plaster & timber |
-| 6 | 3 | – | ×0.8 | 7,810 | 3.8 h | plaster & timber |
-| 7 | 4 | Catapult, Field Medicine (10% of fallen units return) | ×0.7 | 12,653 | 5.6 h | stone |
-| 8 | 4 | – | ×0.7 | 20,498 | 8.1 h | stone |
-| 9 | 5 | Logistics II, Forced March (+20% speed) | ×0.7 | 33,206 | 12 h | marble & gold |
+| 2 | 2 | Shieldbearer, Berserker, Scout, Forge, Clan Hall | ×0.9 | 1,134 | 52 min | cardboard |
+| 3 | 2 | – | ×0.9 | 1,837 | 1.3 h | wood |
+| 4 | 3 | Charger, Logistics (+20% carry) | ×0.9 | 2,976 | 1.8 h | wood |
+| 5 | 3 | – | ×0.8 | 4,821 | 2.7 h | plaster & timber |
+| 6 | 4 | Catapult, Field Medicine (10% of fallen units return) | ×0.8 | 7,810 | 3.8 h | plaster & timber |
+| 7 | 4 | – | ×0.7 | 12,653 | 5.6 h | stone |
+| 8 | 5 | Logistics II, Forced March (+20% speed) | ×0.7 | 20,498 | 8.1 h | stone |
+| 9 | 5 | – | ×0.7 | 33,206 | 12 h | marble & gold |
 | 10 | 5 | – | ×0.6 | 53,794 | 17 h | marble & gold |
 
 Research cost by tier:
@@ -178,27 +178,27 @@ Research cost by tier:
 | Tier | Resources | SEED | Time |
 |---|---|---|---|
 | 1 | 600 | 300 | 2.0 h |
-| 2 | 1,320 | 600 | 3.2 h |
-| 3 | 2,904 | 1,200 | 5.3 h |
-| 4 | 6,389 | 2,400 | 8.6 h |
-| 5 | 14,055 | 4,800 | 14 h |
+| 2 | 1,320 | 600 | 3.4 h |
+| 3 | 2,904 | 1,200 | 5.6 h |
+| 4 | 6,389 | 2,400 | 9.0 h |
+| 5 | 14,055 | 4,800 | 15 h |
 
 ## Forge (1, Academy tier 2)
 
 | Level | Attack and defense, all units | Resources | Time | Look |
 |---|---|---|---|---|
-| 1 | +2% | 650 | 36 min | cardboard |
-| 2 | +4% | 1,053 | 52 min | cardboard |
-| 3 | +6% | 1,706 | 1.3 h | wood |
-| 4 | +8% | 2,763 | 1.8 h | wood |
-| 5 | +10% | 4,477 | 2.7 h | plaster & timber |
-| 6 | +12% | 7,253 | 3.8 h | plaster & timber |
-| 7 | +14% | 11,749 | 5.6 h | stone |
-| 8 | +16% | 19,033 | 8.1 h | stone |
-| 9 | +18% | 30,834 | 12 h | marble & gold |
-| 10 | +20% | 49,951 | 17 h | marble & gold |
+| 1 | +2% | 640 | 36 min | cardboard |
+| 2 | +4% | 1,037 | 52 min | cardboard |
+| 3 | +6% | 1,680 | 1.3 h | wood |
+| 4 | +8% | 2,721 | 1.8 h | wood |
+| 5 | +10% | 4,408 | 2.7 h | plaster & timber |
+| 6 | +12% | 7,141 | 3.8 h | plaster & timber |
+| 7 | +14% | 11,568 | 5.6 h | stone |
+| 8 | +16% | 18,741 | 8.1 h | stone |
+| 9 | +18% | 30,360 | 12 h | marble & gold |
+| 10 | +20% | 49,183 | 17 h | marble & gold |
 
-## Clan Hall (1, Academy tier 2, phase 2)
+## Clan Hall (1, Academy tier 2)
 
 | Level | Clan | Member cap (founder) | Allied reinforcements (upkeep) | Resources | Time | Look |
 |---|---|---|---|---|---|---|
@@ -215,20 +215,20 @@ Research cost by tier:
 
 Clan members cannot send resources to each other (anti multi-account); they can only send troops to help defend. Clan chat is off-chain.
 
-## Market (1, Academy tier 3)
+## Market (1, Town Hall 2)
 
 | Level | Exchange rate | Resources | Time | Look |
 |---|---|---|---|---|
-| 1 | 100 → 25 | 700 | 36 min | cardboard |
-| 2 | 100 → 30 | 1,134 | 52 min | cardboard |
-| 3 | 100 → 35 | 1,837 | 1.3 h | wood |
-| 4 | 100 → 40 | 2,976 | 1.8 h | wood |
-| 5 | 100 → 45 | 4,821 | 2.7 h | plaster & timber |
-| 6 | 100 → 50 | 7,810 | 3.8 h | plaster & timber |
-| 7 | 100 → 55 | 12,653 | 5.6 h | stone |
-| 8 | 100 → 60 | 20,498 | 8.1 h | stone |
-| 9 | 100 → 65 | 33,206 | 12 h | marble & gold |
-| 10 | 100 → 75 | 53,794 | 17 h | marble & gold |
+| 1 | 100 → 25 | 650 | 36 min | cardboard |
+| 2 | 100 → 30 | 1,053 | 52 min | cardboard |
+| 3 | 100 → 35 | 1,706 | 1.3 h | wood |
+| 4 | 100 → 40 | 2,763 | 1.8 h | wood |
+| 5 | 100 → 45 | 4,477 | 2.7 h | plaster & timber |
+| 6 | 100 → 50 | 7,253 | 3.8 h | plaster & timber |
+| 7 | 100 → 55 | 11,749 | 5.6 h | stone |
+| 8 | 100 → 60 | 19,033 | 8.1 h | stone |
+| 9 | 100 → 65 | 30,834 | 12 h | marble & gold |
+| 10 | 100 → 75 | 49,951 | 17 h | marble & gold |
 
 No trading between players. The Market only converts your own resources: give 100 of one, receive the listed amount of another. +5 per level, level 10 gets a final bonus to 75. SEED cannot be exchanged.
 

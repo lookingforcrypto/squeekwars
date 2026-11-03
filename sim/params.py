@@ -8,22 +8,23 @@ WITNESS = 200                # zoomies tanıklığı (günde en fazla 1)
 
 # kaynak alanı (her türden 2): saatlik taban üretim
 FIELD_BASE, FIELD_G = 8.0, 1.4
-FIELD_COST = {0: (30, 40, 50, 40), 1: (50, 20, 50, 40), 2: (50, 40, 20, 50), 3: (60, 40, 50, 10)}
+FIELD_COST = {0: (30, 50, 45, 40), 1: (45, 20, 50, 45), 2: (45, 45, 20, 50), 3: (50, 45, 45, 10)}   # v2: playtest rebalance
 FIELD_CG, FIELD_T1, FIELD_TG = 1.60, 0.4, 1.4
 
 # bina: (seviye-1 maliyeti, maliyet artışı, seviye-1 süresi (saat), süre artışı, en yüksek seviye, başlangıç seviyesi)
 B = {
-    'merkez':  ((200, 150, 200, 150), 1.75, 0.75, 1.50, 10, 1),
-    'cark':    ((120, 80, 100, 100),  1.68, 0.6, 1.45, 10, 0),
-    'ambar':   ((130, 80, 120, 70),   1.28, 0.45, 1.20, 20, 0),
-    'yanak':   ((80, 40, 80, 40),     1.28, 0.45, 1.20, 20, 0),
-    'yuva':    ((100, 60, 80, 40),    1.62, 0.6, 1.45, 10, 0),
-    'kisla':   ((200, 100, 150, 150), 1.62, 0.6, 1.45, 10, 0),
-    'akademi': ((220, 120, 180, 180), 1.62, 0.6, 1.45, 10, 0),
-    'demirci': ((180, 80, 140, 250),  1.62, 0.6, 1.45, 10, 0),
-    'sur':     ((150, 0, 250, 100),   1.62, 0.6, 1.45, 10, 1),
-    'klan':    ((250, 150, 200, 100), 1.62, 0.6, 1.45, 10, 0),
-    'pazar':   ((250, 150, 200, 100), 1.62, 0.6, 1.45, 10, 0),
+    # v2 (playtest): costs spread over all four resources; Wood used to starve the game while Food piled up
+    'merkez':  ((180, 170, 180, 170), 1.75, 0.75, 1.50, 10, 1),
+    'cark':    ((100, 110, 90, 100),  1.68, 0.6, 1.45, 10, 0),
+    'ambar':   ((110, 100, 100, 90),  1.28, 0.45, 1.20, 20, 0),
+    'yanak':   ((70, 60, 80, 50),     1.28, 0.45, 1.20, 20, 0),
+    'yuva':    ((70, 110, 70, 50),    1.55, 0.5, 1.45, 10, 0),
+    'kisla':   ((150, 150, 130, 170), 1.62, 0.6, 1.45, 10, 0),
+    'akademi': ((160, 160, 170, 210), 1.62, 0.6, 1.45, 10, 0),
+    'demirci': ((130, 110, 140, 260), 1.62, 0.6, 1.45, 10, 0),
+    'sur':     ((80, 60, 220, 140),   1.62, 0.6, 1.45, 10, 1),
+    'klan':    ((190, 200, 180, 130), 1.62, 0.6, 1.45, 10, 0),
+    'pazar':   ((150, 200, 150, 150), 1.62, 0.6, 1.45, 10, 0),     # v2: opens at Town Hall 2, no research
 }
 NAMES = {'merkez': 'Köy Merkezi', 'cark': 'Çark Kulesi', 'ambar': 'Ambar', 'yanak': 'Yanak Kesesi', 'yuva': 'Yuva',
          'kisla': 'Kışla', 'akademi': 'Akademi', 'demirci': 'Demirci', 'sur': 'Sur', 'klan': 'Klan Evi', 'pazar': 'Pazar'}
@@ -43,25 +44,27 @@ KISLA_SPEED = 0.90            # kışla seviye başı eğitim süresi çarpanı
 BASE_DEF_PER_MERKEZ = 40      # köylülerin savunması
 
 # araştırma: kademe
-RESEARCH = {'akinci': 1, 'yanak': 1, 'kalkan': 2, 'kemirici': 2, 'demirci': 2, 'klan': 2, 'buyukyanak': 2,
-            'suvari': 3, 'pazar': 3, 'mancinik': 4, 'sargi': 4, 'buyukyanak2': 5, 'hizli': 5}
-def research_cost(t): tot = 600 * 2.2 ** (t - 1); return tuple(tot * f for f in (0.3, 0.2, 0.25, 0.25))
+RESEARCH = {'akinci': 1, 'yanak': 1, 'kalkan': 2, 'kemirici': 2, 'izci': 2, 'demirci': 2, 'klan': 2,
+            'suvari': 3, 'buyukyanak': 3, 'mancinik': 4, 'sargi': 4, 'buyukyanak2': 5, 'hizli': 5}
+def research_cost(t): tot = 600 * 2.2 ** (t - 1); return tuple(tot * f for f in (0.25, 0.25, 0.25, 0.25))
 def research_seed(t): return 300 * 2 ** (t - 1)
 def research_time(t, ak): return 2 * 1.8 ** (t - 1) * 0.95 ** (ak - 1)
-def tier_open(ak): return (ak + 1) // 2          # Lv1→1, Lv3→2, Lv5→3, Lv7→4, Lv9→5
+TIER_AT = [0, 1, 2, 4, 6, 8]                       # v2: Academy level that opens each tier
+def tier_open(ak): return max(t for t in range(6) if TIER_AT[t] <= ak)
 
 # birimler: saldırı, savunma, hız (kare/saat), taşıma, bakım, maliyet, eğitim dakikası, araştırma
 U = {
-    'piyade':   dict(a=40, d=35, s=6,  c=50,  u=1, cost=(60, 30, 50, 40),    m=15, r=None),
-    'akinci':   dict(a=20, d=15, s=8,  c=120, u=1, cost=(70, 40, 30, 20),    m=12, r='akinci'),
-    'kalkan':   dict(a=15, d=70, s=5,  c=20,  u=1, cost=(80, 30, 60, 50),    m=18, r='kalkan'),
-    'kemirici': dict(a=75, d=20, s=6,  c=40,  u=1, cost=(70, 40, 40, 100),   m=20, r='kemirici'),
-    'suvari':   dict(a=90, d=50, s=14, c=80,  u=2, cost=(150, 80, 90, 180),  m=35, r='suvari'),
-    'mancinik': dict(a=30, d=10, s=3,  c=0,   u=4, cost=(400, 100, 300, 150), m=70, r='mancinik'),
+    'piyade':   dict(a=40, d=35, s=6,  c=50,  u=1, cost=(50, 45, 45, 40),    m=15, r=None),
+    'akinci':   dict(a=20, d=15, s=8,  c=120, u=1, cost=(55, 55, 30, 20),    m=12, r='akinci'),
+    'kalkan':   dict(a=15, d=70, s=5,  c=20,  u=1, cost=(60, 45, 70, 45),    m=18, r='kalkan'),
+    'kemirici': dict(a=75, d=20, s=6,  c=40,  u=1, cost=(55, 55, 35, 100),   m=20, r='kemirici'),
+    'suvari':   dict(a=90, d=50, s=14, c=80,  u=2, cost=(120, 130, 90, 170), m=35, r='suvari'),
+    'mancinik': dict(a=30, d=10, s=3,  c=0,   u=4, cost=(320, 140, 300, 170), m=70, r='mancinik'),
+    'izci':     dict(a=0,  d=5,  s=16, c=0,   u=1, cost=(30, 40, 20, 40),    m=8,  r='izci'),     # v2: Scout
 }
 UNAMES = {'piyade': 'Kabuk Kırıcı', 'akinci': 'Yanak Akıncısı', 'kalkan': 'Talaş Kalkanı', 'kemirici': 'Kemirici',
           'suvari': 'Top Süvarisi', 'mancinik': 'Fındık Mancınığı'}
-UPKEEP_FOOD = 1.0             # bakım puanı başına saatte ayçiçeği
+UPKEEP_FOOD = 0.5             # v2: Food per upkeep point per hour
 
 # kahraman
 HERO_BASE, HERO_PER_POINT = 100, 100
