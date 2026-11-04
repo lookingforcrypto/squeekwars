@@ -426,3 +426,5 @@ h3{font-family:var(--f-body);font-size:21px;letter-spacing:.04em}
 .share input{flex:1;min-width:200px;font:inherit;background:var(--well);color:var(--ink);border:2px solid var(--line);padding:4px 6px}
 #walletmenu .btn{display:block;width:100%;text-align:left}
 @media (max-width:900px){ .vstats{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.adm .kv .btn{margin-top:0}
+.adm .kv td{vertical-align:middle}

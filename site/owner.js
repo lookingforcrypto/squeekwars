@@ -51,19 +51,20 @@ const esState = {}; let esBusy = false;
 const esSleep = ms => new Promise(r => setTimeout(r, ms));
 function verifyBox() {
   const scan = a => `https://sepolia.etherscan.io/address/${a}#code`, src = a => `https://repo.sourcify.dev/${ES_CHAIN}/${SW.E.getAddress(a)}`;
-  return `<details class="px box adm"><summary><h3>Source code on Etherscan</h3></summary><p class="muted">The game contracts are verified on Sourcify. To show the same source on Etherscan, paste an Etherscan API key (free at <a href="https://etherscan.io/myapikey" target="_blank" rel="noopener">etherscan.io/myapikey</a>) and press the button. The key stays in this tab and is sent only to Etherscan.</p>`
+  return `<details class="px box adm"><summary><h3>Source code on Etherscan</h3></summary><p class="muted">The game contracts are verified on Sourcify. To show the same source on Etherscan, paste an Etherscan API key (free at <a href="https://etherscan.io/myapikey" target="_blank" rel="noopener">etherscan.io/myapikey</a>) and press Verify on a contract, or verify them all at once. A contract that is already verified just shows ✓. The key stays in this tab and is sent only to Etherscan.</p>`
     + `<div class="mkt"><label>Etherscan API key<input id="es-key" type="password" autocomplete="off" spellcheck="false"></label><button class="btn sm" data-act="esverify" ${esBusy ? 'disabled' : ''}>Verify them all on Etherscan</button></div>`
-    + `<table class="kv">${ES_LIST.map(([n, k]) => `<tr><td>${n}</td><td><a href="${scan(SW.ADDR[k])}" target="_blank" rel="noopener">Etherscan</a> · <a href="${src(SW.ADDR[k])}" target="_blank" rel="noopener">Sourcify</a></td><td id="es-st-${k}">${esState[k] || ''}</td></tr>`).join('')}</table>`
+    + `<table class="kv">${ES_LIST.map(([n, k]) => `<tr><td>${n}</td><td><a href="${scan(SW.ADDR[k])}" target="_blank" rel="noopener">Etherscan</a> · <a href="${src(SW.ADDR[k])}" target="_blank" rel="noopener">Sourcify</a></td><td><button class="btn sm ghost" data-act="esverify1" data-k="${k}" type="button">Verify</button></td><td id="es-st-${k}">${esState[k] || ''}</td></tr>`).join('')}</table>`
     + `<p class="muted" style="font-size:17px">By hand instead: on each contract's Etherscan page choose Contract → Verify and Publish → Solidity (Standard-Json-Input), compiler v0.8.26+commit.8a97fa7a, MIT, upload <a href="verify/input.json" download>input.json</a> (Chat: <a href="verify/input-chat.json" download>input-chat.json</a>), and paste the contract's constructor arguments from <a href="verify/contracts.json" target="_blank">contracts.json</a>.</p></details>`;
 }
-async function esVerify() {
+async function esVerify(only) {          // only: one contract key, or every contract
   const key = ($('#es-key').value || '').trim(); if (!key) return note('Paste your Etherscan API key first.', 'bad');
-  if (esBusy) return; esBusy = true;
+  if (esBusy) return note('Wait for the verification that is running.', 'bad'); esBusy = true;
+  document.querySelectorAll('[data-act="esverify"],[data-act="esverify1"]').forEach(b => { b.disabled = true; });
   const set = (k, h) => { esState[k] = h; const el = document.getElementById('es-st-' + k); if (el) el.innerHTML = h; };
   const ok = '<span class="ok">✓ verified</span>', bad = m => `<span class="bad">${esc(m)}</span>`;
   try {
     const meta = await fetch('verify/contracts.json', { cache: 'no-store' }).then(r => r.json()), inputs = {};
-    for (const c of meta.contracts) {
+    for (const c of meta.contracts.filter(x => !only || x.key === only)) {
       const file = c.input || 'input.json'; if (!inputs[file]) inputs[file] = await fetch('verify/' + file, { cache: 'no-store' }).then(r => r.json());
       const input = inputs[file];
       if (c.address.toLowerCase() !== String(SW.ADDR[c.key]).toLowerCase()) { set(c.key, bad('verify files are for another deployment')); continue; }
@@ -81,7 +82,7 @@ async function esVerify() {
         }
       } catch (e) { set(c.key, bad(e.message || String(e))); }
     }
-  } finally { esBusy = false; }
+  } finally { esBusy = false; document.querySelectorAll('[data-act="esverify"],[data-act="esverify1"]').forEach(b => { b.disabled = false; }); }
 }
 async function ownerAct(label, c, fn, args) {
   if (!S.me) return false;
@@ -117,6 +118,7 @@ function ownerClick(e) {
   if (a === 'txclose') { $('#txbox').hidden = true; return; }
   if (a === 'o-connect') return ownerConnect();
   if (a === 'esverify') return esVerify();
+  if (a === 'esverify1') return esVerify(t.dataset.k);
   if (a === 'o-switch' || a === 'wm-switch') { $('#walletmenu').hidden = true; SW.switchAccount().then(acc => { S.me = acc; S.ui.off = false; saveUI(); ownerRender(); }).catch(err => note(err.message || String(err), 'bad')); return; }
   if (a === 'wm-off') { $('#walletmenu').hidden = true; SW.disconnect().then(() => { S.me = null; S.ui.off = true; saveUI(); note('Wallet disconnected'); ownerRender(); }); return; }
   if (a === 'wm-scan') { $('#walletmenu').hidden = true; if (SW.D && !SW.D.local) window.open(`https://sepolia.etherscan.io/address/${S.me}`, '_blank', 'noopener'); return; }
