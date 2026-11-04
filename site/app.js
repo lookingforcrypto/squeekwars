@@ -355,7 +355,7 @@ function renderBar() {
   let h = '';
   if (G.ok && CFG) {
     const today = Math.max(0, G.coreCum - G.lastCum), lw = G.lastWork, e = CFG.econ;
-    h += `<span class="dot run"></span> Squeektoshi · today so far <b class="gold">${fmt(today)}</b> work · last checkpoint ${G.last ? (G.obsCount > 1 ? `<b>${fmt(lw)}</b> work → <b>${fmt(lw / e.seedWorkDiv)}</b> SEED per village` : 'set the baseline') : 'none yet'} · wheel bonus <b class="gold">+${pct(hasV ? wheelBonus() : lw / e.wheelWorkDiv)}</b>${hasV && !lv(K.WHEEL) ? ' (needs a Wheelhouse)' : ''}`;
+    h += `<span class="dot run"></span> Squeektoshi · ${G.obsCount ? `today so far <b class="gold">${fmt(today)}</b> work` : `work counter <b class="gold">${fmt(G.coreCum)}</b>: the first checkpoint sets the baseline`} · last checkpoint ${G.last ? (G.obsCount > 1 ? `<b>${fmt(lw)}</b> work → <b>${fmt(lw / e.seedWorkDiv)}</b> SEED per village` : 'set the baseline') : 'none yet'} · wheel bonus <b class="gold">+${pct(hasV ? wheelBonus() : lw / e.wheelWorkDiv)}</b>${hasV && !lv(K.WHEEL) ? ' (needs a Wheelhouse)' : ''}`;
     if (ME && ME.nft !== undefined && S.me) h += ` · Squeeks <b>${ME.nft}</b>${ME.nft ? ` (build −${pct(squeekCut(ME.nft, lw))})` : ''}`;
     h += ` · day ${G.day - Math.floor((G.season - 4 * 3600) / 86400)} · next checkpoint in ${dur(nextDayIn())}`;
     const btns = [];
