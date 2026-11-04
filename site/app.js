@@ -1306,7 +1306,10 @@ async function init() {
   document.addEventListener('input', e => { if (e.target.matches('#wright input')) updatePrediction(); if (e.target.matches('#mk-amt,#mk-to,#mk-from')) mkPreview(); });
   document.addEventListener('change', e => { if (e.target.matches('#atk-champ')) updatePrediction(); });
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'goto') { e.preventDefault(); $('[data-act="goto"]').click(); } if (e.key === 'Enter' && e.target.id === 'nm-in') { e.preventDefault(); $('[data-act="nm-ok"]').click(); } });
-  $('#logoHome').addEventListener('click', () => { location.hash = ''; });
+  // both logos lead to the top of the landing page: the game's from any view, the site's from any section
+  const toTop = e => { e.preventDefault(); if (location.hash) history.pushState(null, '', location.pathname + location.search); route(); scrollTo({ top: 0, behavior: S.view === 'home' && !e.fromGame ? 'smooth' : 'auto' }); };
+  $('#logoHome').addEventListener('click', e => { e.fromGame = true; toTop(e); });
+  $('#siteLogo').addEventListener('click', toTop);
   $('#walletbtn').addEventListener('click', e => { e.stopPropagation(); if (!S.me) { openWallet(); return; } const m = $('#walletmenu'); m.hidden = !m.hidden; if (!m.hidden) { $('#wm-addr').textContent = S.me; updNotifBtn(); $('#wm-share').href = ME && ME.v ? `#visit=${encodeURIComponent(ME.v.name)}` : '#village'; } });
   document.addEventListener('click', e => { const m = $('#walletmenu'); if (!m.hidden && !m.contains(e.target)) m.hidden = true; });
   const vst = $('#vstage');
