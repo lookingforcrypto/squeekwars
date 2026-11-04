@@ -122,6 +122,7 @@ async function connect() {
 }
 async function deployNext() {
   const next = ORDER.find(o => !st[o[1]]); if (!next || busy) return;
+  if (!st.owner && DEP && DEP.addresses && DEP.addresses.villages && !confirm(`A season is already live (Villages ${DEP.addresses.villages}). This deploys five NEW, empty contracts; the website keeps using the live ones. Continue?`)) return;
   if (!st.owner) { st.owner = account; st.core = $('#core').value.trim().toLowerCase(); st.squeek = $('#nft').value.trim().toLowerCase(); }
   if (st.owner !== account) { $('#msg').textContent = 'Use the wallet that started the deployment, or press Start over.'; return; }
   if (!(await checkReads())) return;
