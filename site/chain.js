@@ -4,27 +4,25 @@
    Every write is signed by the player's own wallet (EIP-1193). No server, no keys, no indexer. */
 const SW = (() => {
   const E = window.ethers;
-  const CHAIN_ID = 11155111, CHAIN_HEX = '0xaa36a7', DEPLOY_BLOCK = 12060202;
-  const RPCS = ['https://ethereum-sepolia-rpc.publicnode.com', 'https://rpc.sepolia.ethpandaops.io', 'https://sepolia.gateway.tenderly.co', 'https://sepolia.rpc.sentio.xyz'];
-  const ADDR = {
-    villages: '0x68dcfbff8b40429be1effaa63e82ea5200c87aec',
-    army: '0x3cba4215e531ee3c4c3daa045d15803505d282e0',
-    clans: '0xb789d7a3c8bb07ca1bd8811f10ee47f270d93fe1',
-    ledger: '0x11d4a8126b7911bda323e4c6dc8b137bf01ba2b9',
-    rules: '0xfbe6911fbaa2fdfd91ef91887f30b0d3ba8f9d15',
+  const D = window.SW_DEPLOY || null;                       // deployment.js: where this season lives
+  const CHAIN_ID = (D && D.chainId) || 11155111, CHAIN_HEX = '0x' + CHAIN_ID.toString(16), DEPLOY_BLOCK = (D && D.deployBlock) || 0;
+  const RPCS = (D && D.rpcs) || ['https://ethereum-sepolia-rpc.publicnode.com', 'https://rpc.sepolia.ethpandaops.io', 'https://sepolia.gateway.tenderly.co', 'https://sepolia.rpc.sentio.xyz'];
+  const ADDR = Object.assign({
     core: '0x980b4424c007caf7a1f3670b48c8eaef7ebc3d44',
     squeek: '0xcb98349c134ab983da5bfd80527dfe2552bdb70f',
     multicall: '0xcA11bde05977b3631167028862bE2a173976CA11',
-  };
+  }, D ? D.addresses : {});
+  for (const k in ADDR) ADDR[k] = String(ADDR[k]).toLowerCase();
   const A = window.SW_ABI;
   const IF = {
     villages: new E.Interface(A.Villages), army: new E.Interface(A.Army), clans: new E.Interface(A.Clans),
-    ledger: new E.Interface(A.SeedLedger), rules: new E.Interface(A.GameRules),
+    ledger: new E.Interface(A.SeedLedger), config: new E.Interface(A.GameConfig),
     core: new E.Interface(['function state() view returns ((uint64 settledThroughRound,uint64 cumulativeWork,uint96 cumulativeBlockUnits,uint64 blockHeight,uint96 blockProgress,uint32 workPerThousandBlocks,uint256 authorizationNonce,bool paused))']),
     multicall: new E.Interface(['function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)']),
   };
-  const ERR = new E.Interface([...new Map([...A.Villages, ...A.Army, ...A.Clans, ...A.SeedLedger, ...A.GameRules]
+  const ERR = new E.Interface([...new Map([...A.Villages, ...A.Army, ...A.Clans, ...A.SeedLedger, ...A.GameConfig]
     .filter(f => f.type === 'error').map(f => [f.name, f])).values()]);
+  // A.GameConfig errors are already in the union above through the shared GameErrors library
 
   // ---------------------------------------------------------------- reads
   let rpcAt = 0, rid = 1;
@@ -76,8 +74,8 @@ const SW = (() => {
 
   // ---------------------------------------------------------------- events (cached in this browser)
   const TOPIC = {};
-  for (const c of ['villages', 'army', 'clans', 'ledger']) IF[c].forEachEvent(ev => { TOPIC[ev.topicHash] = c; });
-  const LOG_KEY = 'sw-logs-v1-' + ADDR.villages;
+  for (const c of ['villages', 'army', 'clans', 'ledger', 'config']) IF[c].forEachEvent(ev => { TOPIC[ev.topicHash] = c; });
+  const LOG_KEY = 'sw-logs-v2-' + ADDR.villages;
   const plain = v => typeof v === 'bigint' ? (v <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(v) : v.toString())
     : Array.isArray(v) ? v.map(plain) : v;
   let LOGS = (() => { try { const j = JSON.parse(localStorage.getItem(LOG_KEY)); if (j && Array.isArray(j.logs)) return j; } catch (e) { } return { to: DEPLOY_BLOCK - 1, logs: [] }; })();
@@ -85,12 +83,13 @@ const SW = (() => {
   function syncLogs() {
     if (syncing) return syncing;
     syncing = (async () => {
+      if (!D) return LOGS.logs;
       const top = parseInt(await rpc('eth_blockNumber', []), 16);
       const seen = new Set(LOGS.logs.map(l => l.k));
       let from = Math.max(DEPLOY_BLOCK, LOGS.to - 12);           // re-read the last blocks in case of a reorg
       while (from <= top) {
         const to = Math.min(top, from + 39999);
-        const raw = await rpc('eth_getLogs', [{ fromBlock: '0x' + from.toString(16), toBlock: '0x' + to.toString(16), address: [ADDR.villages, ADDR.army, ADDR.clans, ADDR.ledger] }]);
+        const raw = await rpc('eth_getLogs', [{ fromBlock: '0x' + from.toString(16), toBlock: '0x' + to.toString(16), address: [ADDR.villages, ADDR.army, ADDR.clans, ADDR.ledger, ADDR.config] }]);
         for (const l of raw) {
           const c = TOPIC[l.topics[0]]; if (!c) continue;
           const k = l.transactionHash + ':' + parseInt(l.logIndex, 16); if (seen.has(k)) continue;
@@ -196,6 +195,10 @@ const SW = (() => {
     TargetProtected: 'That village is shielded or in your clan.',
     TrainingBusyOrMissingVillage: 'The Barracks are busy: finish the current batch first.',
     TrainingNotReady: 'The training is not finished yet.',
+    NotOwner: 'Only the owner of the rule table can change it.',
+    InvalidConfig: 'Those numbers would break the game (a zero divisor, a level cap over 20, a disabled Town Hall…).',
+    UnitDisabled: 'That unit is not in this season.',
+    BuildingDisabled: 'That building is not in this season.',
     WorkDecreased: "Squeekchain's work counter went down. Checkpoints wait until the owner repoints it.",
   };
   function revertData(e) {
@@ -222,9 +225,11 @@ const SW = (() => {
     onState('check');
     try { await rpc('eth_call', [{ from: account, to: ADDR[c], data }, 'latest']); }
     catch (e) { if (e.revert) throw new Error(explain(e)); }
+    let gas;   // the wallet estimates too, but a margin keeps a busy block from running it out of gas
+    try { gas = '0x' + Math.ceil(parseInt(await rpc('eth_estimateGas', [{ from: account, to: ADDR[c], data }]), 16) * 1.3 + 60000).toString(16); } catch (e) { gas = undefined; }
     onState('wallet');
     let hash;
-    try { hash = await eth().request({ method: 'eth_sendTransaction', params: [{ from: account, to: ADDR[c], data }] }); }
+    try { hash = await eth().request({ method: 'eth_sendTransaction', params: [{ from: account, to: ADDR[c], data, ...(gas ? { gas } : {}) }] }); }
     catch (e) { if (e && (e.code === 4001 || /reject|denied|cancel/i.test(e.message || ''))) throw new Error('You cancelled it in your wallet.'); throw new Error(explain(e)); }
     onState('pending', hash);
     for (let i = 0; i < 150; i++) {
@@ -236,5 +241,5 @@ const SW = (() => {
   }
 
   const nameKey = name => E.keccak256(E.toUtf8Bytes(String(name).toLowerCase()));
-  return { E, ADDR, CHAIN_ID, DEPLOY_BLOCK, RPCS, rpc, call, multi, head, syncLogs, logs: () => LOGS.logs, connect, silent, onAccounts, send, explain, nameKey, get account() { return account; }, hasWallet: () => !!eth() };
+  return { E, D, IF, ADDR, CHAIN_ID, DEPLOY_BLOCK, RPCS, rpc, call, multi, head, syncLogs, logs: () => LOGS.logs, connect, silent, onAccounts, send, explain, nameKey, get account() { return account; }, hasWallet: () => !!eth() };
 })();

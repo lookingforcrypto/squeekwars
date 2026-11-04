@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Squeek Wars · Deploy Season 2</title>
+<link rel="icon" href="assets/ic_seed.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=VT323&display=swap">
+<link rel="stylesheet" href="style.css">
+<style>
+  body{overflow:auto;height:auto}
+  .dep{max-width:820px;margin:24px auto;padding:0 16px 60px}
+  .dep h1{font-family:var(--f-display);color:var(--gold);font-size:30px;margin:0 0 6px}
+  .dep .box{margin:14px 0;padding:14px 16px}
+  .dep label{display:block;margin:8px 0}
+  .dep input{font:inherit;width:100%;background:var(--well);color:var(--ink);border:2px solid var(--line);padding:4px 6px}
+  .steps2 li{margin:6px 0}
+  .steps2 .st{color:var(--dim)} .steps2 .ok{color:var(--green)} .steps2 .bad{color:var(--red)}
+  pre{white-space:pre-wrap;word-break:break-all;background:var(--well);border:2px solid var(--line);padding:10px;font-size:16px}
+  .row2{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+</style>
+</head>
+<body>
+<div class="dep">
+  <h1>Deploy Season 2</h1>
+  <p class="muted">This page deploys the five Squeek Wars Season 2 contracts from your own wallet: GameConfig, SeedLedger, Clans, Army and Villages, in that order. Your wallet becomes the owner of the rule table. Each contract is one transaction you confirm; gas is paid in Sepolia ETH. Nothing else is sent anywhere.</p>
+  <div class="px box">
+    <h3>Squeekchain on Sepolia</h3>
+    <label>SqueekCore (the hamster's work)<input id="core" value="0x980b4424c007caf7a1f3670b48c8eaef7ebc3d44" spellcheck="false"></label>
+    <label>Squeek NFT<input id="nft" value="0xcb98349c134ab983da5bfd80527dfe2552bdb70f" spellcheck="false"></label>
+    <p class="muted small" id="readCheck"></p>
+  </div>
+  <div class="px box">
+    <h3>Your wallet</h3>
+    <div class="row2"><button class="btn" id="connect">Connect wallet</button><span id="acct" class="muted"></span></div>
+  </div>
+  <div class="px box">
+    <h3>Deploy</h3>
+    <ol class="steps2" id="steps"></ol>
+    <div class="row2"><button class="btn go" id="go" disabled>Deploy the next contract</button><button class="btn ghost sm" id="reset">Start over</button></div>
+    <p class="why" id="msg"></p>
+  </div>
+  <div class="px box" id="doneBox" hidden>
+    <h3>Done: send this to set up the website</h3>
+    <p class="muted">The website reads this block from <code>deployment.js</code>. Copy it and send it over, or paste it into that file.</p>
+    <pre id="out"></pre>
+    <button class="btn" id="copy">Copy</button>
+  </div>
+</div>
+<script src="vendor/ethers.umd.min.js"></script>
+<script src="abi.js"></script>
+<script src="deploy-artifacts.js"></script>
+<script>
+'use strict';
+const E = window.ethers, A = window.SW_ABI, BC = window.SW_BYTECODE;
+const RPCS = (window.SW_DEPLOY_RPCS) || ['https://ethereum-sepolia-rpc.publicnode.com', 'https://rpc.sepolia.ethpandaops.io', 'https://sepolia.gateway.tenderly.co'];
+const CHAIN_ID = 11155111, MULTICALL = '0xcA11bde05977b3631167028862bE2a173976CA11';
+const $ = s => document.querySelector(s);
+const ORDER = [
+  ['GameConfig', 'config', st => [st.owner]],
+  ['SeedLedger', 'ledger', st => [st.config, st.core, st.squeek]],
+  ['Clans', 'clans', st => [st.config]],
+  ['Army', 'army', st => [st.config, st.ledger, st.clans]],
+  ['Villages', 'villages', st => [st.config, st.ledger, st.clans, st.army]],
+];
+const KEY = 'sw-deploy-v2';
+let st = (() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } })();
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { } };
+let account = null, busy = false;
+async function rpc(method, params) {
+  let last;
+  for (const url of RPCS) {
+    try { const j = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) }).then(r => r.json()); if (j.error) throw new Error(j.error.message); return j.result; }
+    catch (e) { last = e; }
+  }
+  throw last;
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function render() {
+  $('#steps').innerHTML = ORDER.map(([name, key], i) => `<li><b>${name}</b> <span class="${st[key] ? 'ok' : 'st'}">${st[key] ? '✓ ' + st[key] : i === ORDER.findIndex(o => !st[o[1]]) && busy ? '… working' : 'waiting'}</span></li>`).join('');
+  const next = ORDER.find(o => !st[o[1]]);
+  $('#go').disabled = !account || busy || !next;
+  $('#go').textContent = next ? `Deploy ${next[0]}` : 'All deployed';
+  $('#acct').textContent = account ? `${account} ${st.owner && st.owner !== account ? '(not the wallet that started: press Start over)' : ''}` : '';
+  if (!next && st.villages) finish();
+}
+async function checkReads() {
+  const core = $('#core').value.trim(), nft = $('#nft').value.trim();
+  try {
+    const r = await rpc('eth_call', [{ to: core, data: '0xc19d93fb' }, 'latest']);
+    const work = BigInt('0x' + r.slice(66, 130));
+    await rpc('eth_call', [{ to: nft, data: '0x70a08231' + '0'.repeat(64) }, 'latest']);
+    $('#readCheck').textContent = `Both answer. SqueekCore's work counter is ${work.toLocaleString('en-US')}.`;
+    return true;
+  } catch (e) { $('#readCheck').textContent = 'Could not read these addresses on Sepolia: check them.'; return false; }
+}
+async function connect() {
+  if (!window.ethereum) { $('#msg').textContent = 'No wallet found in this browser.'; return; }
+  const acc = await window.ethereum.request({ method: 'eth_requestAccounts' });
+  account = acc[0].toLowerCase();
+  const id = parseInt(await window.ethereum.request({ method: 'eth_chainId' }), 16);
+  if (id !== CHAIN_ID) { try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x' + CHAIN_ID.toString(16) }] }); } catch (e) { $('#msg').textContent = 'Switch your wallet to Sepolia.'; return; } }
+  const bal = BigInt(await rpc('eth_getBalance', [account, 'latest']));
+  $('#msg').textContent = bal === 0n ? 'This wallet has no Sepolia ETH for gas.' : '';
+  render();
+}
+async function deployNext() {
+  const next = ORDER.find(o => !st[o[1]]); if (!next || busy) return;
+  if (!st.owner) { st.owner = account; st.core = $('#core').value.trim().toLowerCase(); st.squeek = $('#nft').value.trim().toLowerCase(); }
+  if (st.owner !== account) { $('#msg').textContent = 'Use the wallet that started the deployment, or press Start over.'; return; }
+  if (!(await checkReads())) return;
+  busy = true; render(); $('#msg').textContent = '';
+  const [name, key, args] = next;
+  try {
+    const data = BC[name] + new E.Interface(A[name]).encodeDeploy(args(st)).slice(2);
+    let gas; try { gas = '0x' + Math.ceil(parseInt(await rpc('eth_estimateGas', [{ from: account, data }]), 16) * 1.2).toString(16); } catch (e) { gas = undefined; }
+    $('#msg').textContent = `Confirm ${name} in your wallet…`;
+    const hash = await window.ethereum.request({ method: 'eth_sendTransaction', params: [{ from: account, data, ...(gas ? { gas } : {}) }] });
+    $('#msg').textContent = `Waiting for ${name} to be mined…`;
+    let r = null; for (let i = 0; i < 180 && !r; i++) { await sleep(i < 10 ? 2000 : 4000); r = await rpc('eth_getTransactionReceipt', [hash]).catch(() => null); }
+    if (!r) throw new Error('Not mined yet. Wait, then press the button again: nothing is lost.');
+    if (r.status !== '0x1' || !r.contractAddress) throw new Error(`${name} failed on chain.`);
+    st[key] = r.contractAddress.toLowerCase();
+    if (key === 'config') st.deployBlock = parseInt(r.blockNumber, 16);
+    save(); $('#msg').textContent = `${name} deployed.`;
+  } catch (e) { $('#msg').textContent = (e && (e.code === 4001 ? 'You cancelled it in your wallet.' : e.message)) || String(e); }
+  busy = false; render();
+}
+async function finish() {
+  const iv = new E.Interface(A.Villages), call = async (to, fn) => iv.decodeFunctionResult(fn, await rpc('eth_call', [{ to, data: iv.encodeFunctionData(fn, []) }, 'latest']))[0].toLowerCase();
+  let ok = false;
+  try { ok = (await call(st.villages, 'config')) === st.config && (await call(st.villages, 'ledger')) === st.ledger && (await call(st.villages, 'army')) === st.army && (await call(st.villages, 'clans')) === st.clans; } catch (e) { }
+  const dep = { chainId: CHAIN_ID, deployBlock: st.deployBlock, owner: st.owner, addresses: { config: st.config, ledger: st.ledger, clans: st.clans, army: st.army, villages: st.villages, core: st.core, squeek: st.squeek, multicall: MULTICALL } };
+  $('#out').textContent = `window.SW_DEPLOY = ${JSON.stringify(dep, null, 2)};`;
+  $('#doneBox').hidden = false;
+  $('#msg').textContent = ok ? 'All five contracts are deployed and wired to each other.' : 'Deployed, but the wiring check could not be read yet. Reload in a minute.';
+}
+$('#connect').onclick = () => connect().catch(e => { $('#msg').textContent = e.message; });
+$('#go').onclick = deployNext;
+$('#reset').onclick = () => { if (confirm('Forget the progress on this page? Contracts already deployed stay on chain.')) { st = {}; save(); $('#doneBox').hidden = true; render(); } };
+$('#copy').onclick = () => { navigator.clipboard.writeText($('#out').textContent).then(() => { $('#copy').textContent = 'Copied'; }); };
+checkReads(); render();
+</script>
+</body>
+</html>

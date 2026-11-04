@@ -63,7 +63,7 @@
   </section>
   <section class="sec" id="rules">
     <h2>Rules</h2>
-    <p class="lead">The game rules are enforced by the contracts on Sepolia. Nobody can pause the game, change the rules or touch your village.</p>
+    <p class="lead">The game rules are enforced by the contracts on Sepolia. The numbers below are the launch defaults: the season's rule table (GameConfig) can tune them, and every change is public in the log below. Nobody can pause the game or touch your village.</p>
     <div class="rules">
       <div class="px box"><h3>How the game works</h3><ol>
         <li><b>One village per wallet, open to everyone.</b> Your village name is final. Production and SEED are the same with or without a Squeek.</li>
@@ -97,8 +97,9 @@
   </section>
   <section class="sec" id="contracts">
     <h2>Contracts</h2>
-    <p class="lead">Sepolia (chain 11155111), deployed in block 12,060,202 by IMD launch 2935. The website reads them directly from public RPCs.</p>
+    <p class="lead">Season 2 on Sepolia (chain 11155111). The website reads the contracts directly from public RPCs; there is no server.</p>
     <div class="px box" id="contractList"></div>
+    <div id="ruleLog"></div>
   </section>
   <div class="foot">Squeek Wars Testnet · resources and SEED are game points, not tokens</div>
 </div>
@@ -137,14 +138,16 @@
   <div id="champion" class="view page"></div>
   <div id="ranking" class="view page"></div>
   <div id="reports" class="view page"></div>
+  <div id="admin" class="view page"></div>
 
   <nav id="tabs" class="px" aria-label="Game">
-    <a href="#village" data-v="village">Village</a><a href="#world" data-v="world"><span class="lg">World </span>Map</a><a href="#army" data-v="army">Army</a><a href="#academy" data-v="academy">Academy</a><a href="#market" data-v="market">Market</a><a href="#clan" data-v="clan">Clan</a><a href="#champion" data-v="champion">Champion</a><a href="#ranking" data-v="ranking">Ranking</a><a href="#reports" data-v="reports">Reports</a>
+    <a href="#village" data-v="village">Village</a><a href="#world" data-v="world"><span class="lg">World </span>Map</a><a href="#army" data-v="army">Army</a><a href="#academy" data-v="academy">Academy</a><a href="#market" data-v="market">Market</a><a href="#clan" data-v="clan">Clan</a><a href="#champion" data-v="champion">Champion</a><a href="#ranking" data-v="ranking">Ranking</a><a href="#reports" data-v="reports">Reports</a><a href="#admin" data-v="admin" id="tabAdmin" hidden>Rules</a>
   </nav>
   <div id="wtip" class="wtip" hidden></div>
   <div id="namebox" class="modal" hidden><div class="px box">
     <h3>Found your village</h3>
-    <p class="muted">Your village name is linked to your wallet <span class="addr" id="nm-wallet"></span> and cannot be changed later. Other players see both on the map, in reports and in the ranking. Founding gives 750 of each resource, 1,500 SEED and a 7-day shield.</p>
+    <p class="muted">Your village name is linked to your wallet <span class="addr" id="nm-wallet"></span> and cannot be changed later. Other players see both on the map, in reports and in the ranking.</p>
+    <p class="muted" id="nm-gift"></p>
     <label for="nm-in" class="muted">Village name (3–16 letters, digits or _)</label>
     <input id="nm-in" maxlength="16" autocomplete="off" spellcheck="false">
     <div class="row" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn" data-act="nm-ok" type="button">Found village</button><button class="btn ghost" data-act="nm-rand" type="button">Suggest a name</button><button class="btn ghost" data-act="nm-later" type="button">Just look around</button></div>
@@ -169,6 +172,7 @@
 </div>
 <div id="toasts" aria-live="polite"></div>
 <script src="vendor/ethers.umd.min.js"></script>
+<script src="deployment.js"></script>
 <script src="abi.js"></script>
 <script src="chain.js"></script>
 <script src="app.js"></script>

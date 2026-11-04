@@ -361,3 +361,16 @@ h3{font-family:var(--f-body);font-size:21px;letter-spacing:.04em}
 .netbadge{font-family:var(--f-body);font-size:16px;padding:0 6px}
 .wheel .daily .btn{font-size:16px;padding:0 8px}
 @media (max-width:900px){ #tabs a{font-size:17px;padding:5px 1px;letter-spacing:0;overflow:hidden;text-overflow:ellipsis} #txbox{bottom:calc(112px + env(safe-area-inset-bottom,0px))} }
+/* owner rule table */
+.adm{margin-bottom:12px}
+.adm summary{cursor:pointer;list-style:none}
+.adm summary::-webkit-details-marker{display:none}
+.adm summary h3{display:inline-block;margin:0}
+.adm summary h3::before{content:'▸ ';color:var(--dim)}
+.adm[open] summary h3::before{content:'▾ '}
+.adm .kv td:first-child{max-width:360px}
+.adm input[type=number],.adm input:not([type]),.adm select{font:inherit;background:var(--well);color:var(--ink);border:2px solid var(--line);padding:2px 4px}
+.adm input[type=number]{width:110px}
+.adm .btn{margin-top:10px}
+.adm-u td{padding:3px 4px;white-space:nowrap}
+.adm-u th{white-space:nowrap}
