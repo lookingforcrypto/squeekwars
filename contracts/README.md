@@ -24,8 +24,9 @@ Deploy them in that order. There are no wiring calls after deployment. `Chat` ca
 | `Clans` | [0x6c5072663b7b7b2d65f09b140536b3cac21f26ec](https://sepolia.etherscan.io/address/0x6c5072663b7b7b2d65f09b140536b3cac21f26ec) | [Sourcify](https://repo.sourcify.dev/11155111/0x6C5072663b7b7B2d65f09b140536b3Cac21F26ec) |
 | `Army` | [0x84e5751a7b168df2376213aa67ce7ee641048eab](https://sepolia.etherscan.io/address/0x84e5751a7b168df2376213aa67ce7ee641048eab) | [Sourcify](https://repo.sourcify.dev/11155111/0x84e5751a7b168df2376213AA67ce7ee641048Eab) |
 | `Villages` | [0xd7437dc56da2162cb190b0a20df7c6699e4e9b6e](https://sepolia.etherscan.io/address/0xd7437dc56da2162cb190b0a20df7c6699e4e9b6e) | [Sourcify](https://repo.sourcify.dev/11155111/0xd7437Dc56DA2162cB190B0a20dF7C6699e4e9b6E) |
+| `Chat` | [0x150e32b56c9ff8ed04ae7ad9819adfab67b6c5a6](https://sepolia.etherscan.io/address/0x150e32b56c9ff8ed04ae7ad9819adfab67b6c5a6) | [Sourcify](https://repo.sourcify.dev/11155111/0x150E32B56C9fF8ED04AE7Ad9819aDfab67B6C5A6) |
 
-All five are verified on Sourcify with a full match of the creation and runtime code. `../site/verify/input.json` is the exact compiler input (solc 0.8.26+commit.8a97fa7a, via-IR, optimizer 200, Shanghai, no metadata hash) and `../site/verify/contracts.json` holds the constructor arguments; `tools/verify-input.js` rebuilds both from `src` and checks the compiled code against the chain. The owner page of the site (`owner.html`) sends the same input to Etherscan with the owner's own Etherscan API key.
+All six are verified on Sourcify with a full match of the creation and runtime code. `../site/verify/input.json` is the exact compiler input of the five game contracts (`input-chat.json` adds `Chat.sol` for the add-on) (solc 0.8.26+commit.8a97fa7a, via-IR, optimizer 200, Shanghai, no metadata hash) and `../site/verify/contracts.json` holds the constructor arguments; `tools/verify-input.js` rebuilds both from `src` and checks the compiled code against the chain. The owner page of the site (`owner.html`) sends the same input to Etherscan with the owner's own Etherscan API key.
 
 ## What the owner can change
 
