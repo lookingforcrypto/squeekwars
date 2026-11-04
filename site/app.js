@@ -229,7 +229,6 @@ async function refresh(full) {
     if (S.view === 'ranking' || full) await loadRanking();
     if (ME && !ME.none && !S.cam.set) { const [x, y] = tileXY(ME.v.tile); S.cam = { x: x + 0.5, y: y + 0.5, set: true }; }
     $('#liveNote').innerHTML = liveNote(); homeChanges();
-    $('#tabAdmin').hidden = !isOwner();
   } catch (e) { console.warn(e); note('Could not reach the chain: ' + SW.explain(e), 'bad'); }
   finally { loading = false; sceneDirty = true; dirty(); }
   maybeName();
@@ -415,6 +414,22 @@ function smoke(name, x, yb, w, add) { const gg = CHIMNEY[name]; if (!gg) return;
 function wheelSpin(name, x, yb, w, add) { const gg = WHEEL_GEO[name]; if (!gg) return; const bx = spriteBox(name, x, yb, w), k = bx.k; add(`<span class="wspin" style="left:${(bx.left + gg.cx * k).toFixed(1)}px;top:${(bx.top + gg.cy * k).toFixed(1)}px;width:${(2 * gg.rx * k).toFixed(1)}px;height:${(2 * gg.ry * k).toFixed(1)}px;transform:translate(-50%,-50%) rotate(${gg.rot}rad)"><i style="width:${(2 * Math.max(gg.rx, gg.ry) * k).toFixed(1)}px;height:${(2 * Math.max(gg.rx, gg.ry) * k).toFixed(1)}px"></i></span>`); }
 const stageOf = (i, L) => clamp(Math.ceil(Math.max(1, L) * 5 / Math.max(1, BK(i).maxLevel)), 1, 5);
 const spriteOf = (i, L) => { const a = kindArt(i); return a.one ? a.s : `${a.s}_${stageOf(i, L)}`; };
+// the player picks the plot of each building; the chain only knows levels, so the layout lives in this browser
+const PLOT_OPEN_ORDER = [8, 11, 9, 10, 0, 1, 7, 2, 6, 3, 5, 4];
+let LAYOUT = null, moveFrom = null;
+const layoutKey = () => `sw-layout-v2-${SW.ADDR.villages}-${S.me}`;
+function saveLayout() { try { localStorage.setItem(layoutKey(), JSON.stringify(LAYOUT)); } catch (e) { } }
+const openPlotCount = () => clamp(plotsOpen() - 2, 0, PLOTS.length);            // the Town Hall and the Walls hold two plots
+const plotOpensAt = j => j + 3 - CFG.econ.plotsBase;                              // Town Hall level that opens position j
+function plotMap() {
+  if (!LAYOUT || LAYOUT._me !== S.me) { try { LAYOUT = JSON.parse(localStorage.getItem(layoutKey())) || {}; } catch (e) { LAYOUT = {}; } LAYOUT._me = S.me; }
+  const byPlot = {}, byKind = {}, present = plotKinds().filter(i => ME.v.b[i] > 0 || orderOn(8 + i) >= 0);
+  for (const k of present) { const p = LAYOUT[k]; if (p !== undefined && byPlot[p] === undefined) { byPlot[p] = k; byKind[k] = p; } }
+  let changed = false;
+  for (const k of present) if (byKind[k] === undefined) { const p = PLOT_OPEN_ORDER.find(q => byPlot[q] === undefined); if (p !== undefined) { byPlot[p] = k; byKind[k] = p; LAYOUT[k] = p; changed = true; } }
+  if (changed) saveLayout();
+  return { byPlot, byKind };
+}
 function renderSceneBase() {
   const sc = $('#scene'); let h = ''; const z = y => `z-index:${Math.round(y)}`;
   const hasV = ME && ME.v && CFG;
@@ -426,10 +441,10 @@ function renderSceneBase() {
     h += `<img class="spr" src="${spr('town_hall_' + ths)}" style="left:${TH_POS[0]}px;top:${TH_POS[1]}px;width:132px;transform:translate(-50%,-100%);${z(TH_POS[1])}" alt="">`;
     if (orderOn(8) >= 0) h += `<img class="spr scaf" src="${spr('scaffold')}" style="left:${TH_POS[0]}px;top:${TH_POS[1] + 2}px;width:124px;transform:translate(-50%,-100%);${z(TH_POS[1] + 1)}" alt="">`;
     smoke('town_hall_' + ths, TH_POS[0], TH_POS[1], 132, a => h += a); glows.push([TH_POS[0], TH_POS[1] - 50, 1.3]);
-    for (const i of plotKinds()) {
-      const art = kindArt(i); if (art.p === undefined) continue;
-      const L = ME.v.b[i], o = orderOn(8 + i); if (!L && o < 0) continue;
-      const [x, y] = PLOTS[art.p], w = art.w || 112, sname = spriteOf(i, L);
+    const pm = plotMap();
+    for (const [pk, i] of Object.entries(pm.byPlot)) {
+      const art = kindArt(i), L = ME.v.b[i], o = orderOn(8 + i);
+      const [x, y] = PLOTS[+pk], w = art.w || 112, sname = spriteOf(i, L);
       h += `<img class="spr ${L === 0 ? 'build' : ''}" src="${spr(sname)}" style="left:${x}px;top:${y + 22}px;width:${w}px;transform:translate(-50%,-100%);${z(y + 22)}" alt="">`;
       if (o >= 0) h += `<img class="spr scaf" src="${spr('scaffold')}" style="left:${x}px;top:${y + 24}px;width:${Math.round(w * 0.92)}px;transform:translate(-50%,-100%);${z(y + 23)}" alt="">`;
       if (i === K.CLAN && L >= 3 && ME.clanId) for (let n = 0; n < (L >= 5 ? 2 : 1); n++) h += `<span class="banner ${L >= 7 ? 'gold' : ''}" style="left:${x + (n ? 82 : -82)}px;top:${y + 26}px;--c:${clanColor(ME.clanId)};${z(y + 26)}"></span>`;
@@ -448,19 +463,22 @@ function plate(x, y, label, t) {
 }
 function scenePlates() {
   if (!ME || !ME.v || !CFG) return '';
-  let h = ''; const sel = S.sel, free = plotsUsed() < plotsOpen();
-  for (const i of plotKinds()) {
-    const art = kindArt(i); if (art.p === undefined) continue;
-    const L = ME.v.b[i], o = orderOn(8 + i), [x, y] = PLOTS[art.p], on = sel.kind === 'b' && sel.k === i, b = BK(i);
-    if (L || o >= 0) {
-      h += `<button class="hit ${on ? 'sel' : ''}" data-hit="b" data-k="${i}" style="left:${x}px;top:${y - 40}px;width:140px;height:150px" aria-label="${esc(b.name)}"></button>`;
-      const [px, py] = PLATE_AT[art.p] ? [x + PLATE_AT[art.p][0], y + PLATE_AT[art.p][1]] : [x, y + 26];
+  let h = ''; const sel = S.sel, pm = plotMap(), openN = openPlotCount();
+  PLOT_OPEN_ORDER.forEach((p, j) => {
+    const [x, y] = PLOTS[p], i = pm.byPlot[p];
+    if (i !== undefined) {
+      const L = ME.v.b[i], on = sel.kind === 'b' && sel.k === i;
+      h += `<button class="hit ${on ? 'sel' : ''}" data-hit="b" data-k="${i}" style="left:${x}px;top:${y - 40}px;width:140px;height:150px" aria-label="${esc(BK(i).name)}"></button>`;
+      const [px, py] = PLATE_AT[p] ? [x + PLATE_AT[p][0], y + PLATE_AT[p][1]] : [x, y + 26];
       h += plate(px, py, L || 'new', 8 + i);
+    } else if (j < openN) {
+      const on = sel.kind === 'plot' && sel.p === p;
+      h += `<button class="hit empty ${on ? 'sel' : ''}" data-hit="plot" data-p="${p}" style="left:${x}px;top:${y}px;width:124px;height:78px" aria-label="Empty plot"></button><span class="plusmark ${moveFrom !== null ? 'tgt' : ''}" style="left:${x}px;top:${y}px">${moveFrom !== null ? '↓' : '+'}</span>`;
     } else {
-      const ok = !b.tier || ME.v.tier >= b.tier;
-      h += `<button class="hit empty ${on ? 'sel' : ''}" data-hit="b" data-k="${i}" style="left:${x}px;top:${y}px;width:124px;height:78px" aria-label="Build ${esc(b.name)}"></button><span class="plusmark ${ok && free ? '' : 'lock'}" style="left:${x}px;top:${y}px">+</span><span class="plate lockp" style="left:${x}px;top:${y - 22}px">${esc(b.name)}</span>`;
+      const on = sel.kind === 'plot' && sel.p === p, need = plotOpensAt(j);
+      h += `<button class="hit locked ${on ? 'sel' : ''}" data-hit="plot" data-p="${p}" style="left:${x}px;top:${y}px;width:124px;height:78px" aria-label="Locked plot"></button><span class="plate lockp" style="left:${x}px;top:${y - 22}px">${need <= BK(K.TH).maxLevel && j < CFG.econ.plotsMax - 2 ? `Opens at<br>Town Hall ${need}` : 'Locked'}</span>`;
     }
-  }
+  });
   SITES.forEach(([x, yb, w], i) => { h += `<button class="hit ${sel.kind === 'field' && sel.i === i ? 'sel' : ''}" data-hit="field" data-i="${i}" style="left:${x}px;top:${yb - 70}px;width:${w * 0.8}px;height:150px" aria-label="${FIELD_NAME[i]}"></button>` + plate(x, yb + 4, ME.v.fields[i], i); });
   h += `<button class="hit ${sel.kind === 'th' ? 'sel' : ''}" data-hit="th" style="left:${TH_POS[0]}px;top:${TH_POS[1] - 60}px;width:150px;height:170px" aria-label="Town Hall"></button>` + plate(TH_POS[0], TH_POS[1] + 4, th(), 8);
   h += `<button class="hit ${sel.kind === 'walls' ? 'sel' : ''}" data-hit="walls" style="left:${WALLS_POS[0]}px;top:${WALLS_POS[1]}px;width:90px;height:90px" aria-label="Walls"></button>` + plate(WALLS_POS[0], WALLS_POS[1] + 30, `Walls ${lv(K.WALLS)}${ME.walls < lv(K.WALLS) ? ` (${ME.walls} now)` : ''}`, 9);
@@ -534,6 +552,7 @@ function orderBox(t) {
 function detailPanel() {
   let h = '<button class="btn ghost sm sheet-close" data-act="close">Close</button>';
   if (!ME || !ME.v || !CFG) return h + `<h3>Your village</h3><p class="muted">${S.me ? 'Found a village to start building.' : 'Connect a wallet to open your village.'}</p>`;
+  if (S.sel.kind === 'plot') { const k = plotMap().byPlot[S.sel.p]; if (k === undefined) return h + plotPanel(S.sel.p); S.sel = { kind: 'b', k }; }
   const t = selTarget(S.sel), L = levelOfTarget(t), name = t < 8 ? `${FIELD_NAME[t]} ${t % 2 + 1}` : BK(t - 8).name;
   const u = upgradeCheck(t);
   h += `<h3>${esc(name)} · ${L ? `Level ${L}` : 'not built'}</h3>` + (t >= 8 ? `<p class="muted" style="margin:0 0 6px">${t - 8 < CORE_ROLE.length ? CORE_ROLE[t - 8] : `Gives ${FX_NAME[BK(t - 8).effect]} per level`}</p>` : '') + looks(t, L, u.max ? 0 : u.to) + effects(t, L, u.max ? 0 : u.to) + orderBox(t);
@@ -545,8 +564,22 @@ function detailPanel() {
     if (k === K.ACADEMY && L) h += `<p><a class="btn alt sm" href="#academy" style="text-decoration:none">Open research</a></p>`;
     if (k === K.MARKET && L) h += `<p><a class="btn alt sm" href="#market" style="text-decoration:none">Exchange resources</a></p>`;
     if (k === K.TH) h += treasuryHtml();
+    if (k >= 2 && plotMap().byKind[k] !== undefined) h += moveFrom === k ? `<div class="pred">Tap an empty plot to move the ${esc(BK(k).name)} there. <button class="btn ghost sm" data-act="movecancel">Cancel</button></div>` : `<div class="row" style="justify-content:flex-start;margin-top:10px"><button class="btn ghost sm" data-act="move" data-k="${k}">Move</button></div>`;
   }
   return h;
+}
+function plotPanel(p) {
+  const j = PLOT_OPEN_ORDER.indexOf(p);
+  if (j >= openPlotCount()) { const need = plotOpensAt(j); return `<h3>Locked plot</h3><p class="muted">${need <= BK(K.TH).maxLevel && j < CFG.econ.plotsMax - 2 ? `Opens at Town Hall level ${need}.` : 'This plot does not open this season.'} Every Town Hall level opens one more plot.</p>`; }
+  const free = plotsUsed() < plotsOpen(), list = plotKinds().filter(k => !ME.v.b[k] && orderOn(8 + k) < 0);
+  let h = `<h3>Empty plot</h3><p class="muted" style="margin:0 0 6px">Pick a building for this plot. ${free ? '' : '<span class="bad">No free plot: upgrade the Town Hall first.</span>'}</p>`;
+  if (!list.length) return h + `<p class="muted">Every building is already in your village.</p>`;
+  h += `<div class="opts">`;
+  for (const k of list) {
+    const b = BK(k), u = upgradeCheck(8 + k), art = kindArt(k);
+    h += `<div class="opt"><img src="${spr(art.one ? art.s : art.s + '_1')}" alt=""><div><div class="row"><span class="n">${esc(b.name)}</span><button class="btn sm" data-act="buildat" data-k="${k}" data-p="${p}" ${u.why ? 'disabled' : ''}>Build</button></div><div class="d">${k < CORE_ROLE.length ? CORE_ROLE[k] : `Gives ${FX_NAME[b.effect]} per level`}</div>${u.c ? `<div class="c">${u.c.cost.map((x, i) => `${icon(RES[i])}${fmt(x)}`).join(' ')}${u.c.seed ? ` ${icon('seed')}${fmt(u.c.seed)}` : ''} · ${dur(u.c.secs)}</div>` : ''}${u.why ? `<div class="why">${u.why}</div>` : ''}</div></div>`;
+  }
+  return h + '</div>';
 }
 function treasuryHtml() {
   const v = ME.v, t = now(), e = CFG.econ, boostOn = t < v.boostUntil;
@@ -880,53 +913,13 @@ function reportsPage() {
   return h;
 }
 
-// ------------------------------------------------------------------ owner: the rule table
-const LABEL = {
-  startResources: 'Starting resources (each)', startSeed: 'Starting SEED', shieldHours: 'Beginner shield (hours)', fieldRate: 'Field output per hour at level 1', fieldRateGrowth: 'Field output growth per level (%)', fieldCostGrowth: 'Field cost growth per level (%)', fieldSeconds: 'Field build time at level 1 (s)', fieldTimeGrowth: 'Field time growth per level (%)', fieldMaxLevel: 'Field max level (≤ 20)', thBuildCutPct: 'Build time cut per Town Hall level (%)', plotsBase: 'Plots = this + Town Hall level', plotsMax: 'Most plots', cancelRefundPct: 'Cancel refund (%)', upkeepMilli: 'Food per troop room per hour (thousandths)', barracksTimePct: 'Training time × this % per Barracks level', marketBase: 'Market: 100 gives (level 1)', marketPerLevel: 'Market: extra per level', boostSeed: 'Output boost price (SEED)', boostPct: 'Output boost (%)', boostHours: 'Output boost length (hours)', peaceSeed: 'Peace shield price (SEED)', peaceHours: 'Peace shield length (hours)', peaceCooldownHours: 'Peace shield cooldown (hours)', bannerSeed: 'Banner price (SEED)', squeekBuildPct: 'Most build time Squeeks cut (%)', squeekWorkTarget: 'Day work for the full Squeek cut', seedWorkDiv: 'SEED per village = day work ÷', wheelWorkDiv: 'Wheel bonus = day work ÷', wheelPctPerLevel: 'Wheel bonus cap per Wheelhouse level (%)', xpWorkDiv: 'Champion XP per day = work ÷', xpDailyCap: '… at most',
-  storeBase: 'Storage without a Storehouse', storePer: 'Storehouse level 1 adds', storeGrowth: '… growing per level (%)', vaultBase: 'Protected without a Vault', vaultPer: 'Vault level 1 adds', vaultGrowth: '… growing per level (%)', roomBase: 'Troop room without a Burrow', roomPer: 'Burrow: room per level × level', roomGrowth: '… growing per level (%)',
-  winRatioPct: 'Attack must reach this % of defense to win', lossPct: 'Loss rate (% of enemy ÷ own power)', scoutBonusPct: 'Scouting attack bonus (%)', scoutHours: 'Scouting bonus length (hours)', raidsPerDay: 'Raids per attacker and target per day', weakGap: 'Weak target: Town Hall this many levels lower', weakLootPct: 'Weak target loot (%)', siegePerWall: 'Siege units per Walls level knocked down', maxWallDamage: 'Most Walls levels per battle', repairHours: 'Walls repair: hours per level', thGuard: 'Defense per Town Hall level', forgePct: 'Forge: attack/defense % per level', wallsPct: 'Walls: defense % per level', maxSupport: 'Support groups a village can host', campDamagePct: 'Lost camp raid: % of attack removed from its defense',
-  mightBase: 'Might at 0 points', mightPerPoint: 'Might per point', attackPerPointMilli: 'Attack bonus per point (millionths)', defensePerPointMilli: 'Defense bonus per point (millionths)', carryPerPointMilli: 'Carry bonus per point (millionths)', statCap: 'Most points per bonus', pointsPerLevel: 'Points per level', maxLevel: 'Max level', xpPerLevel: 'Level = 1 + √(XP ÷ this)', squeekPct: 'Squeek holder XP and stats (%)', killXpDiv: 'XP = killed value ÷ this',
-  defenseBase: 'Defense at day 0', defensePerDay: 'Defense added per day', defenseCap: 'Defense cap', stockBase: 'Stock per hour at day 0', stockPerDay: 'Stock per hour added per day', stockHours: 'Stock cap (hours of output)', regrowHours: 'Defenders regrow after (hours)', sizePct: 'Small / normal / large size (%)', lossValueNum: 'Killed value per defense ×', lossValueDen: '… ÷',
-  joinHall: 'Clan Hall level to join', foundHall: 'Clan Hall level to found', capPerHall: 'Members per Clan Hall level', maxMembers: 'Most members',
-};
-const GROUPS = [['economy', 'Economy', 'setEconomy', 'econ'], ['storageRules', 'Storage, Vault and Burrow', 'setStorage', 'store'], ['war', 'War', 'setWar', 'war'], ['hero', 'Champion', 'setHero', 'hero'], ['wild', 'Wild camps', 'setWild', 'wild'], ['social', 'Clans', 'setSocial', 'social']];
-const comps = fn => SW.IF.config.getFunction(fn).outputs[0].components;
-const numIn = (id, v, extra = '') => `<input type="number" id="${id}" value="${v}" min="0" step="any" ${extra}>`;
-function adminPage() {
-  if (!SW.D || !CFG) return `<h2>Rules</h2><div class="px box"><p class="muted">Reading the rule table…</p></div>`;
-  if (!isOwner()) return `<h2>Rules</h2><div class="px box"><p class="muted">Only the owner of the rule table (${shortAddr(CFG.owner)}) can edit it. Everyone can see every change in the log below.</p></div>` + changeLog();
-  let h = `<h2>Rules · owner</h2><p class="sub">Every number of the season, version ${CFG.version}. Each Save is one transaction from your wallet; it applies from the next action on and shows up in the public change log.</p>`;
-  for (const [fn, title, setter, key] of GROUPS) {
-    const cs = comps(fn), val = CFG[key];
-    h += `<details class="px box adm"><summary><h3>${title}</h3></summary><table class="kv adm-t">${cs.map(c => `<tr><td>${esc(LABEL[c.name] || c.name)}</td><td>${c.type.endsWith(']') ? val[c.name].map((x, i) => numIn(`cf-${key}-${c.name}-${i}`, x, 'style="width:70px"')).join(' ') : numIn(`cf-${key}-${c.name}`, val[c.name])}</td></tr>`).join('')}</table><button class="btn" data-act="cfsave" data-g="${key}" data-fn="${fn}" data-set="${setter}">Save ${title.toLowerCase()}</button></details>`;
-  }
-  h += `<details class="px box adm"><summary><h3>Field costs</h3></summary><div class="tblwrap"><table class="tbl"><thead><tr><th>Field</th>${RES.map(r => `<th>${RES_NAME[r]}</th>`).join('')}</tr></thead><tbody>${CFG.fieldCost.map((row, i) => `<tr><td>${FIELD_TYPE[i]}</td>${row.map((x, j) => `<td>${numIn(`fc-${i}-${j}`, x, 'style="width:70px"')}</td>`).join('')}</tr>`).join('')}</tbody></table></div><button class="btn" data-act="fcsave">Save field costs</button></details>`;
-  const uc = comps('unit').filter(c => c.name !== 'cost'), roleSel = (id, v) => `<select id="${id}">${ROLE_NAME.map((r, i) => `<option value="${i}" ${v === i ? 'selected' : ''}>${r}</option>`).join('')}</select>`;
-  h += `<details class="px box adm"><summary><h3>Units · 16 slots</h3></summary><p class="muted">Turn a slot on, name it and set its numbers. Tier = research tier needed. Role: scouts scout and fight scouts, siege knocks down Walls.</p><div class="tblwrap"><table class="tbl adm-u"><thead><tr><th>#</th><th>Name</th>${uc.map(c => `<th>${c.name.replace('_', '')}</th>`).join('')}<th>Cost W / F / S / I</th><th></th></tr></thead><tbody>`;
-  h += CFG.units.map(u => `<tr><td>${u.i + 1}</td><td><input id="un-${u.i}-name" value="${esc(u.name)}" maxlength="32" style="width:120px"></td>${uc.map(c => `<td>${c.type === 'bool' ? `<input type="checkbox" id="un-${u.i}-${c.name}" ${u[c.name] ? 'checked' : ''}>` : c.name === 'role' ? roleSel(`un-${u.i}-role`, u.role) : numIn(`un-${u.i}-${c.name}`, u[c.name], 'style="width:64px"')}</td>`).join('')}<td>${u.cost.map((x, j) => numIn(`un-${u.i}-cost-${j}`, x, 'style="width:56px"')).join('')}</td><td><button class="btn sm" data-act="unsave" data-i="${u.i}">Save</button></td></tr>`).join('');
-  h += `</tbody></table></div></details>`;
-  const bc = comps('building').filter(c => c.name !== 'cost'), fxSel = (id, v) => `<select id="${id}">${FX_NAME.map((r, i) => `<option value="${i}" ${v === i ? 'selected' : ''}>${r}</option>`).join('')}</select>`, capSel = (id, v) => `<select id="${id}">${['no cap', '≤ TH', '≤ 2 × TH'].map((r, i) => `<option value="${i}" ${v === i ? 'selected' : ''}>${r}</option>`).join('')}</select>`;
-  h += `<details class="px box adm"><summary><h3>Buildings · 16 slots</h3></summary><p class="muted">Slots 1–11 keep their built-in role (Town Hall … Market). Every slot can add an effect per level. Slots 12–14 get a plot in the village picture; 15 and 16 appear in the building list. Growth values are % per level (162 = ×1.62).</p><div class="tblwrap"><table class="tbl adm-u"><thead><tr><th>#</th><th>Name</th>${bc.map(c => `<th>${c.name.replace('_', '')}</th>`).join('')}<th>Cost W / F / S / I</th><th></th></tr></thead><tbody>`;
-  h += CFG.buildings.map(b => `<tr><td>${b.i + 1}</td><td><input id="bk-${b.i}-name" value="${esc(b.name)}" maxlength="32" style="width:120px"></td>${bc.map(c => `<td>${c.type === 'bool' ? `<input type="checkbox" id="bk-${b.i}-${c.name}" ${b[c.name] ? 'checked' : ''}>` : c.name === 'effect' ? fxSel(`bk-${b.i}-effect`, b.effect) : c.name === 'thCap' ? capSel(`bk-${b.i}-thCap`, b.thCap) : numIn(`bk-${b.i}-${c.name}`, b[c.name], 'style="width:64px"')}</td>`).join('')}<td>${b.cost.map((x, j) => numIn(`bk-${b.i}-cost-${j}`, x, 'style="width:56px"')).join('')}</td><td><button class="btn sm" data-act="bksave" data-i="${b.i}">Save</button></td></tr>`).join('');
-  h += `</tbody></table></div></details>`;
-  h += `<details class="px box adm"><summary><h3>Research tiers</h3></summary><p class="muted">Cost and SEED are whole amounts per resource. A tier's bonuses add up with the tiers below it (medicine takes the best).</p><div class="row" style="justify-content:flex-start;gap:8px"><label>Tiers in play ${numIn('tr-count', CFG.tierCount, 'style="width:56px" max="8"')}</label><button class="btn sm" data-act="tcsave">Save tier count</button></div><div class="tblwrap"><table class="tbl adm-u"><thead><tr><th>Tier</th><th>Cost each</th><th>SEED</th><th>Seconds</th><th>Academy</th><th>Carry %</th><th>Speed %</th><th>Medicine %</th><th></th></tr></thead><tbody>${CFG.tiers.map((x, i) => `<tr><td>${i + 1}</td><td>${numIn(`ti-${i}-cost`, x.costEachUnit / UNIT, 'style="width:80px"')}</td><td>${numIn(`ti-${i}-seed`, x.seedUnit / UNIT, 'style="width:80px"')}</td><td>${numIn(`ti-${i}-seconds_`, x.seconds_, 'style="width:80px"')}</td><td>${numIn(`ti-${i}-academy`, x.academy, 'style="width:56px"')}</td><td>${numIn(`ti-${i}-carryPct`, x.carryPct, 'style="width:56px"')}</td><td>${numIn(`ti-${i}-speedPct`, x.speedPct, 'style="width:56px"')}</td><td>${numIn(`ti-${i}-medicinePct`, x.medicinePct, 'style="width:56px"')}</td><td><button class="btn sm" data-act="tisave" data-i="${i + 1}">Save</button></td></tr>`).join('')}</tbody></table></div></details>`;
-  h += `<details class="px box adm"><summary><h3>Owner and Squeekchain</h3></summary><div class="mkt"><label>SqueekCore<input id="rd-core" value="${SW.ADDR.core}" maxlength="42"></label><label>Squeek NFT<input id="rd-nft" value="${SW.ADDR.squeek}" maxlength="42"></label><button class="btn sm" data-act="rdsave">Point the game here</button></div><p class="muted">Only if Squeekchain moves its contracts. A new SqueekCore starts counting from its current work.</p><div class="mkt" style="margin-top:10px"><label>New owner<input id="own-to" maxlength="42" placeholder="0x…"></label><button class="btn sm ghost" data-act="ownsave">Hand over the rule table</button></div><p class="why">Handing over is final: the new wallet gets every power above.</p></details>`;
-  return h + changeLog();
-}
+// ------------------------------------------------------------------ public rule change log (the editor lives in owner.html)
 function changeLog() {
   const list = W.changes.slice().reverse();
   return `<div class="px box" style="margin-top:14px"><h3>Rule change log</h3>${list.length ? `<div class="tblwrap"><table class="tbl"><thead><tr><th>Version</th><th>What</th><th>Block</th></tr></thead><tbody>${list.map(c => `<tr><td>${c.version}</td><td>${esc(c.what)}${c.what === 'unit' ? ` ${c.index + 1} (${esc(CFG ? UN(c.index).name : '')})` : c.what === 'building' ? ` ${c.index + 1} (${esc(CFG ? BK(c.index).name : '')})` : c.what === 'tier' || c.what === 'tierCount' ? ` ${c.index}` : ''}</td><td>${SW.D && !SW.D.local ? `<a href="https://sepolia.etherscan.io/tx/${c.tx}" target="_blank" rel="noopener">${c.block}</a>` : c.block}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">No changes since the season started: the rules are the launch defaults.</p>'}</div>`;
 }
-const val = id => { const el = document.getElementById(id); if (!el) throw new Error('missing field ' + id); return el.type === 'checkbox' ? el.checked : el.tagName === 'SELECT' ? +el.value : el.value === '' ? NaN : +el.value; };
-function intOf(x, label) { if (!Number.isFinite(x) || x < 0 || Math.floor(x) !== x) throw new Error(`${label}: use a whole number of 0 or more.`); return x; }
-function saveGroup(key, fn, setter, title) {
-  const o = {};
-  for (const c of comps(fn)) o[c.name] = c.type.endsWith(']') ? CFG[key][c.name].map((_, i) => intOf(val(`cf-${key}-${c.name}-${i}`), LABEL[c.name] || c.name)) : intOf(val(`cf-${key}-${c.name}`), LABEL[c.name] || c.name);
-  return act(`Save ${title}`, 'config', setter, [o]);
-}
-
 // ------------------------------------------------------------------ routing and render loop
-const VIEWS = ['home', 'village', 'world', 'army', 'academy', 'market', 'clan', 'champion', 'ranking', 'reports', 'admin'];
+const VIEWS = ['home', 'village', 'world', 'army', 'academy', 'market', 'clan', 'champion', 'ranking', 'reports'];
 function route() {
   const h = location.hash.slice(1), v = VIEWS.includes(h) ? h : 'home';
   S.view = v;
@@ -935,7 +928,7 @@ function route() {
   document.querySelectorAll('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.v === v));
   if (v === 'home' && h) document.getElementById(h)?.scrollIntoView();
   if (v !== 'home' && !S.ui.net) $('#netbox').hidden = false;
-  else if (v !== 'home' && SW.D && !S.me && !S.ui.look && !['world', 'ranking', 'admin'].includes(v)) openWallet();
+  else if (v !== 'home' && SW.D && !S.me && !S.ui.look && !['world', 'ranking'].includes(v)) openWallet();
   if (v === 'ranking' && !W.rank && SW.D) loadRanking().then(dirty).catch(() => { });
   if (v === 'world' && S.wsel !== null) loadTarget(S.wsel).catch(() => { });
   sceneDirty = true; needFull = true; layout(); render(true);
@@ -946,7 +939,7 @@ function panel(id, html, closable) {
   const min = S.ui.min[id];
   return `<div class="ph"><h3>${title}</h3><span class="pbtn">${closable ? '<button class="btn ghost sm sheet-close" data-act="close">Close</button>' : ''}<button class="btn ghost sm" data-act="min" data-p="${id}" aria-expanded="${!min}">${min ? 'Show' : 'Hide'}</button></span></div>${min ? '' : body}`;
 }
-let lastFull = 0, lastBar = 0, pdown = false, adminKey = '';
+let lastFull = 0, lastBar = 0, pdown = false;
 addEventListener('pointerdown', () => { pdown = true; }, true);
 addEventListener('pointerup', () => { setTimeout(() => { pdown = false; }, 0); }, true);
 function render(force) {
@@ -978,7 +971,6 @@ function render(force) {
     if (S.view === 'clan') setHTML($('#clan'), clanPage());
     if (S.view === 'ranking') setHTML($('#ranking'), rankingPage());
     if (S.view === 'reports') setHTML($('#reports'), reportsPage());
-    if (S.view === 'admin') { const k = `${CFG && CFG.version}:${isOwner()}:${W.changes.length}`; if (k !== adminKey) { const open = [...document.querySelectorAll('#admin details[open] summary h3')].map(e => e.textContent); setHTML($('#admin'), adminPage()); document.querySelectorAll('#admin details summary h3').forEach(e => { if (open.includes(e.textContent)) e.closest('details').open = true; }); adminKey = k; } }
     needFull = false; lastFull = t;
   }
 }
@@ -986,7 +978,7 @@ function tick() { if (S.view !== 'home' && !document.hidden) { render(false); if
 
 // ------------------------------------------------------------------ wallet, founding
 function openWallet() { const b = $('#walletbox'); b.hidden = false; $('#wb-msg').textContent = SW.hasWallet() ? '' : 'No wallet found in this browser. Install MetaMask or Rabby, or open this page in your wallet app.'; }
-function maybeName() { if (S.me && ME && ME.none && !['home', 'admin', 'world', 'ranking'].includes(S.view) && !S.ui.lookName) openName(); }
+function maybeName() { if (S.me && ME && ME.none && !['home', 'world', 'ranking'].includes(S.view) && !S.ui.lookName) openName(); }
 function openName() { $('#nm-wallet').textContent = shortAddr(S.me); const nb = $('#namebox'); nb.hidden = false; const i = $('#nm-in'); i.placeholder = i.placeholder || randomName(); if (CFG) $('#nm-gift').textContent = `Founding gives ${fmt(CFG.econ.startResources)} of each resource, ${fmt(CFG.econ.startSeed)} SEED and a ${dur(CFG.econ.shieldHours * 3600)} shield.`; }
 async function foundVillage(name) {
   const why = $('#nm-why');
@@ -1039,6 +1031,9 @@ function onClick(e) {
   if (a === 'anone') { document.querySelectorAll('#wright input[id^="atk-"][data-u]').forEach(i => i.value = 0); updatePrediction(); return; }
   if (a === 'pt') { const c = ME.champ; pending = pending || { might: c.might, attack: c.attack, defense: c.defense, carry: c.carry }; pending[t.dataset.k]++; dirty(); return; }
   if (a === 'ptreset') { pending = null; dirty(); return; }
+  if (a === 'move') { moveFrom = +t.dataset.k; note('Tap an empty plot'); sceneDirty = true; dirty(); return; }
+  if (a === 'movecancel') { moveFrom = null; sceneDirty = true; dirty(); return; }
+  if (a === 'buildat') { const k = +t.dataset.k, p = +t.dataset.p; plotMap(); LAYOUT[k] = p; saveLayout(); const slot = ME.orders[0] ? 1 : 0; return act(`Build ${BK(k).name}`, 'villages', 'orderBuild', [8 + k, slot]).then(ok => { if (ok) { S.sel = { kind: 'b', k }; sceneDirty = true; dirty(); } }); }
   const me = S.me;
   if (a === 'checkpoint') return act('Checkpoint today', 'ledger', 'checkpoint', []);
   if (a === 'claim') return act('Claim SEED', 'villages', 'claimSeed', []);
@@ -1072,19 +1067,17 @@ function onClick(e) {
   if (a === 'invite') return act(`Invite ${nameOf(t.dataset.a)}`, 'villages', 'inviteToClan', [t.dataset.a, true]);
   if (a === 'uninvite') return act('Withdraw invitation', 'villages', 'inviteToClan', [t.dataset.a, false]);
   if (a === 'invname') { const v = $('#cl-inv').value.trim().toLowerCase(), p = /^0x[0-9a-f]{40}$/.test(v) ? v : ([...W.players.values()].find(x => x.name.toLowerCase() === v) || {}).addr; if (!p || !W.players.has(p)) return note(`No village called "${v}".`, 'bad'); return act(`Invite ${nameOf(p)}`, 'villages', 'inviteToClan', [p, true]); }
-  // owner: the rule table
-  try {
-    if (a === 'cfsave') { const gr = GROUPS.find(x => x[3] === t.dataset.g); return saveGroup(gr[3], gr[0], gr[2], gr[1].toLowerCase()); }
-    if (a === 'fcsave') return act('Save field costs', 'config', 'setFieldCosts', [[0, 1, 2, 3].map(i => [0, 1, 2, 3].map(j => intOf(val(`fc-${i}-${j}`), 'Field cost')))]);
-    if (a === 'unsave') { const i = +t.dataset.i, o = {}; for (const c of comps('unit')) o[c.name] = c.name === 'cost' ? [0, 1, 2, 3].map(j => intOf(val(`un-${i}-cost-${j}`), 'Cost')) : c.type === 'bool' ? val(`un-${i}-${c.name}`) : intOf(val(`un-${i}-${c.name}`), c.name); return act(`Save unit ${i + 1}`, 'config', 'setUnit', [i, o, $(`#un-${i}-name`).value.trim()]); }
-    if (a === 'bksave') { const i = +t.dataset.i, o = {}; for (const c of comps('building')) o[c.name] = c.name === 'cost' ? [0, 1, 2, 3].map(j => intOf(val(`bk-${i}-cost-${j}`), 'Cost')) : c.type === 'bool' ? val(`bk-${i}-${c.name}`) : intOf(val(`bk-${i}-${c.name}`), c.name); return act(`Save building ${i + 1}`, 'config', 'setBuilding', [i, o, $(`#bk-${i}-name`).value.trim()]); }
-    if (a === 'tisave') { const i = +t.dataset.i, r = i - 1; const big = x => BigInt(Math.round(intOf(x, 'Cost') * UNIT)); return act(`Save research tier ${i}`, 'config', 'setTier', [i, { costEachUnit: big(val(`ti-${r}-cost`)), seedUnit: big(val(`ti-${r}-seed`)), seconds_: intOf(val(`ti-${r}-seconds_`), 'Seconds'), academy: intOf(val(`ti-${r}-academy`), 'Academy'), carryPct: intOf(val(`ti-${r}-carryPct`), 'Carry'), speedPct: intOf(val(`ti-${r}-speedPct`), 'Speed'), medicinePct: intOf(val(`ti-${r}-medicinePct`), 'Medicine') }]); }
-    if (a === 'tcsave') return act('Save tier count', 'config', 'setTierCount', [intOf(val('tr-count'), 'Tiers')]);
-    if (a === 'rdsave') return act('Point the game at Squeekchain', 'ledger', 'setReaders', [$('#rd-core').value.trim(), $('#rd-nft').value.trim()]);
-    if (a === 'ownsave') { const to = $('#own-to').value.trim(); if (!/^0x[0-9a-fA-F]{40}$/.test(to)) return note('Paste a full 0x address.', 'bad'); if (!confirm(`Hand the rule table to ${to}? This cannot be undone from this wallet.`)) return; return act('Hand over the rule table', 'config', 'transferOwnership', [to]); }
-  } catch (err) { note(err.message || String(err), 'bad'); }
 }
-function selectHit(hit) { const k = hit.dataset.hit; S.sel = k === 'th' || k === 'walls' ? { kind: k } : k === 'field' ? { kind: 'field', i: +hit.dataset.i } : { kind: 'b', k: +hit.dataset.k }; S.ui.min.vright = false; $('#vright').classList.remove('closed'); sceneDirty = true; dirty(); }
+function selectHit(hit) {
+  const k = hit.dataset.hit;
+  if (moveFrom !== null) {
+    const p = +hit.dataset.p, pm = plotMap(), j = PLOT_OPEN_ORDER.indexOf(p);
+    if (k === 'plot' && pm.byPlot[p] === undefined && j < openPlotCount()) { LAYOUT[moveFrom] = p; saveLayout(); S.sel = { kind: 'b', k: moveFrom }; note(`${BK(moveFrom).name} moved`, 'ok'); moveFrom = null; sceneDirty = true; dirty(); return; }
+    moveFrom = null; note('Move cancelled');
+  }
+  S.sel = k === 'th' || k === 'walls' ? { kind: k } : k === 'field' ? { kind: 'field', i: +hit.dataset.i } : k === 'plot' ? { kind: 'plot', p: +hit.dataset.p } : { kind: 'b', k: +hit.dataset.k };
+  S.ui.min.vright = false; $('#vright').classList.remove('closed'); sceneDirty = true; dirty();
+}
 
 // ------------------------------------------------------------------ home page bits
 function liveNote() {
@@ -1140,4 +1133,4 @@ async function init() {
   homeInit(); route();
   setInterval(() => { if (!document.hidden) refresh(); }, 20000);
 }
-init();
+if (window.SW_PAGE !== 'owner') init();
