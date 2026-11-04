@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Squeek Wars · Testnet</title>
+<meta name="description" content="Squeek Wars: a hamster village strategy game on Sepolia. SEED comes from the real work of Squeekchain's hamster.">
+<meta name="theme-color" content="#16100b">
+<link rel="icon" href="assets/ic_seed.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=VT323&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="home" class="view">
+  <header class="site-h">
+    <div class="logo">SQUEEK WARS</div>
+    <nav aria-label="Site"><a href="#how">How it works</a><a href="#wheel">The wheel</a><a href="#units">Units</a><a href="#rules">Rules</a><a href="#faq">FAQ</a><a href="#contracts">Contracts</a></nav>
+    <a class="btn" href="#village" style="text-decoration:none">Play on testnet</a>
+  </header>
+  <section class="hero">
+    <div class="in">
+      <h1>Build a hamster village. <span>Grow with a real wheel.</span></h1>
+      <p>Squeek Wars is a strategy game on Squeekchain. Every wallet founds one village. Squeektoshi, Squeekchain's hamster, really runs on his wheel: once a day his work is recorded on chain, pays SEED to every village and boosts production. Every village has a champion; holding a Squeek makes it a little stronger and your building faster.</p>
+      <div class="cta">
+        <div class="netpick">
+          <button class="net on" data-act="net-test" type="button"><b>Testnet</b><span>Practice season on Sepolia · play now</span></button>
+          <button class="net off" type="button" disabled aria-disabled="true"><b>Mainnet</b><span>Opens after the official Squeek mint</span></button>
+        </div>
+      </div>
+      <div class="wnote" id="liveNote"></div>
+    </div>
+  </section>
+  <section class="sec" id="how">
+    <h2>How it works</h2>
+    <p class="lead">One village per wallet. Build it up, let the hamster boost it, and raid neighbours and wild camps when your attack is at least twice their defense.</p>
+    <div class="steps">
+      <div class="step px"><img src="assets/sprites/town_hall_3.webp" alt="Town Hall"><h3>Build</h3><p>Town Hall, Walls, 8 fields and up to 12 plots for the Wheelhouse, Storehouse, Burrow, Barracks, Academy, Market, Vault, Forge and Clan Hall.</p></div>
+      <div class="step px"><img src="assets/sprites/wheelhouse_3.webp" alt="Wheelhouse"><h3>Grow with the wheel</h3><p>Every day at 04:00 UTC anyone can record Squeektoshi's work. Each village then claims SEED, and the Wheelhouse turns the same work into extra Wood, Food, Stone and Iron.</p></div>
+      <div class="step px"><img src="assets/sprites/unit_berserker.webp" alt="Berserker"><h3>Fight</h3><p>Train seven unit types, scout and raid on a 100 × 100 map with 200 wild camps. No luck: twice the defense wins, and you see the numbers before you send.</p></div>
+      <div class="step px"><img src="assets/sprites/champion_3.webp" alt="Champion"><h3>Lead with a champion</h3><p>Every village has a champion that levels up to 30 from battles and the daily work. Hold a Squeek for +10% XP and stats; Squeeks also speed up building, up to 30%.</p></div>
+    </div>
+  </section>
+  <section class="sec" id="wheel">
+    <h2>The wheel bonus</h2>
+    <div class="wheelbox px">
+      <div class="formula">Output per hour = base × (1 + <b>wheel bonus</b>)<br>Wheel bonus = the last recorded day's work ÷ 4,320<br>capped at <b>+25% per Wheelhouse level</b></div>
+      <div class="muted" style="font-size:20px" id="wheelLive">Every village also receives the day's work ÷ 10 as SEED.</div>
+    </div>
+    <div class="looks px" style="margin-top:14px">
+      <figure><img src="assets/sprites/town_hall_1.webp" alt="Town Hall, cardboard"><figcaption>Lv 1–2 · cardboard</figcaption></figure>
+      <figure><img src="assets/sprites/town_hall_2.webp" alt="Town Hall, wood"><figcaption>Lv 3–4 · wood</figcaption></figure>
+      <figure><img src="assets/sprites/town_hall_3.webp" alt="Town Hall, plaster"><figcaption>Lv 5–6 · plaster &amp; timber</figcaption></figure>
+      <figure><img src="assets/sprites/town_hall_4.webp" alt="Town Hall, stone"><figcaption>Lv 7–8 · stone</figcaption></figure>
+      <figure><img src="assets/sprites/town_hall_5.webp" alt="Town Hall, marble"><figcaption>Lv 9–10 · marble &amp; gold</figcaption></figure>
+    </div>
+  </section>
+  <section class="sec" id="units">
+    <h2>Units</h2>
+    <p class="lead">Attack and defense decide every battle. There is no randomness: an attack of at least twice the defense wipes the defenders and loots; anything less only costs both sides troops. Scouts give +10% attack on a target for 12 hours.</p>
+    <div class="units" id="unitCards"></div>
+  </section>
+  <section class="sec" id="rules">
+    <h2>Rules</h2>
+    <p class="lead">The game rules are enforced by the contracts on Sepolia. Nobody can pause the game, change the rules or touch your village.</p>
+    <div class="rules">
+      <div class="px box"><h3>How the game works</h3><ol>
+        <li><b>One village per wallet, open to everyone.</b> Your village name is final. Production and SEED are the same with or without a Squeek.</li>
+        <li><b>A day starts at 04:00 UTC.</b> The first player to press Checkpoint records the day's work for everyone; then every village presses Claim SEED.</li>
+        <li><b>Raids take resources only:</b> Wood, Food, Stone and Iron above the Vault's protection. SEED, NFTs and buildings are never taken.</li>
+        <li><b>You win only with twice the defense.</b> Then every defender falls, you loot, and 20 Catapults knock down a Walls level (repaired after 12 h).</li>
+        <li><b>New villages get a 7-day shield.</b> Attacking or scouting ends your own shield early.</li>
+        <li><b>3 raids per target per day.</b> Raids on villages 3 or more Town Hall levels below yours give half loot and no points.</li>
+        <li><b>No trading between players.</b> The Market exchanges your own resources; SEED goes into resources, never back.</li>
+        <li><b>Moves resolve when someone presses Resolve.</b> Anyone can resolve an army that has arrived, so battles never wait on the attacker.</li>
+      </ol></div>
+      <div class="px box"><h3>Fair play</h3><ol>
+        <li><b>No feeder accounts.</b> Don't run extra wallets just to feed a main village.</li>
+        <li><b>No bug abuse.</b> If something gives you resources or wins it shouldn't, report it instead of using it.</li>
+        <li><b>Keep names clean.</b> No offensive, hateful or impersonating names.</li>
+        <li><b>Leave the site alone.</b> Don't overload the public RPCs or other players' devices.</li>
+      </ol></div>
+    </div>
+  </section>
+  <section class="sec" id="faq">
+    <h2>FAQ</h2>
+    <div class="faq">
+      <div class="px"><b>Does it cost anything?</b><p>No. You only pay Sepolia gas, which is test ETH from a faucet.</p></div>
+      <div class="px"><b>Where does SEED come from?</b><p>From SqueekCore on Sepolia: the hamster's cumulative work. Each daily checkpoint pays work ÷ 10 SEED to every village that claims.</p></div>
+      <div class="px"><b>What if nobody checkpoints for a day?</b><p>The missed work is not lost: it lands on the next checkpoint. Production keeps using the last recorded day's bonus until then.</p></div>
+      <div class="px"><b>Why is my build not done at zero?</b><p>Contracts never act on their own. When the timer ends, press Finish (anyone may). Production at the new level starts from that moment.</p></div>
+      <div class="px"><b>Do I need a Squeek?</b><p>No. A Squeek gives your champion +10% XP and stats, and Squeeks speed up building after a good day of work; each extra Squeek helps half as much.</p></div>
+      <div class="px"><b>Testnet or mainnet?</b><p>This is the Sepolia practice season. Mainnet opens after the official Squeek mint, and testnet progress does not carry over.</p></div>
+      <div class="px"><b>Can someone take my Squeek?</b><p>No. The game only reads how many Squeeks your wallet holds; it never moves tokens.</p></div>
+    </div>
+  </section>
+  <section class="sec" id="contracts">
+    <h2>Contracts</h2>
+    <p class="lead">Sepolia (chain 11155111), deployed in block 12,060,202 by IMD launch 2935. The website reads them directly from public RPCs.</p>
+    <div class="px box" id="contractList"></div>
+  </section>
+  <div class="foot">Squeek Wars Testnet · resources and SEED are game points, not tokens</div>
+</div>
+
+<div id="game" hidden>
+  <header id="bar">
+    <div class="logo" id="logoHome" title="Back to the site">SQUEEK WARS<small id="logoSub">Testnet</small></div>
+    <span class="netbadge" title="Practice season on Sepolia. Mainnet opens after the official Squeek mint.">TESTNET</span>
+    <div class="res" id="resbar"></div>
+    <button class="btn ghost sm" id="walletbtn" type="button">Connect</button>
+    <div class="wheel" id="wheelchip"></div>
+    <div id="alert" class="alert" role="alert" hidden></div>
+  </header>
+
+  <div id="village" class="view">
+    <div class="stage" id="vstage"><div class="scene" id="scene"><div id="sbase"></div><div id="life"></div><div id="splates"></div></div></div>
+    <div class="zoom" id="zoombar"><button class="btn ghost" data-act="zin" type="button" aria-label="Zoom in">+</button><button class="btn ghost" data-act="zout" type="button" aria-label="Zoom out">−</button><button class="btn ghost" data-act="zfit" type="button" aria-label="Whole village or close up">⤢</button></div>
+    <div class="village-below">
+      <aside class="left px" id="vleft"></aside>
+    </div>
+    <aside class="right px" id="vright"></aside>
+  </div>
+
+  <div id="world" class="view">
+    <div class="stage" id="wstage"><canvas id="worldcv"></canvas></div>
+    <div class="world-below">
+      <aside class="left px" id="wleft"></aside>
+    </div>
+    <aside class="right px" id="wright"></aside>
+  </div>
+
+  <div id="army" class="view page"></div>
+  <div id="academy" class="view page"></div>
+  <div id="market" class="view page"></div>
+  <div id="clan" class="view page"></div>
+  <div id="champion" class="view page"></div>
+  <div id="ranking" class="view page"></div>
+  <div id="reports" class="view page"></div>
+
+  <nav id="tabs" class="px" aria-label="Game">
+    <a href="#village" data-v="village">Village</a><a href="#world" data-v="world"><span class="lg">World </span>Map</a><a href="#army" data-v="army">Army</a><a href="#academy" data-v="academy">Academy</a><a href="#market" data-v="market">Market</a><a href="#clan" data-v="clan">Clan</a><a href="#champion" data-v="champion">Champion</a><a href="#ranking" data-v="ranking">Ranking</a><a href="#reports" data-v="reports">Reports</a>
+  </nav>
+  <div id="wtip" class="wtip" hidden></div>
+  <div id="namebox" class="modal" hidden><div class="px box">
+    <h3>Found your village</h3>
+    <p class="muted">Your village name is linked to your wallet <span class="addr" id="nm-wallet"></span> and cannot be changed later. Other players see both on the map, in reports and in the ranking. Founding gives 750 of each resource, 1,500 SEED and a 7-day shield.</p>
+    <label for="nm-in" class="muted">Village name (3–16 letters, digits or _)</label>
+    <input id="nm-in" maxlength="16" autocomplete="off" spellcheck="false">
+    <div class="row" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn" data-act="nm-ok" type="button">Found village</button><button class="btn ghost" data-act="nm-rand" type="button">Suggest a name</button><button class="btn ghost" data-act="nm-later" type="button">Just look around</button></div>
+    <p class="why" id="nm-why"></p>
+  </div></div>
+  <div id="walletbox" class="modal" hidden><div class="px box">
+    <h3>Connect your wallet</h3>
+    <p class="muted">Your village belongs to your wallet. Every action is a Sepolia transaction you sign yourself; the site never holds keys. Players appear as their name with a short address, like <span class="addr">0x1a2b…9f3c</span>.</p>
+    <div class="row" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn" data-act="wb-connect" type="button">Connect wallet</button><button class="btn ghost" data-act="wb-look" type="button">Just look around</button></div>
+    <p class="why" id="wb-msg"></p>
+    <p class="muted" style="font-size:16px">Need test ETH for gas? Use any Sepolia faucet.</p>
+  </div></div>
+  <div id="netbox" class="modal" hidden><div class="px box netb">
+    <h3>Where do you want to play?</h3>
+    <div class="netpick">
+      <button class="net on" data-act="net-test" type="button"><b>Testnet</b><span>Practice season on Sepolia · play now</span></button>
+      <button class="net off" type="button" disabled aria-disabled="true"><b>Mainnet</b><span>Opens after the official Squeek mint</span></button>
+    </div>
+    <p class="muted" style="font-size:17px;margin:10px 0 0">Testnet progress does not carry over to mainnet.</p>
+  </div></div>
+  <div id="txbox" class="px" hidden></div>
+</div>
+<div id="toasts" aria-live="polite"></div>
+<script src="vendor/ethers.umd.min.js"></script>
+<script src="abi.js"></script>
+<script src="chain.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
