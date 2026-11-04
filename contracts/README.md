@@ -14,6 +14,18 @@ V2 keeps the game of the first Testnet season (IMD launch 2935, MIT) and moves e
 
 Deploy them in that order. There are no wiring calls after deployment.
 
+## Season 2 on Sepolia
+
+| Contract | Address | Source |
+| --- | --- | --- |
+| `GameConfig` | [0xd1eca225399ab5b6220bf522c2e0f964f75a4ce7](https://sepolia.etherscan.io/address/0xd1eca225399ab5b6220bf522c2e0f964f75a4ce7) | [Sourcify](https://repo.sourcify.dev/11155111/0xD1eCa225399Ab5b6220Bf522c2E0F964f75a4Ce7) |
+| `SeedLedger` | [0x36fa35c9583ed036aff17d7aa49db8c4d737c5af](https://sepolia.etherscan.io/address/0x36fa35c9583ed036aff17d7aa49db8c4d737c5af) | [Sourcify](https://repo.sourcify.dev/11155111/0x36fA35c9583ed036aFf17D7aA49DB8C4d737c5AF) |
+| `Clans` | [0x6c5072663b7b7b2d65f09b140536b3cac21f26ec](https://sepolia.etherscan.io/address/0x6c5072663b7b7b2d65f09b140536b3cac21f26ec) | [Sourcify](https://repo.sourcify.dev/11155111/0x6C5072663b7b7B2d65f09b140536b3Cac21F26ec) |
+| `Army` | [0x84e5751a7b168df2376213aa67ce7ee641048eab](https://sepolia.etherscan.io/address/0x84e5751a7b168df2376213aa67ce7ee641048eab) | [Sourcify](https://repo.sourcify.dev/11155111/0x84e5751a7b168df2376213AA67ce7ee641048Eab) |
+| `Villages` | [0xd7437dc56da2162cb190b0a20df7c6699e4e9b6e](https://sepolia.etherscan.io/address/0xd7437dc56da2162cb190b0a20df7c6699e4e9b6e) | [Sourcify](https://repo.sourcify.dev/11155111/0xd7437Dc56DA2162cB190B0a20dF7C6699e4e9b6E) |
+
+All five are verified on Sourcify with a full match of the creation and runtime code. `../site/verify/input.json` is the exact compiler input (solc 0.8.26+commit.8a97fa7a, via-IR, optimizer 200, Shanghai, no metadata hash) and `../site/verify/contracts.json` holds the constructor arguments; `tools/verify-input.js` rebuilds both from `src` and checks the compiled code against the chain. The owner page of the site (`owner.html`) sends the same input to Etherscan with the owner's own Etherscan API key.
+
 ## What the owner can change
 
 Every setter on `GameConfig` is owner-only, bumps `version` and emits `Changed(what, index, version)`, so the site can show a public change log.

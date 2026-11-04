@@ -33,7 +33,7 @@ function adminPage() {
   h += `</tbody></table></div></details>`;
   h += `<details class="px box adm"><summary><h3>Research tiers</h3></summary><p class="muted">Cost and SEED are whole amounts per resource. A tier's bonuses add up with the tiers below it (medicine takes the best).</p><div class="row" style="justify-content:flex-start;gap:8px"><label>Tiers in play ${numIn('tr-count', CFG.tierCount, 'style="width:56px" max="8"')}</label><button class="btn sm" data-act="tcsave">Save tier count</button></div><div class="tblwrap"><table class="tbl adm-u"><thead><tr><th>Tier</th><th>Cost each</th><th>SEED</th><th>Seconds</th><th>Academy</th><th>Carry %</th><th>Speed %</th><th>Medicine %</th><th></th></tr></thead><tbody>${CFG.tiers.map((x, i) => `<tr><td>${i + 1}</td><td>${numIn(`ti-${i}-cost`, x.costEachUnit / UNIT, 'style="width:80px"')}</td><td>${numIn(`ti-${i}-seed`, x.seedUnit / UNIT, 'style="width:80px"')}</td><td>${numIn(`ti-${i}-seconds_`, x.seconds_, 'style="width:80px"')}</td><td>${numIn(`ti-${i}-academy`, x.academy, 'style="width:56px"')}</td><td>${numIn(`ti-${i}-carryPct`, x.carryPct, 'style="width:56px"')}</td><td>${numIn(`ti-${i}-speedPct`, x.speedPct, 'style="width:56px"')}</td><td>${numIn(`ti-${i}-medicinePct`, x.medicinePct, 'style="width:56px"')}</td><td><button class="btn sm" data-act="tisave" data-i="${i + 1}">Save</button></td></tr>`).join('')}</tbody></table></div></details>`;
   h += `<details class="px box adm"><summary><h3>Owner and Squeekchain</h3></summary><div class="mkt"><label>SqueekCore<input id="rd-core" value="${SW.ADDR.core}" maxlength="42"></label><label>Squeek NFT<input id="rd-nft" value="${SW.ADDR.squeek}" maxlength="42"></label><button class="btn sm" data-act="rdsave">Point the game here</button></div><p class="muted">Only if Squeekchain moves its contracts. A new SqueekCore starts counting from its current work.</p><div class="mkt" style="margin-top:10px"><label>New owner<input id="own-to" maxlength="42" placeholder="0x…"></label><button class="btn sm ghost" data-act="ownsave">Hand over the rule table</button></div><p class="why">Handing over is final: the new wallet gets every power above.</p></details>`;
-  return h + changeLog();
+  return h + verifyBox() + changeLog();
 }
 
 const val = id => { const el = document.getElementById(id); if (!el) throw new Error('missing field ' + id); return el.type === 'checkbox' ? el.checked : el.tagName === 'SELECT' ? +el.value : el.value === '' ? NaN : +el.value; };
@@ -42,6 +42,44 @@ function saveGroup(key, fn, setter, title) {
   const o = {};
   for (const c of comps(fn)) o[c.name] = c.type.endsWith(']') ? CFG[key][c.name].map((_, i) => intOf(val(`cf-${key}-${c.name}-${i}`), LABEL[c.name] || c.name)) : intOf(val(`cf-${key}-${c.name}`), LABEL[c.name] || c.name);
   return ownerAct(`Save ${title}`, 'config', setter, [o]);
+}
+// ------------------------------------------------------------------ the source code on Etherscan
+// verify/input.json is the exact compiler input of the deployed code (contracts/tools/verify-input.js); the key goes only to Etherscan
+const ES_API = 'https://api.etherscan.io/v2/api', ES_CHAIN = 11155111;
+const ES_LIST = [['GameConfig', 'config'], ['SeedLedger', 'ledger'], ['Clans', 'clans'], ['Army', 'army'], ['Villages', 'villages']];
+const esState = {}; let esBusy = false;
+const esSleep = ms => new Promise(r => setTimeout(r, ms));
+function verifyBox() {
+  const scan = a => `https://sepolia.etherscan.io/address/${a}#code`, src = a => `https://repo.sourcify.dev/${ES_CHAIN}/${SW.E.getAddress(a)}`;
+  return `<details class="px box adm"><summary><h3>Source code on Etherscan</h3></summary><p class="muted">The five game contracts are verified on Sourcify. To show the same source on Etherscan, paste an Etherscan API key (free at <a href="https://etherscan.io/myapikey" target="_blank" rel="noopener">etherscan.io/myapikey</a>) and press the button. The key stays in this tab and is sent only to Etherscan.</p>`
+    + `<div class="mkt"><label>Etherscan API key<input id="es-key" type="password" autocomplete="off" spellcheck="false"></label><button class="btn sm" data-act="esverify" ${esBusy ? 'disabled' : ''}>Verify all five on Etherscan</button></div>`
+    + `<table class="kv">${ES_LIST.map(([n, k]) => `<tr><td>${n}</td><td><a href="${scan(SW.ADDR[k])}" target="_blank" rel="noopener">Etherscan</a> · <a href="${src(SW.ADDR[k])}" target="_blank" rel="noopener">Sourcify</a></td><td id="es-st-${k}">${esState[k] || ''}</td></tr>`).join('')}</table>`
+    + `<p class="muted" style="font-size:17px">By hand instead: on each contract's Etherscan page choose Contract → Verify and Publish → Solidity (Standard-Json-Input), compiler v0.8.26+commit.8a97fa7a, MIT, upload <a href="verify/input.json" download>input.json</a>, and paste the contract's constructor arguments from <a href="verify/contracts.json" target="_blank">contracts.json</a>.</p></details>`;
+}
+async function esVerify() {
+  const key = ($('#es-key').value || '').trim(); if (!key) return note('Paste your Etherscan API key first.', 'bad');
+  if (esBusy) return; esBusy = true;
+  const set = (k, h) => { esState[k] = h; const el = document.getElementById('es-st-' + k); if (el) el.innerHTML = h; };
+  const ok = '<span class="ok">✓ verified</span>', bad = m => `<span class="bad">${esc(m)}</span>`;
+  try {
+    const [input, meta] = await Promise.all([fetch('verify/input.json').then(r => r.json()), fetch('verify/contracts.json').then(r => r.json())]);
+    for (const c of meta.contracts) {
+      if (c.address.toLowerCase() !== String(SW.ADDR[c.key]).toLowerCase()) { set(c.key, bad('verify files are for another deployment')); continue; }
+      set(c.key, 'Sending…');
+      try {
+        const body = new URLSearchParams({ module: 'contract', action: 'verifysourcecode', apikey: key, contractaddress: c.address, sourceCode: JSON.stringify(input), codeformat: 'solidity-standard-json-input', contractname: c.id, compilerversion: meta.compiler, constructorArguements: c.ctorArgs, licenseType: '3' });
+        const j = await fetch(`${ES_API}?chainid=${ES_CHAIN}`, { method: 'POST', body }).then(r => r.json());
+        if (j.status !== '1') { set(c.key, /already verified/i.test(j.result || '') ? ok : bad(j.result || j.message || 'Refused')); continue; }
+        set(c.key, 'Etherscan is compiling…');
+        for (let i = 0; i < 40; i++) {
+          await esSleep(4000);
+          const s = await fetch(`${ES_API}?chainid=${ES_CHAIN}&module=contract&action=checkverifystatus&guid=${encodeURIComponent(j.result)}&apikey=${encodeURIComponent(key)}`).then(r => r.json());
+          if (/pending|queue/i.test(s.result || '')) continue;
+          set(c.key, /^pass|already verified/i.test(s.result || '') ? ok : bad(s.result || 'Failed')); break;
+        }
+      } catch (e) { set(c.key, bad(e.message || String(e))); }
+    }
+  } finally { esBusy = false; }
 }
 async function ownerAct(label, c, fn, args) {
   if (!S.me) return false;
@@ -76,6 +114,7 @@ function ownerClick(e) {
   const a = t.dataset.act;
   if (a === 'txclose') { $('#txbox').hidden = true; return; }
   if (a === 'o-connect') return ownerConnect();
+  if (a === 'esverify') return esVerify();
   if (a === 'o-switch' || a === 'wm-switch') { $('#walletmenu').hidden = true; SW.switchAccount().then(acc => { S.me = acc; S.ui.off = false; saveUI(); ownerRender(); }).catch(err => note(err.message || String(err), 'bad')); return; }
   if (a === 'wm-off') { $('#walletmenu').hidden = true; SW.disconnect().then(() => { S.me = null; S.ui.off = true; saveUI(); note('Wallet disconnected'); ownerRender(); }); return; }
   if (a === 'wm-scan') { $('#walletmenu').hidden = true; if (SW.D && !SW.D.local) window.open(`https://sepolia.etherscan.io/address/${S.me}`, '_blank', 'noopener'); return; }
