@@ -392,7 +392,13 @@ function layout() {
   if (S.view === 'world') sizeCanvas();
 }
 function zoomAt(f, cx, cy) { const z = zoomLimits(), s1 = vscale, s2 = clamp(s1 * f, z.fit, z.max); if (Math.abs(s2 - s1) < 1e-4) return; pan.x = cx - (cx - pan.x) * s2 / s1; pan.y = cy - (cy - pan.y) * s2 / s1; vscale = s2; S.ui.vz = s2; saveUI(); clampPan(); applyPan(); }
-function clampPan() { const st = $('#vstage'); const W_ = 1920 * vscale, H = 1200 * vscale, sw = st.clientWidth, sh = st.clientHeight; pan.x = W_ <= sw ? (sw - W_) / 2 : Math.min(0, Math.max(sw - W_, pan.x)); pan.y = H <= sh ? (sh - H) / 2 : Math.min(0, Math.max(sh - H, pan.y)); }
+// the tab bar floats over the bottom of the stage: let the scene scroll up past it, so the bottom fields can be tapped
+function tabOverlap() { const st = $('#vstage').getBoundingClientRect(), tb = $('#tabs').getBoundingClientRect(); return tb.height && tb.top < st.bottom ? st.bottom - tb.top + 12 : 0; }
+function clampPan() {
+  const st = $('#vstage'); const W_ = 1920 * vscale, H = 1200 * vscale, sw = st.clientWidth, sh = st.clientHeight, avail = sh - tabOverlap();
+  pan.x = W_ <= sw ? (sw - W_) / 2 : Math.min(0, Math.max(sw - W_, pan.x));
+  pan.y = H <= avail ? (avail - H) / 2 : Math.min(0, Math.max(avail - H, pan.y));
+}
 function applyPan() { $('#scene').style.transform = `translate(${pan.x}px,${pan.y}px) scale(${vscale})`; }
 function stageDrag(stage, onMove, onTap, onPinch) {
   const pts = new Map(); let moved = false, last = null, pinchD = 0;
