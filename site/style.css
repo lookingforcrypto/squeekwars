@@ -441,3 +441,9 @@ h3{font-family:var(--f-body);font-size:21px;letter-spacing:.04em}
 .cp-b{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
 .cp-b .ok{color:var(--green)}
 .cp-n{margin:6px 0 0;font-size:17px}
+
+/* what a rule change changed */
+.rd{margin:2px 0 6px;padding-left:18px;font-size:18px;line-height:1.15}
+.rd li{margin:1px 0}
+.rd-n{margin:2px 0 6px;font-size:17px}
+.tbl .rd{font-size:16px;margin:4px 0 0}

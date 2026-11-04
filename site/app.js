@@ -237,7 +237,7 @@ async function refresh(full) {
     $('#liveNote').innerHTML = liveNote(); homeChanges();
   } catch (e) { console.warn(e); note('Could not reach the chain: ' + SW.explain(e), 'bad'); }
   finally { loading = false; sceneDirty = true; dirty(); }
-  maybeName(); renderChat(); notifyCheck();
+  maybeName(); renderChat(); notifyCheck(); loadRuleDiffs().catch(() => { });
 }
 
 // ------------------------------------------------------------------ derived numbers (the same formulas as the contracts)
@@ -925,6 +925,82 @@ function reportsPage() {
   return h;
 }
 
+// ------------------------------------------------------------------ what a rule change changed
+// GameConfig's Changed event only names the group; the new values are in the transaction input. Replaying every
+// change from the launch table (rules-launch.json, see contracts/tools/rules-launch.js) gives "old → new" lines.
+const UNIT_LABEL = { name: 'Name', enabled: 'On', tier: 'Research tier', role: 'Role', attack: 'Attack', defense: 'Defense', speed: 'Speed (tiles per hour)', carry: 'Carry', room: 'Troop room', seconds_: 'Training time at Barracks 1 (s)', cost: 'Cost W/F/S/I' };
+const BUILD_LABEL = { name: 'Name', enabled: 'On', maxLevel: 'Max level', thCap: 'Town Hall cap', tier: 'Research tier', effect: 'Effect', effectPerLevel: 'Effect per level', costGrowth: 'Cost growth per level (%)', seedGrowth: 'SEED growth per level (%)', timeGrowth: 'Time growth per level (%)', seed: 'SEED cost', seconds_: 'Build time at level 1 (s)', cost: 'Cost W/F/S/I' };
+const TIER_LABEL = { costEachUnit: 'Cost of each resource', seedUnit: 'SEED', seconds_: 'Research time (s)', academy: 'Academy level', carryPct: 'Carry bonus (%)', speedPct: 'Speed bonus (%)', medicinePct: 'Medicine (%)' };
+const RD_KEY = 'sw-ruletx-v1';
+const RD = { launch: undefined, lines: new Map(), loading: false, tx: (() => { try { return JSON.parse(localStorage.getItem(RD_KEY)) || {}; } catch (e) { return {}; } })() };
+function rdVal(v, k) {
+  if (Array.isArray(v)) return v.map(x => rdVal(x, k)).join('/');
+  if (typeof v === 'boolean') return v ? 'yes' : 'no';
+  if (k === 'role') return ROLE_NAME[v] || v;
+  if (k === 'effect') return FX_NAME[v] || v;
+  if (k === 'thCap') return ['no cap', '≤ Town Hall', '≤ 2 × Town Hall'][v] || v;
+  if (k === 'costEachUnit' || k === 'seedUnit') return fmt(v / UNIT);
+  return typeof v === 'number' ? v.toLocaleString('en-US') : String(v);
+}
+function rdDiff(old, nw, labels) {
+  const out = [];
+  for (const k of Object.keys(nw)) {
+    const a = old ? old[k] : undefined, b = nw[k];
+    if (JSON.stringify(a) === JSON.stringify(b)) continue;
+    const pct = typeof a === 'number' && typeof b === 'number' && a > 0 && !['role', 'effect', 'thCap', 'tier'].includes(k) ? ` (${b > a ? '+' : ''}${Math.round((b - a) / a * 100)}%)` : '';
+    out.push(`${labels[k] || k.replace(/_$/, '')}: ${a === undefined ? '–' : rdVal(a, k)} → ${rdVal(b, k)}${pct}`);
+  }
+  return out;
+}
+function rdReplay() {
+  RD.lines.clear();
+  const st = RD.launch ? JSON.parse(JSON.stringify(RD.launch)) : null;
+  for (const c of W.changes.slice().sort((a, b) => a.version - b.version)) {
+    let lines = null;
+    try {
+      if (!st || !RD.tx[c.tx]) throw 0;
+      const p = SW.IF.config.parseTransaction({ data: RD.tx[c.tx] }), fn = p.name, g = GROUPS.find(x => x[2] === fn);
+      if (g && g[0].replace('storageRules', 'storage') === c.what) { const nw = plain(p.args[0]); lines = rdDiff(st[g[3]], nw, LABEL); st[g[3]] = nw; }
+      else if (fn === 'setFieldCosts' && c.what === 'fieldCosts') { const nw = plain(p.args[0]); lines = []; nw.forEach((row, i) => { if (JSON.stringify(row) !== JSON.stringify(st.fieldCost[i])) lines.push(`${FIELD_TYPE[i]} cost W/F/S/I: ${st.fieldCost[i].join('/')} → ${row.join('/')}`); }); st.fieldCost = nw; }
+      else if ((fn === 'setUnit' || fn === 'setBuilding') && (c.what === 'unit' || c.what === 'building')) {
+        const k = N(p.args[0]), list = fn === 'setUnit' ? st.units : st.buildings, nw = { ...plain(p.args[1]), name: p.args[2] };
+        lines = rdDiff(list[k], nw, fn === 'setUnit' ? UNIT_LABEL : BUILD_LABEL); list[k] = { ...list[k], ...nw };
+      }
+      else if (fn === 'setTier' && c.what === 'tier') { const k = N(p.args[0]) - 1, nw = plain(p.args[1]); lines = rdDiff(st.tiers[k], nw, TIER_LABEL); st.tiers[k] = nw; }
+      else if (fn === 'setTierCount' && c.what === 'tierCount') { const n = N(p.args[0]); lines = n === st.tierCount ? [] : [`Research tiers in play: ${st.tierCount} → ${n}`]; st.tierCount = n; }
+    } catch (e) { lines = null; }
+    RD.lines.set(c.version, lines);
+  }
+}
+async function loadRuleDiffs() {
+  if (RD.loading || !W.changes.length || W.changes.every(c => RD.lines.has(c.version))) return;
+  RD.loading = true;
+  try {
+    if (RD.launch === undefined) { const j = await fetch('rules-launch.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null); RD.launch = j && String(j.config).toLowerCase() === SW.ADDR.config ? j : null; }
+    for (const c of W.changes) if (!RD.tx[c.tx]) { const t = await SW.rpc('eth_getTransactionByHash', [c.tx]).catch(() => null); if (t && t.input) RD.tx[c.tx] = t.input; }
+    try { localStorage.setItem(RD_KEY, JSON.stringify(RD.tx)); } catch (e) { }
+    rdReplay();
+  } finally { RD.loading = false; }
+  CH.listKey = ''; renderChat(); homeChanges();
+}
+function ruleLines(c, max = 8) {
+  const l = RD.lines.get(c.version);
+  if (l === undefined) return '';
+  if (l === null) return '';
+  if (!l.length) return '<p class="muted rd-n">Saved with the same numbers.</p>';
+  return `<ul class="rd">${l.slice(0, max).map(x => `<li>${esc(x)}</li>`).join('')}${l.length > max ? `<li class="muted">and ${l.length - max} more</li>` : ''}</ul>`;
+}
+
+// ------------------------------------------------------------------ the rule table's labels (shared with owner.html)
+const LABEL = {
+  startResources: 'Starting resources (each)', startSeed: 'Starting SEED', shieldHours: 'Beginner shield (hours)', fieldRate: 'Field output per hour at level 1', fieldRateGrowth: 'Field output growth per level (%)', fieldCostGrowth: 'Field cost growth per level (%)', fieldSeconds: 'Field build time at level 1 (s)', fieldTimeGrowth: 'Field time growth per level (%)', fieldMaxLevel: 'Field max level (≤ 20)', thBuildCutPct: 'Build time cut per Town Hall level (%)', plotsBase: 'Plots = this + Town Hall level', plotsMax: 'Most plots', cancelRefundPct: 'Cancel refund (%)', upkeepMilli: 'Food per troop room per hour (thousandths)', barracksTimePct: 'Training time × this % per Barracks level', marketBase: 'Market: 100 gives (level 1)', marketPerLevel: 'Market: extra per level', boostSeed: 'Output boost price (SEED)', boostPct: 'Output boost (%)', boostHours: 'Output boost length (hours)', peaceSeed: 'Peace shield price (SEED)', peaceHours: 'Peace shield length (hours)', peaceCooldownHours: 'Peace shield cooldown (hours)', bannerSeed: 'Banner price (SEED)', squeekBuildPct: 'Most build time Squeeks cut (%)', squeekWorkTarget: 'Day work for the full Squeek cut', seedWorkDiv: 'SEED per village = day work ÷', wheelWorkDiv: 'Wheel bonus = day work ÷', wheelPctPerLevel: 'Wheel bonus cap per Wheelhouse level (%)', xpWorkDiv: 'Champion XP per day = work ÷', xpDailyCap: '… at most',
+  storeBase: 'Storage without a Storehouse', storePer: 'Storehouse level 1 adds', storeGrowth: '… growing per level (%)', vaultBase: 'Protected without a Vault', vaultPer: 'Vault level 1 adds', vaultGrowth: '… growing per level (%)', roomBase: 'Troop room without a Burrow', roomPer: 'Burrow: room per level × level', roomGrowth: '… growing per level (%)',
+  winRatioPct: 'Attack must reach this % of defense to win', lossPct: 'Loss rate (% of enemy ÷ own power)', scoutBonusPct: 'Scouting attack bonus (%)', scoutHours: 'Scouting bonus length (hours)', raidsPerDay: 'Raids per attacker and target per day', weakGap: 'Weak target: Town Hall this many levels lower', weakLootPct: 'Weak target loot (%)', siegePerWall: 'Siege units per Walls level knocked down', maxWallDamage: 'Most Walls levels per battle', repairHours: 'Walls repair: hours per level', thGuard: 'Defense per Town Hall level', forgePct: 'Forge: attack/defense % per level', wallsPct: 'Walls: defense % per level', maxSupport: 'Support groups a village can host', campDamagePct: 'Lost camp raid: % of attack removed from its defense',
+  mightBase: 'Might at 0 points', mightPerPoint: 'Might per point', attackPerPointMilli: 'Attack bonus per point (millionths)', defensePerPointMilli: 'Defense bonus per point (millionths)', carryPerPointMilli: 'Carry bonus per point (millionths)', statCap: 'Most points per bonus', pointsPerLevel: 'Points per level', maxLevel: 'Max level', xpPerLevel: 'Level = 1 + √(XP ÷ this)', squeekPct: 'Squeek holder XP and stats (%)', killXpDiv: 'XP = killed value ÷ this',
+  defenseBase: 'Defense at day 0', defensePerDay: 'Defense added per day', defenseCap: 'Defense cap', stockBase: 'Stock per hour at day 0', stockPerDay: 'Stock per hour added per day', stockHours: 'Stock cap (hours of output)', regrowHours: 'Defenders regrow after (hours)', sizePct: 'Small / normal / large size (%)', lossValueNum: 'Killed value per defense ×', lossValueDen: '… ÷',
+  joinHall: 'Clan Hall level to join', foundHall: 'Clan Hall level to found', capPerHall: 'Members per Clan Hall level', maxMembers: 'Most members',
+};
+const GROUPS = [['economy', 'Economy', 'setEconomy', 'econ'], ['storageRules', 'Storage, Vault and Burrow', 'setStorage', 'store'], ['war', 'War', 'setWar', 'war'], ['hero', 'Champion', 'setHero', 'hero'], ['wild', 'Wild camps', 'setWild', 'wild'], ['social', 'Clans', 'setSocial', 'social']];
 // ------------------------------------------------------------------ public rule change log (the editor lives in owner.html)
 // ------------------------------------------------------------------ village page (#visit=Name), for sharing
 const visitData = new Map();
@@ -988,7 +1064,7 @@ function notifyEvents() {
   }
   if (G.ok && needCheckpoint()) ev.push([`cp:${G.day}`, 'A new day in Squeek Wars', "Press Checkpoint to record the hamster's work for every village.", 'village']);
   if (chatOn()) {
-    newsList().slice(0, 5).forEach(n => ev.push([`n:${n.key}`, n.kind === 'rule' ? `Rule change: ${ruleText(n.c)}` : n.title, n.kind === 'rule' ? `The rule table is now at version ${n.c.version}.` : (n.text || 'New announcement').slice(0, 140), 'news']));
+    newsList().slice(0, 5).forEach(n => ev.push([`n:${n.key}`, n.kind === 'rule' ? `Rule change: ${ruleText(n.c)}` : n.title, n.kind === 'rule' ? ((RD.lines.get(n.c.version) || [])[0] || `The rule table is now at version ${n.c.version}.`) : (n.text || 'New announcement').slice(0, 140), 'news']));
     if (ME && ME.v) { const at = '@' + ME.v.name.toLowerCase(); W.chat.slice(-30).forEach(m => { if (m.from !== me && !W.hiddenMsg.get(m.id) && m.text.toLowerCase().includes(at)) ev.push([`c:${m.id}`, `${nameOf(m.from)} mentioned you`, m.text.slice(0, 140), 'chat']); }); }
   }
   return ev;
@@ -1045,7 +1121,7 @@ function chatItems() {
     const l = newsList();
     if (!l.length) return '<p class="muted cm-empty">No announcements yet. Rule changes appear here by themselves.</p>';
     return l.map(n => n.kind === 'rule'
-      ? `<div class="an rule"><div class="an-h"><span class="tag">Rule change</span><b>${esc(ruleText(n.c))}</b><span class="t">${ago(blockTime(n.b))}</span></div><div class="an-t">The rule table is now at version ${n.c.version}. ${SW.D && !SW.D.local ? `<a href="https://sepolia.etherscan.io/tx/${n.c.tx}" target="_blank" rel="noopener">See the change</a>` : ''}</div></div>`
+      ? `<div class="an rule"><div class="an-h"><span class="tag">Rule change</span><b>${esc(ruleText(n.c))}</b><span class="t">${ago(blockTime(n.b))}</span></div><div class="an-t">${ruleLines(n.c)}The rule table is now at version ${n.c.version}. ${SW.D && !SW.D.local ? `<a href="https://sepolia.etherscan.io/tx/${n.c.tx}" target="_blank" rel="noopener">See the transaction</a>` : ''}</div></div>`
       : `<div class="an ${W.hiddenMsg.get(n.id) ? 'hid' : ''}"><div class="an-h"><span class="tag gold">Announcement</span><b>${esc(n.title)}</b><span class="t">${ago(blockTime(n.b))}</span>${own ? `<button class="lnk" data-act="chide" data-id="${n.id}" data-h="${W.hiddenMsg.get(n.id) ? 0 : 1}">${W.hiddenMsg.get(n.id) ? 'Show' : 'Hide'}</button>` : ''}</div>${n.text ? `<div class="an-t">${linkify(esc(n.text)).replace(/\n/g, '<br>')}</div>` : ''}</div>`).join('');
   }
   const l = W.chat.filter(m => own || !W.hiddenMsg.get(m.id)).slice(-200);
@@ -1139,7 +1215,7 @@ function chatInit() {
 }
 function changeLog() {
   const list = W.changes.slice().reverse();
-  return `<div class="px box" style="margin-top:14px"><h3>Rule change log</h3>${list.length ? `<div class="tblwrap"><table class="tbl"><thead><tr><th>Version</th><th>What</th><th>Block</th></tr></thead><tbody>${list.map(c => `<tr><td>${c.version}</td><td>${esc(c.what)}${c.what === 'unit' ? ` ${c.index + 1} (${esc(CFG ? UN(c.index).name : '')})` : c.what === 'building' ? ` ${c.index + 1} (${esc(CFG ? BK(c.index).name : '')})` : c.what === 'tier' || c.what === 'tierCount' ? ` ${c.index}` : ''}</td><td>${SW.D && !SW.D.local ? `<a href="https://sepolia.etherscan.io/tx/${c.tx}" target="_blank" rel="noopener">${c.block}</a>` : c.block}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">No changes since the season started: the rules are the launch defaults.</p>'}</div>`;
+  return `<div class="px box" style="margin-top:14px"><h3>Rule change log</h3>${list.length ? `<div class="tblwrap"><table class="tbl"><thead><tr><th>Version</th><th>What</th><th>Block</th></tr></thead><tbody>${list.map(c => `<tr><td>${c.version}</td><td>${esc(ruleText(c))}${ruleLines(c, 4)}</td><td>${SW.D && !SW.D.local ? `<a href="https://sepolia.etherscan.io/tx/${c.tx}" target="_blank" rel="noopener">${c.block}</a>` : c.block}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">No changes since the season started: the rules are the launch defaults.</p>'}</div>`;
 }
 // ------------------------------------------------------------------ routing and render loop
 const VIEWS = ['home', 'village', 'world', 'army', 'academy', 'market', 'clan', 'champion', 'ranking', 'reports', 'visit'];

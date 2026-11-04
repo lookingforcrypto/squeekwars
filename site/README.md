@@ -22,6 +22,7 @@ The playable website. It uses the prototype's art and layout, and every rule and
 | `app.js` | Village, map, army, academy, market, champion, clan, ranking, reports and the public rule change log |
 | `owner.html`, `owner.js` | The owner's rule table, a separate page that opens only for the GameConfig owner wallet |
 | `abi.js` | Contract ABIs, generated from `../contracts` |
+| `rules-launch.json` | The rule table the season's GameConfig started with (`../contracts/tools/rules-launch.js`). Each rule change is replayed from it, so announcements and the change log say what changed, old → new |
 | `deploy-artifacts.js` | Contract creation bytecode, used only by `deploy.html` |
 | `vendor/ethers.umd.min.js` | ethers v6.13.4 |
 | `assets/` | Sprites and backgrounds |
@@ -30,7 +31,8 @@ The playable website. It uses the prototype's art and layout, and every rule and
 
 1. Open `deploy.html` with the owner's wallet on Sepolia and press the button five times (GameConfig, SeedLedger, Clans, Army, Villages). Progress is saved in the browser, so a closed tab can continue.
 2. Copy the block it prints into `deployment.js` and publish the site.
-3. Open `owner.html` with the owner wallet: every number of the season, the 16 unit slots, the 16 building slots, the research tiers, the Squeekchain addresses and the owner hand-over. Each Save is one transaction and appears in the public change log. The page shows nothing to other wallets, and the contracts refuse a change from any wallet but the owner.
+3. Run `node ../contracts/tools/rules-launch.js <ganache> . rules-launch.json` so rule changes can be described.
+4. Open `owner.html` with the owner wallet: every number of the season, the 16 unit slots, the 16 building slots, the research tiers, the Squeekchain addresses and the owner hand-over. Each Save is one transaction and appears in the public change log. The page shows nothing to other wallets, and the contracts refuse a change from any wallet but the owner.
 
 ## Run it locally
 
