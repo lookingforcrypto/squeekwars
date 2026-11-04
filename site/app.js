@@ -106,7 +106,7 @@ let skew = 0;
 const now = () => Date.now() / 1000 + skew;
 const G = { ok: false, day: 0, obsCount: 0, last: null, lastWork: 0, lastCum: 0, coreCum: 0, week: 0, season: 0 };
 let ME = null;
-const W = { players: new Map(), tiles: new Map(), clans: new Map(), invites: new Map(), moves: new Map(), battles: new Map(), scouts: [], changes: [], ctx: new Map(), clanOf: new Map(), rank: null, target: new Map() };
+const W = { players: new Map(), tiles: new Map(), clans: new Map(), invites: new Map(), moves: new Map(), battles: new Map(), scouts: [], changes: [], chat: [], news: [], hiddenMsg: new Map(), muted: new Map(), ctx: new Map(), clanOf: new Map(), rank: null, target: new Map() };
 let busyTx = false, needFull = true, sceneDirty = true;
 const dirty = () => { needFull = true; };
 const isOwner = () => !!(S.me && CFG && CFG.owner === S.me);
@@ -114,7 +114,7 @@ const isOwner = () => !!(S.me && CFG && CFG.owner === S.me);
 // ------------------------------------------------------------------ loading from the chain
 const g = () => SW.ADDR.villages;
 async function loadGlobal() {
-  const h = await SW.head(); skew = h.time - Date.now() / 1000;
+  const h = await SW.head(); skew = h.time - Date.now() / 1000; G.headBlock = h.number; G.headTime = h.time;
   if (await loadConfig()) { sceneDirty = true; dirty(); }
   const [day, cnt, lw, lcum, core, wk, ss] = await SW.multi([['ledger', 'currentDay'], ['ledger', 'observationCount'], ['ledger', 'lastWork'], ['ledger', 'lastCumulativeWork'], ['core', 'state'], ['clans', 'week'], ['villages', 'seasonStartedAt']]);
   G.day = N(day); G.obsCount = N(cnt); G.lastWork = N(lw); G.lastCum = N(lcum); G.coreCum = core ? N(core.cumulativeWork) : G.lastCum; G.week = N(wk); G.season = N(ss);
@@ -170,7 +170,7 @@ async function loadMe() {
 }
 function processLogs(logs) {
   const gl = g();
-  W.players.clear(); W.tiles.clear(); W.clans.clear(); W.invites.clear(); W.moves.clear(); W.battles.clear(); W.scouts = []; W.changes = [];
+  W.players.clear(); W.tiles.clear(); W.clans.clear(); W.invites.clear(); W.moves.clear(); W.battles.clear(); W.scouts = []; W.changes = []; W.chat = []; W.news = []; W.hiddenMsg.clear(); W.muted.clear();
   for (const l of logs) {
     const a = l.a, game = a.game ? String(a.game).toLowerCase() : null;
     if (game && game !== gl) continue;
@@ -182,6 +182,12 @@ function processLogs(logs) {
     else if (l.n === 'MovementResolved') { const m = W.moves.get(N(a.id)); if (m) m.events.push({ mode: N(a.mode), next: N(a.nextArrival), block: l.b }); }
     else if (l.n === 'Battle') W.battles.set(N(a.id), { id: N(a.id), attack: N(a.attack), defense: N(a.defense), aLost: N(a.attackerLost), dLost: N(a.defenderLost), decisive: !!a.decisive, block: l.b });
     else if (l.n === 'Scouted') W.scouts.push({ player: String(a.player).toLowerCase(), target: String(a.target).toLowerCase(), success: !!a.success, until: N(a.until), block: l.b });
+    else if (l.c === 'chat') {
+      if (l.n === 'Said') W.chat.push({ id: N(a.id), from: String(a.from).toLowerCase(), text: a.text, b: l.b, tx: l.tx });
+      else if (l.n === 'Announced') W.news.push({ kind: 'ann', id: N(a.id), title: a.title, text: a.text, b: l.b, i: l.i, tx: l.tx });
+      else if (l.n === 'Hidden') W.hiddenMsg.set(N(a.id), !!a.hidden);
+      else if (l.n === 'Muted') W.muted.set(String(a.who).toLowerCase(), !!a.muted);
+    }
     else if (l.n === 'Changed') W.changes.push({ what: a.what, index: N(a.index), version: N(a.version), block: l.b, tx: l.tx });
   }
 }
@@ -231,7 +237,7 @@ async function refresh(full) {
     $('#liveNote').innerHTML = liveNote(); homeChanges();
   } catch (e) { console.warn(e); note('Could not reach the chain: ' + SW.explain(e), 'bad'); }
   finally { loading = false; sceneDirty = true; dirty(); }
-  maybeName();
+  maybeName(); renderChat(); notifyCheck();
 }
 
 // ------------------------------------------------------------------ derived numbers (the same formulas as the contracts)
@@ -563,7 +569,7 @@ function detailPanel() {
     if (k === K.BARRACKS && L) h += `<p><a class="btn alt sm" href="#army" style="text-decoration:none">Train units</a></p>`;
     if (k === K.ACADEMY && L) h += `<p><a class="btn alt sm" href="#academy" style="text-decoration:none">Open research</a></p>`;
     if (k === K.MARKET && L) h += `<p><a class="btn alt sm" href="#market" style="text-decoration:none">Exchange resources</a></p>`;
-    if (k === K.TH) h += treasuryHtml();
+    if (k === K.TH) h += treasuryHtml() + `<div class="row" style="justify-content:flex-start;margin-top:10px"><a class="btn ghost sm" style="text-decoration:none" href="#visit=${encodeURIComponent(ME.v.name)}">Share your village</a></div>`;
     if (k >= 2 && plotMap().byKind[k] !== undefined) h += moveFrom === k ? `<div class="pred">Tap an empty plot to move the ${esc(BK(k).name)} there. <button class="btn ghost sm" data-act="movecancel">Cancel</button></div>` : `<div class="row" style="justify-content:flex-start;margin-top:10px"><button class="btn ghost sm" data-act="move" data-k="${k}">Move</button></div>`;
   }
   return h;
@@ -742,7 +748,7 @@ function worldRight() {
   const cl = T.clanId, same = ME && ME.clanId && cl === ME.clanId;
   const D = defenseOf(T.home, T.forge, T.away ? 0 : T.might, T.away ? 0 : T.def, T.walls, T.th, T.defPct);
   const lootable = T.stock.map(s => Math.max(0, s - T.protect));
-  h += `<h3>${esc(nameOf(p))} (${x}|${y})</h3><div class="addr big">${p}</div><div class="vhead"><img src="${spr('town_hall_' + clamp(Math.ceil(Math.max(1, T.th) / 2), 1, 5))}" alt=""><div class="muted">Town Hall ${T.th} · Walls ${T.walls}${dist !== null ? ` · ${dist.toFixed(1)} tiles away` : ''}<br>${cl ? `${esc(clanName(cl))}${same ? ' (your clan)' : ''}` : 'No clan'}${T.shieldUntil > t ? ` · shield ${dur(T.shieldUntil - t)}` : ''}</div></div>
+  h += `<h3>${esc(nameOf(p))} (${x}|${y})</h3><div class="addr big">${p}</div><a class="lnk" href="#visit=${encodeURIComponent(nameOf(p))}">Village page</a><div class="vhead"><img src="${spr('town_hall_' + clamp(Math.ceil(Math.max(1, T.th) / 2), 1, 5))}" alt=""><div class="muted">Town Hall ${T.th} · Walls ${T.walls}${dist !== null ? ` · ${dist.toFixed(1)} tiles away` : ''}<br>${cl ? `${esc(clanName(cl))}${same ? ' (your clan)' : ''}` : 'No clan'}${T.shieldUntil > t ? ` · shield ${dur(T.shieldUntil - t)}` : ''}</div></div>
   <table class="kv"><tr><td>Troops at home</td><td>${T.home.some(Boolean) ? unitList(T.home) : 'none'}</td></tr><tr><td>Defense</td><td>about ${fmt(D)}${T.away ? ' (champion away)' : ''}, plus any clan support</td></tr><tr><td>Above the Vault</td><td>${lootable.map((v, i) => `${icon(RES[i])}${fmt(v)}`).join(' ')}</td></tr><tr><td>Scouting bonus</td><td>${scouted ? `<span class="ok">+${CFG.war.scoutBonusPct}% · ${dur(T.scouted - t)} left</span>` : '<span class="muted">none</span>'}</td></tr></table>`;
   if (!units) return h + `<p class="muted">Connect a wallet with a village to send troops.</p>`;
   if (ME.clan && ME.clan.founder === S.me && !cl) { const inv = W.invites.get(ME.clanId + ':' + p); h += `<div class="row" style="margin:8px 0;justify-content:flex-start"><button class="btn sm alt" data-act="invite" data-a="${p}" ${inv && inv.open ? 'disabled' : ''}>${inv && inv.open ? 'Invited' : `Invite to ${esc(ME.clan.name)}`}</button></div>`; }
@@ -914,22 +920,210 @@ function reportsPage() {
 }
 
 // ------------------------------------------------------------------ public rule change log (the editor lives in owner.html)
+// ------------------------------------------------------------------ village page (#visit=Name), for sharing
+const visitData = new Map();
+async function loadVisit(addr) {
+  const r = await SW.multi([['villages', 'village', [addr]], ['army', 'championLevel', [g(), addr]], ['clans', 'clanOf', [g(), addr]], ['ledger', 'nftBalance', [addr]], ['villages', 'effectiveWalls', [addr]]]);
+  const [v, cl, clanId, nft, walls] = r;
+  visitData.set(addr, { at: Date.now(), v: v && { name: v.name, tile: N(v.tile), foundedAt: N(v.foundedAt), tier: N(v.tier), fields: [...v.fields].map(N), b: [...v.buildings].map(N), shieldUntil: N(v.shieldUntil) }, level: N(cl), clanId: N(clanId), nft: N(nft), walls: N(walls) });
+  dirty();
+}
+const siteUrl = () => location.origin + location.pathname.replace(/index\.html$/, '');
+function visitPage() {
+  const name = S.visit || '', key = name.toLowerCase();
+  if (!SW.D) return '<h2>Village</h2><div class="px box"><p class="muted">Season 2 is not deployed yet.</p></div>';
+  const p = [...W.players.values()].find(x => x.name.toLowerCase() === key);
+  if (!p) return `<h2>${esc(name)}</h2><div class="px box"><p class="muted">${W.players.size ? `There is no village called "${esc(name)}" in this season.` : 'Reading the map…'}</p><a class="btn sm" style="text-decoration:none" href="#village">Play Squeek Wars</a></div>`;
+  const d = visitData.get(p.addr);
+  if (!d || Date.now() - d.at > 60000) loadVisit(p.addr).catch(() => { });
+  if (!d || !d.v || !CFG) return `<h2>${esc(p.name)}</h2><div class="px box"><p class="muted">Reading the village…</p></div>`;
+  const v = d.v, [x, y] = tileXY(v.tile), mine = p.addr === S.me, url = `${siteUrl()}#visit=${encodeURIComponent(p.name)}`;
+  const ranked = W.rank ? W.rank.slice().sort((a, b) => b.season.overall - a.season.overall) : null, place = ranked ? ranked.findIndex(r => r.addr === p.addr) + 1 : 0;
+  const built = [];
+  for (let i = 0; i < NKINDS; i++) if (v.b[i] > 0 && BK(i).enabled) built.push(i);
+  const fig = i => { const L = v.b[i], art = i === K.TH ? { s: 'town_hall' } : i === K.WALLS ? { s: 'walls' } : kindArt(i), sname = art.one ? art.s : `${art.s}_${clamp(Math.ceil(Math.max(1, L) * 5 / Math.max(1, BK(i).maxLevel)), 1, 5)}`; return `<figure><img src="${spr(sname)}" alt="" loading="lazy"><figcaption>${esc(BK(i).name)} · ${L}</figcaption></figure>`; };
+  const text = mine ? `My hamster village ${p.name} in Squeek Wars: Town Hall ${v.b[K.TH]}, champion level ${d.level}${place ? `, #${place} in the ranking` : ''}. Come and raid me if you can.` : `${p.name}'s hamster village in Squeek Wars`;
+  const stat = (k, val) => `<div class="vs px"><span>${k}</span><b>${val}</b></div>`;
+  let h = `<h2>${esc(p.name)}${mine ? ' <span class="tag gold">your village</span>' : ''}</h2><p class="sub">A hamster village on the Squeek Wars map at (${x}|${y}) · <span class="addr">${shortAddr(p.addr)}</span> · founded ${new Date(v.foundedAt * 1000).toISOString().slice(0, 10)}</p>`;
+  h += `<div class="vstats">${stat('Town Hall', v.b[K.TH])}${stat('Walls', d.walls)}${stat('Buildings', built.length)}${stat('Research tier', v.tier)}${stat(d.nft ? 'Squeek champion' : 'Champion', `level ${d.level}`)}${stat('Clan', d.clanId ? esc(clanName(d.clanId)) : '–')}${stat('Ranking', place ? `#${place} of ${ranked.length}` : '…')}${stat('Fields', v.fields.reduce((a, b) => a + b, 0) + ' levels')}</div>`;
+  h += `<div class="px box"><h3>Buildings</h3><div class="looks vlooks">${built.map(fig).join('')}</div></div>`;
+  h += `<div class="px box share"><h3>${mine ? 'Share your village' : 'Share this village'}</h3><div class="mkt"><input readonly value="${esc(url)}" onclick="this.select()"><button class="btn sm" data-act="copylink" data-u="${esc(url)}" type="button">Copy link</button><a class="btn sm alt" style="text-decoration:none" target="_blank" rel="noopener" href="https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}">Post on X</a></div></div>`;
+  h += `<div class="row" style="justify-content:flex-start;gap:8px;margin-top:12px"><button class="btn ghost sm" data-act="gotile" data-t="${v.tile}" type="button">See it on the world map</button>${mine ? '<a class="btn ghost sm" style="text-decoration:none" href="#village">Back to my village</a>' : `<a class="btn sm" style="text-decoration:none" href="#village">${S.me && ME && ME.v ? 'Back to my village' : 'Play Squeek Wars'}</a>`}</div>`;
+  return h;
+}
+
+// ------------------------------------------------------------------ browser notifications (while a Squeek Wars tab is open)
+const NT_KEY = 'sw-notified-v1';
+const NT = { seen: new Set((() => { try { return JSON.parse(localStorage.getItem(NT_KEY)) || []; } catch (e) { return []; } })()), primedFor: undefined };
+const notifOn = () => !!S.ui.notif && 'Notification' in window && Notification.permission === 'granted';
+const saveNT = () => { try { localStorage.setItem(NT_KEY, JSON.stringify([...NT.seen].slice(-400))); } catch (e) { } };
+function updNotifBtn() { const b = $('#wm-notif'); if (b) b.textContent = `Notifications: ${notifOn() ? 'on' : 'off'}`; }
+function toggleNotif() {
+  if (!('Notification' in window)) return note('This browser cannot show notifications here.', 'bad');
+  if (notifOn()) { S.ui.notif = false; saveUI(); updNotifBtn(); return note('Notifications off'); }
+  Notification.requestPermission().then(perm => {
+    if (perm === 'granted') { S.ui.notif = true; saveUI(); note('Notifications on while a Squeek Wars tab is open', 'ok'); try { new Notification('Squeek Wars', { body: 'Notifications are on.', icon: 'assets/favicon-64.png' }); } catch (e) { } }
+    else note('The browser blocked notifications for this site. Allow them in the site settings.', 'bad');
+    updNotifBtn();
+  });
+}
+function notifyEvents() {
+  const ev = [], t = now(), me = S.me;
+  if (ME && ME.v) {
+    ME.orders.forEach(o => { if (o && o.readyAt <= t) ev.push([`o:${me}:${o.target}:${o.level}`, `${targetName(o.target)} level ${o.level} is ready`, 'Open your village to finish it.', 'village']); });
+    if (ME.study && ME.study.readyAt <= t) ev.push([`s:${me}:${ME.study.tier}`, `Research tier ${ME.study.tier} is done`, 'Finish it in the Academy.', 'academy']);
+    if (ME.training && ME.training.readyAt <= t) ev.push([`t:${me}:${ME.training.readyAt}`, `${fmt(ME.training.count)} ${UN(ME.training.kind).name} trained`, 'They are ready in the Army tab.', 'army']);
+    ME.moves.forEach(m => {
+      if (m.target === me && m.owner !== me && (m.mode === 1 || m.mode === 2) && m.arriveAt > t) ev.push([`in:${m.id}`, `Incoming ${m.mode === 2 ? 'scouts' : 'raid'} from ${nameOf(m.owner)}`, `It arrives in ${dur(m.arriveAt - t)}.`, 'army']);
+      if (m.owner === me && m.mode === 4 && m.arriveAt <= t) ev.push([`back:${m.id}`, 'Your troops are back', m.campId ? 'From a wild camp.' : `From ${nameOf(m.target)}.`, 'army']);
+    });
+    if (ME.claim && ME.claim.seed > 0) ev.push([`claim:${me}:${G.obsCount}`, `Claim ${fmt(ME.claim.seed)} SEED`, "The hamster's day is recorded.", 'village']);
+  }
+  if (G.ok && needCheckpoint()) ev.push([`cp:${G.day}`, 'A new day in Squeek Wars', "Press Checkpoint to record the hamster's work for every village.", 'village']);
+  if (chatOn()) {
+    newsList().slice(0, 5).forEach(n => ev.push([`n:${n.key}`, n.kind === 'rule' ? `Rule change: ${ruleText(n.c)}` : n.title, n.kind === 'rule' ? `The rule table is now at version ${n.c.version}.` : (n.text || 'New announcement').slice(0, 140), 'news']));
+    if (ME && ME.v) { const at = '@' + ME.v.name.toLowerCase(); W.chat.slice(-30).forEach(m => { if (m.from !== me && !W.hiddenMsg.get(m.id) && m.text.toLowerCase().includes(at)) ev.push([`c:${m.id}`, `${nameOf(m.from)} mentioned you`, m.text.slice(0, 140), 'chat']); }); }
+  }
+  return ev;
+}
+function notifyCheck() {
+  if (!G.ok || (S.me && !ME)) return;                        // wait for the first full read
+  const ev = notifyEvents();
+  if (NT.primedFor !== S.me) { ev.forEach(e => NT.seen.add(e[0])); NT.primedFor = S.me; saveNT(); return; }   // what is already true on load is not news
+  let changed = false;
+  for (const [k, title, body, go] of ev) {
+    if (NT.seen.has(k)) continue; NT.seen.add(k); changed = true;
+    if (!notifOn()) continue;
+    if (document.hidden) {
+      try { const n = new Notification(title, { body, icon: 'assets/favicon-64.png', tag: k }); n.onclick = () => { window.focus(); if (go === 'news' || go === 'chat') openChat(go); else location.hash = go; n.close(); }; } catch (e) { }
+    } else note(title, 'ok');
+  }
+  if (changed) saveNT();
+}
+
+// ------------------------------------------------------------------ chat and announcements (Chat contract, add-on)
+const CHAT_KEY = 'sw-chat-seen-v1';
+const CH = { open: false, tab: 'chat', seen: (() => { try { return JSON.parse(localStorage.getItem(CHAT_KEY)) || {}; } catch (e) { return {}; } })(), formKey: '', listKey: '', poll: 0 };
+const saveSeen = () => { try { localStorage.setItem(CHAT_KEY, JSON.stringify(CH.seen)); } catch (e) { } };
+const WHAT_NAME = { economy: 'Economy', storage: 'Storage, Vault and Burrow', war: 'War', hero: 'Champion', wild: 'Wild camps', social: 'Clans', fieldCosts: 'Field costs', unit: 'Unit', building: 'Building', tier: 'Research tier', tierCount: 'Research tiers in play' };
+const chatOn = () => !!SW.ADDR.chat;
+const blockTime = b => G.headBlock ? G.headTime - (G.headBlock - b) * 12 : 0;          // Sepolia makes a block every 12 s
+function ago(t) { if (!t) return ''; const d = Math.max(0, now() - t); return d < 60 ? 'now' : d < 3600 ? `${Math.floor(d / 60)}m` : d < 86400 ? `${Math.floor(d / 3600)}h` : `${Math.floor(d / 86400)}d`; }
+const bytesOf = t => new TextEncoder().encode(t).length;
+const linkify = h => h.replace(/https:\/\/[^\s<]+[^\s<.,;:!?)]/g, u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+function newsList() {
+  const rules = W.changes.map((c, k) => ({ kind: 'rule', key: `r${c.version}`, b: c.block, i: k, c }));
+  return W.news.filter(n => !W.hiddenMsg.get(n.id) || isOwner()).map(n => ({ ...n, key: `a${n.id}` })).concat(rules).sort((x, y) => y.b - x.b || y.i - x.i);
+}
+const newsMark = n => n.b * 100000 + n.i;
+function chatUnread() {
+  const lastChat = CH.seen.chat || 0, lastNews = CH.seen.news || 0;
+  const c = W.chat.filter(m => m.id > lastChat && m.from !== S.me && !W.hiddenMsg.get(m.id)).length;
+  const n = newsList().filter(x => newsMark(x) > lastNews).length;
+  return { c, n };
+}
+function markSeen() {
+  if (!CH.open) return;
+  if (CH.tab === 'chat' && W.chat.length) CH.seen.chat = Math.max(CH.seen.chat || 0, W.chat[W.chat.length - 1].id);
+  if (CH.tab === 'news') { const l = newsList(); if (l.length) CH.seen.news = Math.max(CH.seen.news || 0, newsMark(l[0])); }
+  saveSeen();
+}
+function ruleText(c) {
+  const nm = WHAT_NAME[c.what] || c.what, x = c.what === 'unit' && CFG ? ` ${c.index + 1} · ${UN(c.index).name}` : c.what === 'building' && CFG ? ` ${c.index + 1} · ${BK(c.index).name}` : c.what === 'tier' ? ` ${c.index}` : c.what === 'tierCount' ? `: ${c.index}` : '';
+  return `${nm}${x}`;
+}
+function chatItems() {
+  const own = isOwner(), team = CFG && CFG.owner;
+  if (CH.tab === 'news') {
+    const l = newsList();
+    if (!l.length) return '<p class="muted cm-empty">No announcements yet. Rule changes appear here by themselves.</p>';
+    return l.map(n => n.kind === 'rule'
+      ? `<div class="an rule"><div class="an-h"><span class="tag">Rule change</span><b>${esc(ruleText(n.c))}</b><span class="t">${ago(blockTime(n.b))}</span></div><div class="an-t">The rule table is now at version ${n.c.version}. ${SW.D && !SW.D.local ? `<a href="https://sepolia.etherscan.io/tx/${n.c.tx}" target="_blank" rel="noopener">See the change</a>` : ''}</div></div>`
+      : `<div class="an ${W.hiddenMsg.get(n.id) ? 'hid' : ''}"><div class="an-h"><span class="tag gold">Announcement</span><b>${esc(n.title)}</b><span class="t">${ago(blockTime(n.b))}</span>${own ? `<button class="lnk" data-act="chide" data-id="${n.id}" data-h="${W.hiddenMsg.get(n.id) ? 0 : 1}">${W.hiddenMsg.get(n.id) ? 'Show' : 'Hide'}</button>` : ''}</div>${n.text ? `<div class="an-t">${linkify(esc(n.text)).replace(/\n/g, '<br>')}</div>` : ''}</div>`).join('');
+  }
+  const l = W.chat.filter(m => own || !W.hiddenMsg.get(m.id)).slice(-200);
+  if (!l.length) return '<p class="muted cm-empty">No messages yet. Say hello to the other villages.</p>';
+  return l.map(m => {
+    const p = W.players.get(m.from), hid = W.hiddenMsg.get(m.id), mut = W.muted.get(m.from);
+    const tools = own ? `<button class="lnk" data-act="chide" data-id="${m.id}" data-h="${hid ? 0 : 1}">${hid ? 'Show' : 'Hide'}</button><button class="lnk" data-act="cmute" data-a="${m.from}" data-m="${mut ? 0 : 1}">${mut ? 'Unmute' : 'Mute'}</button>` : '';
+    return `<div class="cm ${m.from === S.me ? 'me' : ''} ${hid ? 'hid' : ''}"><div class="cm-h"><b>${p ? `<a href="#visit=${encodeURIComponent(p.name)}">${esc(p.name)}</a>` : shortAddr(m.from)}</b>${m.from === team ? '<span class="tag gold">team</span>' : ''}<span class="t">${ago(blockTime(m.b))}</span>${tools}</div><div class="cm-t">${linkify(esc(m.text))}</div></div>`;
+  }).join('');
+}
+function chatForm() {
+  if (CH.tab === 'news') return isOwner() ? `<input id="an-title" maxlength="80" placeholder="Title" autocomplete="off"><textarea id="an-text" rows="3" placeholder="Announcement for every player (links allowed)"></textarea><div class="row"><span class="muted cnt" id="an-cnt"></span><button class="btn sm" data-act="annsend" type="button">Post announcement</button></div>` : '';
+  if (!S.me) return `<p class="muted">Connect a wallet to talk.</p><button class="btn sm" data-act="wb-open" type="button">Connect wallet</button>`;
+  if (!ME || ME.none) return `<p class="muted">Found a village to talk in the chat.</p><button class="btn sm" data-act="nm-open" type="button">Found village</button>`;
+  if (W.muted.get(S.me)) return '<p class="muted">This wallet is muted in the chat.</p>';
+  return `<textarea id="chat-in" rows="2" placeholder="Say something to every village…" autocomplete="off"></textarea><div class="row"><span class="muted cnt" id="chat-cnt">280 left · each message is a Sepolia transaction</span><button class="btn sm" data-act="chatsend" type="button">Send</button></div>`;
+}
+function renderChat() {
+  const btn = $('#chatbtn'); if (!btn) return;
+  btn.hidden = !chatOn();
+  if (!chatOn()) return;
+  const u = chatUnread(), total = u.c + u.n;
+  const b = $('#chatbadge'); b.hidden = CH.open || !total; b.textContent = total > 99 ? '99+' : total;
+  const nb = $('#newsbadge'); nb.hidden = !u.n || CH.tab === 'news'; nb.textContent = u.n;
+  const cb = $('#chatbadge2'); cb.hidden = !u.c || CH.tab === 'chat'; cb.textContent = u.c;
+  $('#chatbox').hidden = !CH.open;
+  if (!CH.open) return;
+  document.querySelectorAll('#chatbox .chat-tabs button').forEach(x => x.classList.toggle('on', x.dataset.t === CH.tab));
+  const fk = `${CH.tab}:${S.me}:${ME && !ME.none}:${isOwner()}:${W.muted.get(S.me)}`;
+  if (fk !== CH.formKey) { $('#chatform').innerHTML = chatForm(); CH.formKey = fk; }
+  const list = $('#chatlist'), html = chatItems();
+  if (html !== CH.listKey) {
+    const atEnd = list.scrollHeight - list.scrollTop - list.clientHeight < 40 || !CH.listKey;
+    list.innerHTML = html; CH.listKey = html;
+    if (CH.tab === 'chat' && atEnd) list.scrollTop = list.scrollHeight; else if (CH.tab === 'news' && !CH.keepScroll) list.scrollTop = 0;
+  }
+  markSeen();
+}
+function openChat(tab) { CH.open = true; if (tab) CH.tab = tab; CH.listKey = ''; renderChat(); pollChat(); }
+async function pollChat() {
+  if (!chatOn() || CH.polling) return; CH.polling = true;
+  try { processLogs(await SW.syncLogs()); } catch (e) { } finally { CH.polling = false; }
+  renderChat();
+}
+async function sendChat() {
+  const i = $('#chat-in'); if (!i) return; const text = i.value.trim();
+  if (!text) return; const n = bytesOf(text); if (n > 280) return note(`That is ${n} bytes: 280 at most.`, 'bad');
+  if (await act('Send message', 'chat', 'say', [text])) { const j = $('#chat-in'); if (j) j.value = ''; chatCount(); await pollChat(); }
+}
+async function sendAnnouncement() {
+  const t = $('#an-title').value.trim(), x = $('#an-text').value.trim();
+  if (!t) return note('Give the announcement a title.', 'bad');
+  if (bytesOf(t) > 80 || bytesOf(x) > 2000) return note('Title up to 80 bytes, text up to 2,000.', 'bad');
+  if (await act('Post announcement', 'chat', 'announce', [t, x])) { $('#an-title').value = ''; $('#an-text').value = ''; chatCount(); await pollChat(); }
+}
+function chatCount() {
+  const i = $('#chat-in'), c = $('#chat-cnt'); if (i && c) { const left = 280 - bytesOf(i.value); c.textContent = `${left} left · each message is a Sepolia transaction`; c.classList.toggle('bad', left < 0); }
+  const a = $('#an-text'), ac = $('#an-cnt'); if (a && ac) { const left = 2000 - bytesOf(a.value); ac.textContent = `${left} left`; ac.classList.toggle('bad', left < 0); }
+}
+function chatInit() {
+  if (!$('#chatbtn')) return;
+  $('#chatbtn').addEventListener('click', () => { if (CH.open) { CH.open = false; renderChat(); } else openChat(); });
+  document.addEventListener('input', e => { if (e.target.id === 'chat-in' || e.target.id === 'an-text') chatCount(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && e.target.id === 'chat-in') { e.preventDefault(); sendChat(); } });
+  setInterval(() => { if (CH.open && !document.hidden) pollChat(); else renderChat(); }, 8000);
+  renderChat();
+}
 function changeLog() {
   const list = W.changes.slice().reverse();
   return `<div class="px box" style="margin-top:14px"><h3>Rule change log</h3>${list.length ? `<div class="tblwrap"><table class="tbl"><thead><tr><th>Version</th><th>What</th><th>Block</th></tr></thead><tbody>${list.map(c => `<tr><td>${c.version}</td><td>${esc(c.what)}${c.what === 'unit' ? ` ${c.index + 1} (${esc(CFG ? UN(c.index).name : '')})` : c.what === 'building' ? ` ${c.index + 1} (${esc(CFG ? BK(c.index).name : '')})` : c.what === 'tier' || c.what === 'tierCount' ? ` ${c.index}` : ''}</td><td>${SW.D && !SW.D.local ? `<a href="https://sepolia.etherscan.io/tx/${c.tx}" target="_blank" rel="noopener">${c.block}</a>` : c.block}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">No changes since the season started: the rules are the launch defaults.</p>'}</div>`;
 }
 // ------------------------------------------------------------------ routing and render loop
-const VIEWS = ['home', 'village', 'world', 'army', 'academy', 'market', 'clan', 'champion', 'ranking', 'reports'];
+const VIEWS = ['home', 'village', 'world', 'army', 'academy', 'market', 'clan', 'champion', 'ranking', 'reports', 'visit'];
 function route() {
-  const h = location.hash.slice(1), v = VIEWS.includes(h) ? h : 'home';
+  let h = location.hash.slice(1);
+  if (/^visit=/.test(h)) { S.visit = decodeURIComponent(h.slice(6)); h = 'visit'; } else if (h === 'visit') h = '';
+  const v = VIEWS.includes(h) ? h : 'home';
   S.view = v;
   $('#home').classList.toggle('on', v === 'home'); $('#game').hidden = v === 'home';
   for (const id of VIEWS.slice(1)) $('#' + id).classList.toggle('on', id === v);
   document.querySelectorAll('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.v === v));
   if (v === 'home' && h) document.getElementById(h)?.scrollIntoView();
   if (v !== 'home' && !S.ui.net) $('#netbox').hidden = false;
-  else if (v !== 'home' && SW.D && !S.me && !S.ui.look && !['world', 'ranking'].includes(v)) openWallet();
-  if (v === 'ranking' && !W.rank && SW.D) loadRanking().then(dirty).catch(() => { });
+  else if (v !== 'home' && SW.D && !S.me && !S.ui.look && !['world', 'ranking', 'visit'].includes(v)) openWallet();
+  if ((v === 'ranking' || v === 'visit') && !W.rank && SW.D) loadRanking().then(dirty).catch(() => { });
   if (v === 'world' && S.wsel !== null) loadTarget(S.wsel).catch(() => { });
   sceneDirty = true; needFull = true; layout(); render(true);
 }
@@ -971,6 +1165,7 @@ function render(force) {
     if (S.view === 'clan') setHTML($('#clan'), clanPage());
     if (S.view === 'ranking') setHTML($('#ranking'), rankingPage());
     if (S.view === 'reports') setHTML($('#reports'), reportsPage());
+    if (S.view === 'visit') setHTML($('#visit'), visitPage());
     needFull = false; lastFull = t;
   }
 }
@@ -978,7 +1173,7 @@ function tick() { if (S.view !== 'home' && !document.hidden) { render(false); if
 
 // ------------------------------------------------------------------ wallet, founding
 function openWallet() { const b = $('#walletbox'); b.hidden = false; $('#wb-msg').textContent = SW.hasWallet() ? '' : 'No wallet found in this browser. Install MetaMask or Rabby, or open this page in your wallet app.'; }
-function maybeName() { if (S.me && ME && ME.none && !['home', 'world', 'ranking'].includes(S.view) && !S.ui.lookName) openName(); }
+function maybeName() { if (S.me && ME && ME.none && !['home', 'world', 'ranking', 'visit'].includes(S.view) && !S.ui.lookName) openName(); }
 function openName() { $('#nm-wallet').textContent = shortAddr(S.me); const nb = $('#namebox'); nb.hidden = false; const i = $('#nm-in'); i.placeholder = i.placeholder || randomName(); if (CFG) $('#nm-gift').textContent = `Founding gives ${fmt(CFG.econ.startResources)} of each resource, ${fmt(CFG.econ.startSeed)} SEED and a ${dur(CFG.econ.shieldHours * 3600)} shield.`; }
 async function foundVillage(name) {
   const why = $('#nm-why');
@@ -1007,10 +1202,19 @@ function onClick(e) {
   if (a === 'close') { t.closest('.right').classList.add('closed'); return; }
   if (a === 'min') { S.ui.min[t.dataset.p] = !S.ui.min[t.dataset.p]; saveUI(); dirty(); return; }
   if (a === 'txclose') { $('#txbox').hidden = true; return; }
+  if (a === 'ct') { CH.tab = t.dataset.t; CH.listKey = ''; renderChat(); return; }
+  if (a === 'chatclose') { CH.open = false; renderChat(); return; }
+  if (a === 'chatsend') return sendChat();
+  if (a === 'annsend') return sendAnnouncement();
+  if (a === 'chide') return act(t.dataset.h === '1' ? 'Hide message' : 'Show message', 'chat', 'hide', [+t.dataset.id, t.dataset.h === '1']).then(pollChat);
+  if (a === 'cmute') { const w = t.dataset.a; if (t.dataset.m === '1' && !confirm(`Mute ${nameOf(w)}? They cannot post until you unmute them.`)) return; return act(t.dataset.m === '1' ? 'Mute wallet' : 'Unmute wallet', 'chat', 'mute', [w, t.dataset.m === '1']).then(pollChat); }
   if (a === 'net-test') { S.ui.net = 'testnet'; saveUI(); $('#netbox').hidden = true; if (S.view === 'home') { location.hash = 'village'; return; } route(); return; }
   if (a === 'wb-connect') return connectWallet();
   if (a === 'wm-scan') { $('#walletmenu').hidden = true; if (SW.D && !SW.D.local) window.open(`https://sepolia.etherscan.io/address/${S.me}`, '_blank', 'noopener'); return; }
   if (a === 'wm-switch') { $('#walletmenu').hidden = true; SW.switchAccount().then(acc => { S.me = acc; S.ui.off = false; saveUI(); ME = null; pending = null; S.cam.set = false; note(`Wallet ${shortAddr(acc)} connected`, 'ok'); return refresh(true); }).then(route).catch(err => note(err.message || String(err), 'bad')); return; }
+  if (a === 'wm-notif') { toggleNotif(); return; }
+  if (a === 'wm-share') { $('#walletmenu').hidden = true; return; }
+  if (a === 'copylink') { const u = t.dataset.u; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => note('Link copied', 'ok')).catch(() => { prompt('Copy this link:', u); }); return; }
   if (a === 'wm-off') { $('#walletmenu').hidden = true; SW.disconnect().then(() => { S.me = null; ME = null; pending = null; S.ui.off = true; S.ui.look = false; saveUI(); note('Wallet disconnected'); dirty(); route(); }); return; }
   if (a === 'wb-open') return openWallet();
   if (a === 'wb-look') { S.ui.look = true; saveUI(); $('#walletbox').hidden = true; if (S.view !== 'world' && S.view !== 'ranking') location.hash = 'world'; return; }
@@ -1097,12 +1301,13 @@ function homeInit() {
 // ------------------------------------------------------------------ start
 async function init() {
   homeInit();
+  chatInit();
   document.addEventListener('click', onClick);
   document.addEventListener('input', e => { if (e.target.matches('#wright input')) updatePrediction(); if (e.target.matches('#mk-amt,#mk-to,#mk-from')) mkPreview(); });
   document.addEventListener('change', e => { if (e.target.matches('#atk-champ')) updatePrediction(); });
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'goto') { e.preventDefault(); $('[data-act="goto"]').click(); } if (e.key === 'Enter' && e.target.id === 'nm-in') { e.preventDefault(); $('[data-act="nm-ok"]').click(); } });
   $('#logoHome').addEventListener('click', () => { location.hash = ''; });
-  $('#walletbtn').addEventListener('click', e => { e.stopPropagation(); if (!S.me) { openWallet(); return; } const m = $('#walletmenu'); m.hidden = !m.hidden; if (!m.hidden) $('#wm-addr').textContent = S.me; });
+  $('#walletbtn').addEventListener('click', e => { e.stopPropagation(); if (!S.me) { openWallet(); return; } const m = $('#walletmenu'); m.hidden = !m.hidden; if (!m.hidden) { $('#wm-addr').textContent = S.me; updNotifBtn(); $('#wm-share').href = ME && ME.v ? `#visit=${encodeURIComponent(ME.v.name)}` : '#village'; } });
   document.addEventListener('click', e => { const m = $('#walletmenu'); if (!m.hidden && !m.contains(e.target)) m.hidden = true; });
   const vst = $('#vstage');
   stageDrag(vst, (dx, dy) => { pan.x += dx; pan.y += dy; clampPan(); applyPan(); }, e => { const hit = document.elementsFromPoint(e.clientX, e.clientY).find(el => el.dataset && el.dataset.hit); if (hit) selectHit(hit); }, (f, cx, cy) => zoomAt(f, cx, cy));
@@ -1132,6 +1337,7 @@ async function init() {
   route(); requestAnimationFrame(tick);
   await refresh(true);
   homeInit(); route();
-  setInterval(() => { if (!document.hidden) refresh(); }, 20000);
+  let bg = 0; setInterval(() => { if (!document.hidden) refresh(); else if (notifOn() && ++bg % 3 === 0) refresh(); }, 20000);
+  setInterval(notifyCheck, 5000);
 }
 if (window.SW_PAGE !== 'owner') init();

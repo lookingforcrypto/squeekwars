@@ -376,3 +376,53 @@ h3{font-family:var(--f-body);font-size:21px;letter-spacing:.04em}
 .adm-u th{white-space:nowrap}
 #walletmenu{position:fixed;top:calc(var(--barh,78px) + 6px);right:max(12px,env(safe-area-inset-right,0px));z-index:61;padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-width:230px}
 #walletmenu .addr{font-size:15px;word-break:break-all}
+
+/* chat and announcements */
+#chatbtn{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:55;width:52px;height:52px;display:grid;place-items:center;color:var(--gold);cursor:pointer;padding:0}
+#chatbtn:hover{color:#ffd774}
+.badge{display:inline-block;min-width:20px;height:20px;line-height:20px;padding:0 5px;border-radius:10px;background:var(--red);color:#fff;font-family:var(--f-body);font-size:17px;text-align:center;margin-left:6px}
+#chatbtn .badge{position:absolute;top:-6px;right:-8px;margin:0}
+#chatbox{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(144px + env(safe-area-inset-bottom,0px));z-index:56;width:380px;max-width:calc(100% - 24px);height:min(540px,calc(100vh - 240px));display:flex;flex-direction:column;padding:8px 10px 10px}
+#chatbox[hidden]{display:none!important}
+.chat-h{display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:2px solid var(--line);padding-bottom:6px}
+.chat-tabs{display:flex;gap:4px}
+.chat-tabs button{font:inherit;font-family:var(--f-display);font-size:15px;background:transparent;color:var(--dim);border:2px solid transparent;padding:3px 8px;cursor:pointer}
+.chat-tabs button.on{color:var(--gold);border-color:var(--edge);background:var(--well)}
+.chat-list{flex:1;overflow-y:auto;padding:6px 2px;display:flex;flex-direction:column;gap:6px;overscroll-behavior:contain}
+.cm-empty{margin:auto;text-align:center;font-size:18px}
+.cm,.an{background:var(--well);border:2px solid var(--line);padding:5px 8px}
+.cm.me{border-color:var(--edge)}
+.cm.hid,.an.hid{opacity:.45}
+.cm-h,.an-h{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;font-size:17px}
+.cm-h b a{color:var(--gold);text-decoration:none}
+.cm-h .t,.an-h .t{color:var(--mute);margin-left:auto}
+.cm-t,.an-t{font-size:19px;line-height:1.15;word-break:break-word;white-space:pre-wrap}
+.an-t{white-space:normal;color:var(--ink);margin-top:3px}
+.an.rule{border-style:dashed}
+.tag{font-size:14px;padding:0 5px;border:1px solid var(--line);color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
+.tag.gold{color:var(--gold);border-color:var(--gold-dd)}
+.lnk{font:inherit;font-size:15px;background:none;border:0;color:var(--blue);cursor:pointer;padding:0 2px}
+.chat-f{border-top:2px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px}
+.chat-f p{margin:0;font-size:18px}
+.chat-f textarea,.chat-f input{font:inherit;font-size:19px;width:100%;box-sizing:border-box;background:var(--well);color:var(--ink);border:2px solid var(--line);padding:4px 6px;resize:none}
+.chat-f .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.chat-f .cnt{font-size:15px}
+.chat-f .cnt.bad{color:var(--red)}
+@media (max-width:900px){
+  #chatbtn{bottom:calc(76px + env(safe-area-inset-bottom,0px));width:46px;height:46px}
+  #chatbox{left:8px;right:8px;width:auto;max-width:none;bottom:calc(128px + env(safe-area-inset-bottom,0px));height:min(62vh,520px)}
+}
+
+/* village page (#visit=Name) */
+.vstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 14px}
+.vs{padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+.vs span{color:var(--dim);font-size:16px}
+.vs b{font-family:var(--f-display);color:var(--gold);font-size:20px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vlooks{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.vlooks figure{margin:0;text-align:center}
+.vlooks img{height:96px;max-width:100%;object-fit:contain}
+.vlooks figcaption{font-size:16px;color:var(--dim)}
+.share .mkt{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.share input{flex:1;min-width:200px;font:inherit;background:var(--well);color:var(--ink);border:2px solid var(--line);padding:4px 6px}
+#walletmenu .btn{display:block;width:100%;text-align:left}
+@media (max-width:900px){ .vstats{grid-template-columns:repeat(2,minmax(0,1fr))} }

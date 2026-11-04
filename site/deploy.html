@@ -4,10 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Squeek Wars · Deploy Season 2</title>
-<link rel="icon" href="assets/ic_seed.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=VT323&display=swap">
-<link rel="stylesheet" href="style.css?v=202611041050">
+<link rel="stylesheet" href="style.css?v=202611041153">
 <style>
   body{overflow:auto;height:auto}
   .dep{max-width:820px;margin:24px auto;padding:0 16px 60px}
@@ -35,7 +37,12 @@
     <h3>Your wallet</h3>
     <div class="row2"><button class="btn" id="connect">Connect wallet</button><span id="acct" class="muted"></span></div>
   </div>
-  <div class="px box">
+  <div class="px box" id="liveNote" hidden>
+    <h3>Season already deployed</h3>
+    <p class="muted">deployment.js already points to a live season (Villages <code id="liveV"></code>). To add the chat, use the add-on below. Deploy five new contracts only to start a new season.</p>
+    <button class="btn ghost sm" id="newSeason" type="button">Deploy a new season instead</button>
+  </div>
+  <div class="px box" id="seasonBox">
     <h3>Deploy</h3>
     <ol class="steps2" id="steps"></ol>
     <div class="row2"><button class="btn go" id="go" disabled>Deploy the next contract</button><button class="btn ghost sm" id="reset">Start over</button></div>
@@ -47,10 +54,18 @@
     <pre id="out"></pre>
     <button class="btn" id="copy">Copy</button>
   </div>
+  <div class="px box" id="chatBox">
+    <h3>Add-on: Chat and announcements</h3>
+    <p class="muted">Deploys the Chat contract for the season in <code>deployment.js</code>: one transaction from the connected wallet. Players with a village can talk; the owner of the rule table posts announcements and can hide messages or mute wallets.</p>
+    <div class="row2"><button class="btn" id="goChat" disabled>Deploy Chat</button></div>
+    <p class="why" id="chatMsg"></p>
+    <pre id="chatOut" hidden></pre>
+  </div>
 </div>
-<script src="vendor/ethers.umd.min.js?v=202611041050"></script>
-<script src="abi.js?v=202611041050"></script>
-<script src="deploy-artifacts.js?v=202611041050"></script>
+<script src="vendor/ethers.umd.min.js?v=202611041153"></script>
+<script src="deployment.js?v=202611041153"></script>
+<script src="abi.js?v=202611041153"></script>
+<script src="deploy-artifacts.js?v=202611041153"></script>
 <script>
 'use strict';
 const E = window.ethers, A = window.SW_ABI, BC = window.SW_BYTECODE;
@@ -103,7 +118,7 @@ async function connect() {
   if (id !== CHAIN_ID) { try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x' + CHAIN_ID.toString(16) }] }); } catch (e) { $('#msg').textContent = 'Switch your wallet to Sepolia.'; return; } }
   const bal = BigInt(await rpc('eth_getBalance', [account, 'latest']));
   $('#msg').textContent = bal === 0n ? 'This wallet has no Sepolia ETH for gas.' : '';
-  render();
+  render(); renderChatBox();
 }
 async function deployNext() {
   const next = ORDER.find(o => !st[o[1]]); if (!next || busy) return;
@@ -139,8 +154,35 @@ async function finish() {
 $('#connect').onclick = () => connect().catch(e => { $('#msg').textContent = e.message; });
 $('#go').onclick = deployNext;
 $('#reset').onclick = () => { if (confirm('Forget the progress on this page? Contracts already deployed stay on chain.')) { st = {}; save(); $('#doneBox').hidden = true; render(); } };
+const DEP = window.SW_DEPLOY || null, CHAT_KEY = 'sw-deploy-chat';
+function renderChatBox() {
+  const done = (DEP && DEP.addresses.chat) || (() => { try { return localStorage.getItem(CHAT_KEY); } catch (e) { return null; } })();
+  $('#goChat').disabled = !account || busy || !DEP || !!done;
+  if (!DEP) $('#chatMsg').textContent = 'deployment.js has no season yet.';
+  if (done) { $('#chatOut').hidden = false; $('#chatOut').textContent = `"chat": "${done}"`; $('#chatMsg').textContent = DEP && DEP.addresses.chat ? 'The chat is deployed and in deployment.js.' : 'Deployed. Send this line to set up the website.'; }
+}
+async function deployChat() {
+  if (busy || !account || !DEP) return; busy = true; renderChatBox(); $('#chatMsg').textContent = '';
+  try {
+    const cfg = DEP.addresses.config, vil = DEP.addresses.villages;
+    for (const a of [cfg, vil]) if ((await rpc('eth_getCode', [a, 'latest'])).length < 4) throw new Error(`No contract at ${a} on Sepolia.`);
+    const data = BC.Chat + new E.Interface(A.Chat).encodeDeploy([cfg, vil]).slice(2);
+    let gas; try { gas = '0x' + Math.ceil(parseInt(await rpc('eth_estimateGas', [{ from: account, data }]), 16) * 1.2).toString(16); } catch (e) { gas = undefined; }
+    $('#chatMsg').textContent = 'Confirm Chat in your wallet…';
+    const hash = await window.ethereum.request({ method: 'eth_sendTransaction', params: [{ from: account, data, ...(gas ? { gas } : {}) }] });
+    $('#chatMsg').textContent = 'Waiting for Chat to be mined…';
+    let r = null; for (let i = 0; i < 180 && !r; i++) { await sleep(i < 10 ? 2000 : 4000); r = await rpc('eth_getTransactionReceipt', [hash]).catch(() => null); }
+    if (!r) throw new Error('Not mined yet. Wait, then reload this page.');
+    if (r.status !== '0x1' || !r.contractAddress) throw new Error('Chat failed on chain.');
+    try { localStorage.setItem(CHAT_KEY, r.contractAddress.toLowerCase()); } catch (e) { }
+  } catch (e) { $('#chatMsg').textContent = (e && (e.code === 4001 ? 'You cancelled it in your wallet.' : e.message)) || String(e); }
+  busy = false; renderChatBox();
+}
+$('#goChat').onclick = deployChat;
 $('#copy').onclick = () => { navigator.clipboard.writeText($('#out').textContent).then(() => { $('#copy').textContent = 'Copied'; }); };
-checkReads(); render();
+if (DEP && DEP.addresses && DEP.addresses.villages && !st.config) { $('#seasonBox').hidden = true; $('#liveNote').hidden = false; $('#liveV').textContent = DEP.addresses.villages; }
+$('#newSeason').onclick = () => { $('#seasonBox').hidden = false; $('#liveNote').hidden = true; };
+checkReads(); render(); renderChatBox();
 </script>
 </body>
 </html>

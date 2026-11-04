@@ -16,11 +16,11 @@ const SW = (() => {
   const A = window.SW_ABI;
   const IF = {
     villages: new E.Interface(A.Villages), army: new E.Interface(A.Army), clans: new E.Interface(A.Clans),
-    ledger: new E.Interface(A.SeedLedger), config: new E.Interface(A.GameConfig),
+    ledger: new E.Interface(A.SeedLedger), config: new E.Interface(A.GameConfig), chat: new E.Interface(A.Chat || []),
     core: new E.Interface(['function state() view returns ((uint64 settledThroughRound,uint64 cumulativeWork,uint96 cumulativeBlockUnits,uint64 blockHeight,uint96 blockProgress,uint32 workPerThousandBlocks,uint256 authorizationNonce,bool paused))']),
     multicall: new E.Interface(['function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)']),
   };
-  const ERR = new E.Interface([...new Map([...A.Villages, ...A.Army, ...A.Clans, ...A.SeedLedger, ...A.GameConfig]
+  const ERR = new E.Interface([...new Map([...A.Villages, ...A.Army, ...A.Clans, ...A.SeedLedger, ...A.GameConfig, ...(A.Chat || [])]
     .filter(f => f.type === 'error').map(f => [f.name, f])).values()]);
   // A.GameConfig errors are already in the union above through the shared GameErrors library
 
@@ -74,8 +74,9 @@ const SW = (() => {
 
   // ---------------------------------------------------------------- events (cached in this browser)
   const TOPIC = {};
-  for (const c of ['villages', 'army', 'clans', 'ledger', 'config']) IF[c].forEachEvent(ev => { TOPIC[ev.topicHash] = c; });
-  const LOG_KEY = 'sw-logs-v2-' + ADDR.villages;
+  const LOGGED = ['villages', 'army', 'clans', 'ledger', 'config'].concat(ADDR.chat ? ['chat'] : []);   // the chat is an add-on: absent until deployed
+  for (const c of LOGGED) IF[c].forEachEvent(ev => { TOPIC[ev.topicHash] = c; });
+  const LOG_KEY = 'sw-logs-v2-' + ADDR.villages + (ADDR.chat ? '-' + ADDR.chat : '');
   const plain = v => typeof v === 'bigint' ? (v <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(v) : v.toString())
     : Array.isArray(v) ? v.map(plain) : v;
   let LOGS = (() => { try { const j = JSON.parse(localStorage.getItem(LOG_KEY)); if (j && Array.isArray(j.logs)) return j; } catch (e) { } return { to: DEPLOY_BLOCK - 1, logs: [] }; })();
@@ -89,7 +90,7 @@ const SW = (() => {
       let from = Math.max(DEPLOY_BLOCK, LOGS.to - 12);           // re-read the last blocks in case of a reorg
       while (from <= top) {
         const to = Math.min(top, from + 39999);
-        const raw = await rpc('eth_getLogs', [{ fromBlock: '0x' + from.toString(16), toBlock: '0x' + to.toString(16), address: [ADDR.villages, ADDR.army, ADDR.clans, ADDR.ledger, ADDR.config] }]);
+        const raw = await rpc('eth_getLogs', [{ fromBlock: '0x' + from.toString(16), toBlock: '0x' + to.toString(16), address: LOGGED.map(c => ADDR[c]) }]);
         for (const l of raw) {
           const c = TOPIC[l.topics[0]]; if (!c) continue;
           const k = l.transactionHash + ':' + parseInt(l.logIndex, 16); if (seen.has(k)) continue;
@@ -145,6 +146,10 @@ const SW = (() => {
   function onAccounts(fn) { if (eth() && eth().on) { eth().on('accountsChanged', a => { account = a && a[0] ? a[0].toLowerCase() : null; fn(account); }); eth().on('chainChanged', () => fn(account)); } }
 
   const WHY = {
+    NoVillage: 'Found a village first: only villages can talk in the chat.',
+    TooSoon: 'Wait a few seconds between two messages.',
+    WalletMuted: 'This wallet is muted in the chat.',
+    BadLength: 'Use 1 to 280 characters (fewer for emoji and accents).',
     AcademyTooLow: 'Your Academy is too low for this research tier.',
     AlreadyBuildingTarget: 'That is already being built in your other slot.',
     AlreadyCheckpointed: "Today's checkpoint is already recorded.",

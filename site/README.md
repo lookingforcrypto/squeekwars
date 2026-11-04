@@ -4,6 +4,9 @@ The playable website. It uses the prototype's art and layout, and every rule and
 
 - **Static files only.** No server, indexer or database. The browser reads Sepolia through public RPCs (`chain.js`, with fallback) and batches reads through Multicall3. Contract events are cached in the browser.
 - **The player's wallet signs everything.** Each action is simulated with `eth_call` first, so a refused action shows the contract's reason in plain English. The site never holds a key.
+- **Chat and announcements.** With the `Chat` add-on deployed, a chat window opens from every page: players with a village talk (each message is a Sepolia transaction), the owner posts announcements, and every rule change of `GameConfig` shows up as an announcement by itself.
+- **Notifications.** Opt in from the wallet menu: while a tab is open, the browser tells you when a build, research or training is done, when a raid or scouts are coming, when the troops are back, when a new day starts, and when there is an announcement or a chat mention (`@YourVillage`).
+- **Village pages.** `#visit=Name` shows any village with its buildings, champion, clan and ranking place, with Copy link and Post on X.
 - **Free layout.** A player puts any building on any free plot and can move it later. The contracts only store levels, so the layout is kept in the player's browser.
 - **Data-driven.** Units, buildings, research tiers, prices and formulas are read from `GameConfig` and cached by its `version`, so an owner edit shows up on the next refresh without a new release of the site.
 
