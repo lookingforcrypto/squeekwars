@@ -90,7 +90,7 @@ async function checkReads() {
   try {
     const r = await rpc('eth_call', [{ to: core, data: '0xc19d93fb' }, 'latest']);
     const work = BigInt('0x' + r.slice(66, 130));
-    await rpc('eth_call', [{ to: nft, data: '0x70a08231' + '0'.repeat(64) }, 'latest']);
+    await rpc('eth_call', [{ to: nft, data: '0x70a08231' + '0'.repeat(63) + '1' }, 'latest']);   // balanceOf(0x…01): ERC-721 refuses the zero address
     $('#readCheck').textContent = `Both answer. SqueekCore's work counter is ${work.toLocaleString('en-US')}.`;
     return true;
   } catch (e) { $('#readCheck').textContent = 'Could not read these addresses on Sepolia: check them.'; return false; }
