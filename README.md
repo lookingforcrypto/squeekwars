@@ -52,3 +52,5 @@ Open [`prototype/index.html`](prototype/) in a browser: the site plus a playable
 ## Status
 
 Season 2 is live on Sepolia at [squeekwars.online](https://squeekwars.online). Mainnet Season 1 opens after the official Squeek mint.
+
+squeekchain-project: 98396650-2a5e-43b6-931e-a7ae0b97affb
