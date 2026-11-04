@@ -1002,7 +1002,7 @@ async function foundVillage(name) {
 }
 async function connectWallet() {
   $('#wb-msg').textContent = 'Waiting for your wallet…';
-  try { S.me = await SW.connect(); $('#walletbox').hidden = true; note(`Wallet ${shortAddr(S.me)} connected`, 'ok'); ME = null; await refresh(true); route(); }
+  try { S.me = await SW.connect(); S.ui.off = false; saveUI(); $('#walletbox').hidden = true; note(`Wallet ${shortAddr(S.me)} connected`, 'ok'); ME = null; await refresh(true); route(); }
   catch (e) { $('#wb-msg').textContent = e.message || String(e); }
 }
 
@@ -1017,6 +1017,9 @@ function onClick(e) {
   if (a === 'txclose') { $('#txbox').hidden = true; return; }
   if (a === 'net-test') { S.ui.net = 'testnet'; saveUI(); $('#netbox').hidden = true; if (S.view === 'home') { location.hash = 'village'; return; } route(); return; }
   if (a === 'wb-connect') return connectWallet();
+  if (a === 'wm-scan') { $('#walletmenu').hidden = true; if (SW.D && !SW.D.local) window.open(`https://sepolia.etherscan.io/address/${S.me}`, '_blank', 'noopener'); return; }
+  if (a === 'wm-switch') { $('#walletmenu').hidden = true; SW.switchAccount().then(acc => { S.me = acc; S.ui.off = false; saveUI(); ME = null; pending = null; S.cam.set = false; note(`Wallet ${shortAddr(acc)} connected`, 'ok'); return refresh(true); }).then(route).catch(err => note(err.message || String(err), 'bad')); return; }
+  if (a === 'wm-off') { $('#walletmenu').hidden = true; SW.disconnect().then(() => { S.me = null; ME = null; pending = null; S.ui.off = true; S.ui.look = false; saveUI(); note('Wallet disconnected'); dirty(); route(); }); return; }
   if (a === 'wb-open') return openWallet();
   if (a === 'wb-look') { S.ui.look = true; saveUI(); $('#walletbox').hidden = true; if (S.view !== 'world' && S.view !== 'ranking') location.hash = 'world'; return; }
   if (a === 'nm-open') { S.ui.lookName = false; saveUI(); return openName(); }
@@ -1105,7 +1108,8 @@ async function init() {
   document.addEventListener('change', e => { if (e.target.matches('#atk-champ')) updatePrediction(); });
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'goto') { e.preventDefault(); $('[data-act="goto"]').click(); } if (e.key === 'Enter' && e.target.id === 'nm-in') { e.preventDefault(); $('[data-act="nm-ok"]').click(); } });
   $('#logoHome').addEventListener('click', () => { location.hash = ''; });
-  $('#walletbtn').addEventListener('click', () => { if (!S.me) openWallet(); else if (SW.D && !SW.D.local) window.open(`https://sepolia.etherscan.io/address/${S.me}`, '_blank', 'noopener'); });
+  $('#walletbtn').addEventListener('click', e => { e.stopPropagation(); if (!S.me) { openWallet(); return; } const m = $('#walletmenu'); m.hidden = !m.hidden; if (!m.hidden) $('#wm-addr').textContent = S.me; });
+  document.addEventListener('click', e => { const m = $('#walletmenu'); if (!m.hidden && !m.contains(e.target)) m.hidden = true; });
   const vst = $('#vstage');
   stageDrag(vst, (dx, dy) => { pan.x += dx; pan.y += dy; clampPan(); applyPan(); }, e => { const hit = document.elementsFromPoint(e.clientX, e.clientY).find(el => el.dataset && el.dataset.hit); if (hit) selectHit(hit); }, (f, cx, cy) => zoomAt(f, cx, cy));
   vst.addEventListener('wheel', e => { e.preventDefault(); const r = vst.getBoundingClientRect(); zoomAt(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX - r.left, e.clientY - r.top); }, { passive: false });
@@ -1130,7 +1134,7 @@ async function init() {
   $('#vright').classList.add('closed');
   if (innerWidth <= 900) $('#wright').classList.add('closed');
   SW.onAccounts(acc => { S.me = acc; ME = null; pending = null; S.cam.set = false; refresh(true).then(route); });
-  S.me = await SW.silent();
+  S.me = S.ui.off ? null : await SW.silent();      // after Disconnect, wait for the player to press Connect
   route(); requestAnimationFrame(tick);
   await refresh(true);
   homeInit(); route();

@@ -374,3 +374,5 @@ h3{font-family:var(--f-body);font-size:21px;letter-spacing:.04em}
 .adm .btn{margin-top:10px}
 .adm-u td{padding:3px 4px;white-space:nowrap}
 .adm-u th{white-space:nowrap}
+#walletmenu{position:fixed;top:calc(var(--barh,78px) + 6px);right:max(12px,env(safe-area-inset-right,0px));z-index:61;padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-width:230px}
+#walletmenu .addr{font-size:15px;word-break:break-all}

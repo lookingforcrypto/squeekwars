@@ -132,6 +132,16 @@ const SW = (() => {
     try { const acc = await eth().request({ method: 'eth_accounts' }); account = acc && acc[0] ? acc[0].toLowerCase() : null; } catch (e) { account = null; }
     return account;
   }
+  // EIP-1193 has no standard disconnect; MetaMask and most wallets honour wallet_revokePermissions
+  async function disconnect() {
+    try { if (eth()) await eth().request({ method: 'wallet_revokePermissions', params: [{ eth_accounts: {} }] }); } catch (e) { }
+    account = null;
+  }
+  async function switchAccount() {
+    if (!eth()) throw new Error('No wallet found in this browser.');
+    try { await eth().request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] }); } catch (e) { if (e && e.code === 4001) throw new Error('You cancelled it in your wallet.'); }
+    return connect();
+  }
   function onAccounts(fn) { if (eth() && eth().on) { eth().on('accountsChanged', a => { account = a && a[0] ? a[0].toLowerCase() : null; fn(account); }); eth().on('chainChanged', () => fn(account)); } }
 
   const WHY = {
@@ -241,5 +251,5 @@ const SW = (() => {
   }
 
   const nameKey = name => E.keccak256(E.toUtf8Bytes(String(name).toLowerCase()));
-  return { E, D, IF, ADDR, CHAIN_ID, DEPLOY_BLOCK, RPCS, rpc, call, multi, head, syncLogs, logs: () => LOGS.logs, connect, silent, onAccounts, send, explain, nameKey, get account() { return account; }, hasWallet: () => !!eth() };
+  return { E, D, IF, ADDR, CHAIN_ID, DEPLOY_BLOCK, RPCS, rpc, call, multi, head, syncLogs, logs: () => LOGS.logs, connect, silent, disconnect, switchAccount, onAccounts, send, explain, nameKey, get account() { return account; }, hasWallet: () => !!eth() };
 })();
