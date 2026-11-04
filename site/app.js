@@ -977,6 +977,7 @@ function notifyEvents() {
       if (m.target === me && m.owner !== me && (m.mode === 1 || m.mode === 2) && m.arriveAt > t) ev.push([`in:${m.id}`, `Incoming ${m.mode === 2 ? 'scouts' : 'raid'} from ${nameOf(m.owner)}`, `It arrives in ${dur(m.arriveAt - t)}.`, 'army']);
       if (m.owner === me && m.mode === 4 && m.arriveAt <= t) ev.push([`back:${m.id}`, 'Your troops are back', m.campId ? 'From a wild camp.' : `From ${nameOf(m.target)}.`, 'army']);
     });
+    if (!ME.clanId) for (const inv of W.invites.values()) if (inv.player === me && inv.open) ev.push([`inv:${inv.clanId}:${me}`, `Clan invitation: ${clanName(inv.clanId)}`, 'Open the Clan tab to join.', 'clan']);
     if (ME.claim && ME.claim.seed > 0) ev.push([`claim:${me}:${G.obsCount}`, `Claim ${fmt(ME.claim.seed)} SEED`, "The hamster's day is recorded.", 'village']);
   }
   if (G.ok && needCheckpoint()) ev.push([`cp:${G.day}`, 'A new day in Squeek Wars', "Press Checkpoint to record the hamster's work for every village.", 'village']);
@@ -1046,7 +1047,7 @@ function chatItems() {
   return l.map(m => {
     const p = W.players.get(m.from), hid = W.hiddenMsg.get(m.id), mut = W.muted.get(m.from);
     const tools = own ? `<button class="lnk" data-act="chide" data-id="${m.id}" data-h="${hid ? 0 : 1}">${hid ? 'Show' : 'Hide'}</button><button class="lnk" data-act="cmute" data-a="${m.from}" data-m="${mut ? 0 : 1}">${mut ? 'Unmute' : 'Mute'}</button>` : '';
-    return `<div class="cm ${m.from === S.me ? 'me' : ''} ${hid ? 'hid' : ''}"><div class="cm-h"><b>${p ? `<a href="#visit=${encodeURIComponent(p.name)}">${esc(p.name)}</a>` : shortAddr(m.from)}</b>${m.from === team ? '<span class="tag gold">team</span>' : ''}<span class="t">${ago(blockTime(m.b))}</span>${tools}</div><div class="cm-t">${linkify(esc(m.text))}</div></div>`;
+    return `<div class="cm ${m.from === S.me ? 'me' : ''} ${hid ? 'hid' : ''}"><div class="cm-h"><b>${p ? `<button class="lnk nm" data-act="cprof" data-a="${m.from}" type="button">${esc(p.name)}</button>` : shortAddr(m.from)}</b>${m.from === team ? '<span class="tag gold">team</span>' : ''}<span class="t">${ago(blockTime(m.b))}</span>${tools}</div><div class="cm-t">${linkify(esc(m.text))}</div></div>`;
   }).join('');
 }
 function chatForm() {
@@ -1069,6 +1070,8 @@ function renderChat() {
   document.querySelectorAll('#chatbox .chat-tabs button').forEach(x => x.classList.toggle('on', x.dataset.t === CH.tab));
   const fk = `${CH.tab}:${S.me}:${ME && !ME.none}:${isOwner()}:${W.muted.get(S.me)}`;
   if (fk !== CH.formKey) { $('#chatform').innerHTML = chatForm(); CH.formKey = fk; }
+  const pf = $('#chatprof');
+  if (pf) { if (CH.prof && CH.tab === 'chat') { setHTML(pf, profileCard(CH.prof)); pf.hidden = false; } else { pf.hidden = true; } }
   const list = $('#chatlist'), html = chatItems();
   if (html !== CH.listKey) {
     const atEnd = list.scrollHeight - list.scrollTop - list.clientHeight < 40 || !CH.listKey;
@@ -1076,6 +1079,28 @@ function renderChat() {
     if (CH.tab === 'chat' && atEnd) list.scrollTop = list.scrollHeight; else if (CH.tab === 'news' && !CH.keepScroll) list.scrollTop = 0;
   }
   markSeen();
+}
+function profileCard(addr) {
+  const p = W.players.get(addr), d = visitData.get(addr);
+  if ((!d || Date.now() - d.at > 60000) && !CH.profLoading) { CH.profLoading = true; loadVisit(addr).catch(() => { }).finally(() => { CH.profLoading = false; renderChat(); }); }
+  if (!W.rank && SW.D && !CH.rankLoading) { CH.rankLoading = true; loadRanking().catch(() => { }).finally(() => { CH.rankLoading = false; renderChat(); }); }
+  let h = `<div class="cp-h"><b>${esc(p ? p.name : shortAddr(addr))}</b><span class="addr">${shortAddr(addr)}</span><button class="btn ghost sm" data-act="cprofclose" type="button" aria-label="Close">✕</button></div>`;
+  if (!d || !d.v || !CFG) return h + '<p class="muted cp-n">Reading the village…</p>';
+  const v = d.v, [x, y] = tileXY(v.tile), ranked = W.rank ? W.rank.slice().sort((a, b) => b.season.overall - a.season.overall) : null, place = ranked ? ranked.findIndex(r => r.addr === addr) + 1 : 0;
+  h += `<table class="kv cp-t"><tr><td>Town Hall</td><td>${v.b[K.TH]}</td></tr><tr><td>Walls</td><td>${d.walls}</td></tr><tr><td>${d.nft ? 'Squeek champion' : 'Champion'}</td><td>level ${d.level}</td></tr><tr><td>Research tier</td><td>${v.tier}</td></tr><tr><td>Clan</td><td>${d.clanId ? esc(clanName(d.clanId)) : 'none'}</td></tr><tr><td>Ranking</td><td>${place ? `#${place} of ${ranked.length}` : '…'}</td></tr><tr><td>Map</td><td>(${x}|${y})</td></tr></table>`;
+  h += `<div class="row cp-b"><a class="btn sm ghost" href="#visit=${encodeURIComponent(v.name)}" style="text-decoration:none">Village page</a><button class="btn sm ghost" data-act="gotile" data-t="${v.tile}" type="button">On the map</button></div>`;
+  return h + inviteBox(addr, d);
+}
+function inviteBox(addr, d) {                       // only a clan's founder can invite (Clans.invite)
+  if (!S.me || !ME || !ME.v) return '';
+  if (addr === S.me) return '<p class="muted cp-n">This is your village.</p>';
+  if (d.clanId) return d.clanId === ME.clanId ? '<p class="muted cp-n">A member of your clan.</p>' : '';
+  if (!ME.clan) return '<p class="muted cp-n">No clan. Found one in the Clan tab to invite players.</p>';
+  if (ME.clan.founder !== S.me) return `<p class="muted cp-n">No clan. Only the founder of ${esc(ME.clan.name)} can invite.</p>`;
+  const inv = W.invites.get(ME.clanId + ':' + addr);
+  if (inv && inv.open) return `<div class="row cp-b"><span class="ok">Invited to ${esc(ME.clan.name)}</span><button class="btn sm ghost" data-act="uninvite" data-a="${addr}" type="button">Withdraw</button></div>`;
+  if (ME.clan.members.length >= ME.clan.capacity) return `<p class="muted cp-n">No clan, but ${esc(ME.clan.name)} is full (${ME.clan.members.length}/${ME.clan.capacity}).</p>`;
+  return `<div class="row cp-b"><span class="muted">No clan yet</span><button class="btn sm" data-act="invite" data-a="${addr}" type="button">Invite to ${esc(ME.clan.name)}</button></div>`;
 }
 function openChat(tab) { CH.open = true; if (tab) CH.tab = tab; CH.listKey = ''; renderChat(); pollChat(); }
 async function pollChat() {
@@ -1202,8 +1227,10 @@ function onClick(e) {
   if (a === 'close') { t.closest('.right').classList.add('closed'); return; }
   if (a === 'min') { S.ui.min[t.dataset.p] = !S.ui.min[t.dataset.p]; saveUI(); dirty(); return; }
   if (a === 'txclose') { $('#txbox').hidden = true; return; }
-  if (a === 'ct') { CH.tab = t.dataset.t; CH.listKey = ''; renderChat(); return; }
-  if (a === 'chatclose') { CH.open = false; renderChat(); return; }
+  if (a === 'ct') { CH.tab = t.dataset.t; CH.listKey = ''; CH.prof = null; renderChat(); return; }
+  if (a === 'cprof') { CH.prof = t.dataset.a; renderChat(); return; }
+  if (a === 'cprofclose') { CH.prof = null; renderChat(); return; }
+  if (a === 'chatclose') { CH.open = false; CH.prof = null; renderChat(); return; }
   if (a === 'chatsend') return sendChat();
   if (a === 'annsend') return sendAnnouncement();
   if (a === 'chide') return act(t.dataset.h === '1' ? 'Hide message' : 'Show message', 'chat', 'hide', [+t.dataset.id, t.dataset.h === '1']).then(pollChat);
