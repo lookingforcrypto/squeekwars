@@ -38,7 +38,7 @@ function saveGroup(key, fn, setter, title) {
 // ------------------------------------------------------------------ the source code on Etherscan
 // verify/input.json is the exact compiler input of the deployed code (contracts/tools/verify-input.js); the key goes only to Etherscan
 const ES_API = 'https://api.etherscan.io/v2/api', ES_CHAIN = 11155111;
-const ES_LIST = [['GameConfig', 'config'], ['SeedLedger', 'ledger'], ['Clans', 'clans'], ['Army', 'army'], ['Villages', 'villages']].concat(SW.ADDR.chat ? [['Chat', 'chat']] : []);
+const ES_LIST = [['GameConfig', 'config'], ['SeedLedger', 'ledger'], ['Clans', 'clans'], ['Army', 'army'], ['Villages', 'villages']].concat(SW.ADDR.chat ? [['Chat', 'chat']] : []).concat(SW.ADDR.holdings ? [['SqueekHoldings', 'holdings']] : []);
 const esState = {}; let esBusy = false;
 const esSleep = ms => new Promise(r => setTimeout(r, ms));
 function verifyBox() {
@@ -46,7 +46,7 @@ function verifyBox() {
   return `<details class="px box adm"><summary><h3>Source code on Etherscan</h3></summary><p class="muted">The game contracts are verified on Sourcify. To show the same source on Etherscan, paste an Etherscan API key (free at <a href="https://etherscan.io/myapikey" target="_blank" rel="noopener">etherscan.io/myapikey</a>) and press Verify on a contract, or verify them all at once. A contract that is already verified just shows ✓. The key stays in this tab and is sent only to Etherscan.</p>`
     + `<div class="mkt"><label>Etherscan API key<input id="es-key" type="password" autocomplete="off" spellcheck="false"></label><button class="btn sm" data-act="esverify" ${esBusy ? 'disabled' : ''}>Verify them all on Etherscan</button></div>`
     + `<table class="kv">${ES_LIST.map(([n, k]) => `<tr><td>${n}</td><td><a href="${scan(SW.ADDR[k])}" target="_blank" rel="noopener">Etherscan</a> · <a href="${src(SW.ADDR[k])}" target="_blank" rel="noopener">Sourcify</a></td><td><button class="btn sm ghost" data-act="esverify1" data-k="${k}" type="button">Verify</button></td><td id="es-st-${k}">${esState[k] || ''}</td></tr>`).join('')}</table>`
-    + `<p class="muted" style="font-size:17px">By hand instead: on each contract's Etherscan page choose Contract → Verify and Publish → Solidity (Standard-Json-Input), compiler v0.8.26+commit.8a97fa7a, MIT, upload <a href="verify/input.json" download>input.json</a> (Chat: <a href="verify/input-chat.json" download>input-chat.json</a>), and paste the contract's constructor arguments from <a href="verify/contracts.json" target="_blank">contracts.json</a>.</p></details>`;
+    + `<p class="muted" style="font-size:17px">By hand instead: on each contract's Etherscan page choose Contract → Verify and Publish → Solidity (Standard-Json-Input), compiler v0.8.26+commit.8a97fa7a, MIT, upload <a href="verify/input.json" download>input.json</a> (Chat: <a href="verify/input-chat.json" download>input-chat.json</a>, SqueekHoldings: <a href="verify/input-holdings.json" download>input-holdings.json</a>), and paste the contract's constructor arguments from <a href="verify/contracts.json" target="_blank">contracts.json</a>.</p></details>`;
 }
 async function esVerify(only) {          // only: one contract key, or every contract
   const key = ($('#es-key').value || '').trim(); if (!key) return note('Paste your Etherscan API key first.', 'bad');

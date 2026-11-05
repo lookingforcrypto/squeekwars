@@ -13,9 +13,10 @@ const res = JSON.parse(solc.compile(JSON.stringify(input)));
 if ((res.errors || []).some(e => e.severity === 'error')) { console.log(res.errors); process.exit(1); }
 const dep = (() => { const window = {}; eval(fs.readFileSync(process.argv[6], 'utf8')); return window.SW_DEPLOY; })();
 const D = { ...dep.addresses, owner: dep.owner };
+const R0 = dep.readersAtLaunch || { core: D.core, squeek: D.squeek };   // SeedLedger's constructor got the Squeekchain readers of its day
 const ADDON = { Chat: 'Chat.sol', SqueekHoldings: 'SqueekHoldings.sol' };
 const INPUT_FILE = { Chat: 'input-chat.json', SqueekHoldings: 'input-holdings.json' };
-const LIST = [['GameConfig', 'config', [D.owner]], ['SeedLedger', 'ledger', [D.config, D.core, D.squeek]], ['Clans', 'clans', [D.config]], ['Army', 'army', [D.config, D.ledger, D.clans]], ['Villages', 'villages', [D.config, D.ledger, D.clans, D.army]]];
+const LIST = [['GameConfig', 'config', [D.owner]], ['SeedLedger', 'ledger', [D.config, R0.core, R0.squeek]], ['Clans', 'clans', [D.config]], ['Army', 'army', [D.config, D.ledger, D.clans]], ['Villages', 'villages', [D.config, D.ledger, D.clans, D.army]]];
 if (D.chat) LIST.push(['Chat', 'chat', [D.config, D.villages]]);
 if (D.holdings) LIST.push(['SqueekHoldings', 'holdings', [D.squeek, D.staking]]);
 const p = new E.JsonRpcProvider((dep.rpcs && dep.rpcs[0]) || 'https://ethereum-sepolia-rpc.publicnode.com');

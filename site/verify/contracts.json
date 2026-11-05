@@ -54,6 +54,15 @@
       "address": "0x150e32b56c9ff8ed04ae7ad9819adfab67b6c5a6",
       "ctorArgs": "000000000000000000000000d1eca225399ab5b6220bf522c2e0f964f75a4ce7000000000000000000000000d7437dc56da2162cb190b0a20df7c6699e4e9b6e",
       "input": "input-chat.json"
+    },
+    {
+      "name": "SqueekHoldings",
+      "key": "holdings",
+      "file": "SqueekHoldings.sol",
+      "id": "SqueekHoldings.sol:SqueekHoldings",
+      "address": "0x8566e954532a377f269c45dfaea5479b6e92b759",
+      "ctorArgs": "000000000000000000000000c4c7982657f00509548f3a3a41db7fa439a6856b00000000000000000000000050fd1780526c3186a0c037c7622203bc4fb611ca",
+      "input": "input-holdings.json"
     }
   ]
 }

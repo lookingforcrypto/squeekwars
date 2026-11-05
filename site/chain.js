@@ -8,8 +8,8 @@ const SW = (() => {
   const CHAIN_ID = (D && D.chainId) || 11155111, CHAIN_HEX = '0x' + CHAIN_ID.toString(16), DEPLOY_BLOCK = (D && D.deployBlock) || 0;
   const RPCS = (D && D.rpcs) || ['https://ethereum-sepolia-rpc.publicnode.com', 'https://rpc.sepolia.ethpandaops.io', 'https://sepolia.gateway.tenderly.co', 'https://sepolia.rpc.sentio.xyz'];
   const ADDR = Object.assign({
-    core: '0x980b4424c007caf7a1f3670b48c8eaef7ebc3d44',
-    squeek: '0xcb98349c134ab983da5bfd80527dfe2552bdb70f',
+    core: '0xfd6c166d4b8e2962e65746a13e5a0797cd4de0c4',
+    squeek: '0xc4c7982657f00509548f3a3a41db7fa439a6856b',
     multicall: '0xcA11bde05977b3631167028862bE2a173976CA11',
   }, D ? D.addresses : {});
   for (const k in ADDR) ADDR[k] = String(ADDR[k]).toLowerCase();
