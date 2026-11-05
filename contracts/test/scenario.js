@@ -199,6 +199,19 @@ const tile = slot => (slot * 7919 + 1237) % 10000;
   await tx(nft.setBalance(aA, 2));
   const [might] = await army.championStats(G, aA); assert.equal(might, 55n);
   ok('a Squeek holder\'s champion gets +10% (Might 55)');
+  console.log('Squeeks in staking');
+  const stk = await deploy('MockStaking', owner), hold = await deploy('SqueekHoldings', owner, await nft.getAddress(), await stk.getAddress());
+  assert.equal(await hold.unitPower(), 1000n * 10n ** 18n);
+  await tx(stk.setPower(bA, 2200n * 10n ** 18n));                              // one level-2 Squeek in staking, none in the wallet
+  assert.equal(await hold.balanceOf(bA), 2n); assert.equal(await hold.balanceOf(aA), 2n);
+  await tx(ledger.connect(owner).setReaders(await core.getAddress(), await hold.getAddress()));
+  assert.equal(await ledger.nftBalance(bA), 2n);
+  const [mightB] = await army.championStats(G, bA); assert.equal(mightB, 55n);
+  await tx(stk.setPower(bA, 10n ** 18n)); assert.equal(await hold.balanceOf(bA), 1n);   // a sliver of power still counts as one
+  await tx(stk.setBroken(true)); assert.equal(await ledger.nftBalance(bA), 0n); assert.equal(await ledger.nftBalance(aA), 2n);
+  for (const t of [0, 8 + 3]) { try { await V(bob).orderBuild.staticCall(t, 0); } catch (e) { assert(!errName(e).includes('ExternalReadFailed'), 'a broken staking read blocked the game'); } }
+  const [mightB2] = await army.championStats(G, bA); assert.equal(mightB2, 50n);
+  ok('staked Squeeks count through SqueekHoldings; a failing staking read counts as 0 and never blocks the game');
   console.log('chat');
   const chat = await deploy('Chat', owner, await cfg.getAddress(), G);
   const C = s => chat.connect(s);

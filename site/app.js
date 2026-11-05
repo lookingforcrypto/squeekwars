@@ -605,7 +605,7 @@ function treasuryHtml() {
 }
 function slotsHtml() {
   const n = ME.nft;
-  let h = `<h3>Construction</h3><div class="muted" style="font-size:16px;margin:-4px 0 6px">${n ? `${n} Squeek${n > 1 ? 's' : ''} in your wallet: build time −${pct(squeekCut(n, G.lastWork))} after the last recorded day` : 'Hold a Squeek to build faster after a good day of work'}</div><div class="list">`;
+  let h = `<h3>Construction</h3><div class="muted" style="font-size:16px;margin:-4px 0 6px">${n ? `${n} Squeek${n > 1 ? 's' : ''} held or staked: build time −${pct(squeekCut(n, G.lastWork))} after the last recorded day` : 'Hold or stake a Squeek to build faster after a good day of work'}</div><div class="list">`;
   ME.orders.forEach((o, i) => {
     if (!o) { h += `<div class="slot"><div class="t"><span class="muted">Slot ${i + 1} is free</span></div><div class="q">Tap a building, a field or a + plot</div></div>`; return; }
     const ready = now() >= o.readyAt;

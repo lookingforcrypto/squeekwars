@@ -24,7 +24,7 @@ function adminPage() {
   h += CFG.buildings.map(b => `<tr><td>${b.i + 1}</td><td><input id="bk-${b.i}-name" value="${esc(b.name)}" maxlength="32" style="width:120px"></td>${bc.map(c => `<td>${c.type === 'bool' ? `<input type="checkbox" id="bk-${b.i}-${c.name}" ${b[c.name] ? 'checked' : ''}>` : c.name === 'effect' ? fxSel(`bk-${b.i}-effect`, b.effect) : c.name === 'thCap' ? capSel(`bk-${b.i}-thCap`, b.thCap) : numIn(`bk-${b.i}-${c.name}`, b[c.name], 'style="width:64px"')}</td>`).join('')}<td>${b.cost.map((x, j) => numIn(`bk-${b.i}-cost-${j}`, x, 'style="width:56px"')).join('')}</td><td><button class="btn sm" data-act="bksave" data-i="${b.i}">Save</button></td></tr>`).join('');
   h += `</tbody></table></div></details>`;
   h += `<details class="px box adm"><summary><h3>Research tiers</h3></summary><p class="muted">Cost and SEED are whole amounts per resource. A tier's bonuses add up with the tiers below it (medicine takes the best).</p><div class="row" style="justify-content:flex-start;gap:8px"><label>Tiers in play ${numIn('tr-count', CFG.tierCount, 'style="width:56px" max="8"')}</label><button class="btn sm" data-act="tcsave">Save tier count</button></div><div class="tblwrap"><table class="tbl adm-u"><thead><tr><th>Tier</th><th>Cost each</th><th>SEED</th><th>Seconds</th><th>Academy</th><th>Carry %</th><th>Speed %</th><th>Medicine %</th><th></th></tr></thead><tbody>${CFG.tiers.map((x, i) => `<tr><td>${i + 1}</td><td>${numIn(`ti-${i}-cost`, x.costEachUnit / UNIT, 'style="width:80px"')}</td><td>${numIn(`ti-${i}-seed`, x.seedUnit / UNIT, 'style="width:80px"')}</td><td>${numIn(`ti-${i}-seconds_`, x.seconds_, 'style="width:80px"')}</td><td>${numIn(`ti-${i}-academy`, x.academy, 'style="width:56px"')}</td><td>${numIn(`ti-${i}-carryPct`, x.carryPct, 'style="width:56px"')}</td><td>${numIn(`ti-${i}-speedPct`, x.speedPct, 'style="width:56px"')}</td><td>${numIn(`ti-${i}-medicinePct`, x.medicinePct, 'style="width:56px"')}</td><td><button class="btn sm" data-act="tisave" data-i="${i + 1}">Save</button></td></tr>`).join('')}</tbody></table></div></details>`;
-  h += `<details class="px box adm"><summary><h3>Owner and Squeekchain</h3></summary><div class="mkt"><label>SqueekCore<input id="rd-core" value="${SW.ADDR.core}" maxlength="42"></label><label>Squeek NFT<input id="rd-nft" value="${SW.ADDR.squeek}" maxlength="42"></label><button class="btn sm" data-act="rdsave">Point the game here</button></div><p class="muted">Only if Squeekchain moves its contracts. A new SqueekCore starts counting from its current work.</p><div class="mkt" style="margin-top:10px"><label>New owner<input id="own-to" maxlength="42" placeholder="0x…"></label><button class="btn sm ghost" data-act="ownsave">Hand over the rule table</button></div><p class="why">Handing over is final: the new wallet gets every power above.</p></details>`;
+  h += `<details class="px box adm"><summary><h3>Owner and Squeekchain</h3></summary><div class="mkt"><label>SqueekCore<input id="rd-core" value="${SW.ADDR.core}" maxlength="42"></label><label>Squeek reader (SqueekHoldings, or the Squeek NFT itself)<input id="rd-nft" value="${SW.ADDR.holdings || SW.ADDR.squeek}" maxlength="42"></label><button class="btn sm" data-act="rdsave">Point the game here</button></div>${READERS ? `<p class="muted">The game reads now: SqueekCore <code>${READERS.core}</code>, Squeeks <code>${READERS.squeek}</code>.${READERS.core !== SW.ADDR.core || READERS.squeek !== (SW.ADDR.holdings || SW.ADDR.squeek) ? ' <span class="gold">This differs from the addresses above: press Point the game here to switch.</span>' : ' <span class="ok">Up to date.</span>'}</p>` : ''}<p class="muted">Only if Squeekchain moves its contracts. A new SqueekCore starts counting from its current work. SqueekHoldings counts Squeeks in the wallet and in Squeekchain staking.</p><div class="mkt" style="margin-top:10px"><label>New owner<input id="own-to" maxlength="42" placeholder="0x…"></label><button class="btn sm ghost" data-act="ownsave">Hand over the rule table</button></div><p class="why">Handing over is final: the new wallet gets every power above.</p></details>`;
   return h + verifyBox() + changeLog();
 }
 
@@ -85,15 +85,16 @@ async function ownerAct(label, c, fn, args) {
   finally { busyTx = false; ownerRender(); }
   return ok;
 }
+let READERS = null;
 async function ownerLoad() {
   if (!SW.D) return;
-  try { const logs = await SW.syncLogs(); processLogs(logs); await loadConfig(); }
+  try { const logs = await SW.syncLogs(); processLogs(logs); await loadConfig(); const [c, q] = await SW.multi([['ledger', 'core'], ['ledger', 'squeek']]); READERS = { core: String(c).toLowerCase(), squeek: String(q).toLowerCase() }; }
   catch (e) { console.warn(e); note('Could not reach the chain: ' + SW.explain(e), 'bad'); }
 }
 let ownerKey = '';
 function ownerRender() {
   const wb = $('#walletbtn'); wb.textContent = S.me ? shortAddr(S.me) : 'Connect';
-  const k = `${CFG && CFG.version}:${S.me}:${isOwner()}:${W.changes.length}`; if (k === ownerKey) return;
+  const k = `${CFG && CFG.version}:${S.me}:${isOwner()}:${W.changes.length}:${READERS && READERS.core + READERS.squeek}`; if (k === ownerKey) return;
   const open = [...document.querySelectorAll('#admin details[open] summary h3')].map(e => e.textContent);
   setHTML($('#admin'), adminPage());
   document.querySelectorAll('#admin details summary h3').forEach(e => { if (open.includes(e.textContent)) e.closest('details').open = true; });

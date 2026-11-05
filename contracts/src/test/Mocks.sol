@@ -29,3 +29,27 @@ contract MockNFT is ISqueekNFT {
         return balances[who];
     }
 }
+
+/// @dev Squeekchain staking as SqueekHoldings reads it: accountPower(account).nftPower, basePower(collection, level), POWER_UNIT
+contract MockStaking {
+    uint256 public constant POWER_UNIT = 1e18;
+    mapping(address => uint256) public power;
+    bool public broken;
+
+    function setPower(address who, uint256 value) external {
+        power[who] = value;
+    }
+
+    function setBroken(bool value) external {
+        broken = value;
+    }
+
+    function basePower(address, uint8 level) external pure returns (uint64) {
+        return level == 1 ? 1000 : 2200;
+    }
+
+    function accountPower(address who) external view returns (uint256 nftPower, uint256 sqkPower) {
+        require(!broken, "staking paused");
+        return (power[who], 0);
+    }
+}

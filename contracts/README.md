@@ -12,6 +12,7 @@ V2 keeps the game of the first Testnet season (IMD launch 2935, MIT) and moves e
 | `Army` | Troops, movements, battles, champions, wild camps | `config, ledger, clans` |
 | `Villages` | The game: every player action starts here | `config, ledger, clans, army` |
 | `Chat` | Add-on: chat and announcements, kept in events. Wallets with a village talk (280 bytes, 15 s apart); the GameConfig owner announces, hides messages and mutes wallets | `config, villages` |
+| `SqueekHoldings` | Add-on: counts a wallet's Squeeks in the wallet and in Squeekchain staking (`accountPower(player).nftPower` in level-1 Squeeks). Point `SeedLedger.setReaders` at it instead of the Squeek NFT; a failing read counts as 0 | `collection, staking` |
 
 Deploy them in that order. There are no wiring calls after deployment. `Chat` can be added to a running season at any time (deploy.html has the step).
 

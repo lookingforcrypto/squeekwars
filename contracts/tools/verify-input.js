@@ -13,9 +13,11 @@ const res = JSON.parse(solc.compile(JSON.stringify(input)));
 if ((res.errors || []).some(e => e.severity === 'error')) { console.log(res.errors); process.exit(1); }
 const dep = (() => { const window = {}; eval(fs.readFileSync(process.argv[6], 'utf8')); return window.SW_DEPLOY; })();
 const D = { ...dep.addresses, owner: dep.owner };
-const ADDON = { Chat: 'Chat.sol' };
+const ADDON = { Chat: 'Chat.sol', SqueekHoldings: 'SqueekHoldings.sol' };
+const INPUT_FILE = { Chat: 'input-chat.json', SqueekHoldings: 'input-holdings.json' };
 const LIST = [['GameConfig', 'config', [D.owner]], ['SeedLedger', 'ledger', [D.config, D.core, D.squeek]], ['Clans', 'clans', [D.config]], ['Army', 'army', [D.config, D.ledger, D.clans]], ['Villages', 'villages', [D.config, D.ledger, D.clans, D.army]]];
 if (D.chat) LIST.push(['Chat', 'chat', [D.config, D.villages]]);
+if (D.holdings) LIST.push(['SqueekHoldings', 'holdings', [D.squeek, D.staking]]);
 const p = new E.JsonRpcProvider((dep.rpcs && dep.rpcs[0]) || 'https://ethereum-sepolia-rpc.publicnode.com');
 (async () => {
   const out = { compiler: 'v' + solc.version().replace(/\.Emscripten.*$/, ''), contracts: [] };
@@ -29,11 +31,13 @@ const p = new E.JsonRpcProvider((dep.rpcs && dep.rpcs[0]) || 'https://ethereum-s
     const same = a.join('') === b.join('');
     const ctor = new E.Interface(abi).encodeDeploy(args).slice(2);
     console.log(name.padEnd(11), file, '| runtime matches Sepolia:', same, '| ctor args', ctor.length / 2, 'bytes');
-    out.contracts.push({ name, key, file, id: `${file}:${name}`, address: D[key], ctorArgs: ctor, input: ADDON[name] ? 'input-chat.json' : 'input.json' });
+    out.contracts.push({ name, key, file, id: `${file}:${name}`, address: D[key], ctorArgs: ctor, input: INPUT_FILE[name] || 'input.json' });
   }
   const base = { ...sources }; for (const f of Object.values(ADDON)) delete base[f];
   fs.writeFileSync(path.join(outDir, 'input.json'), JSON.stringify({ language: 'Solidity', sources: base, settings: { viaIR: true, optimizer: { enabled: true, runs: 200 }, evmVersion: 'shanghai', metadata: { bytecodeHash: 'none' }, outputSelection: { '*': { '*': ['abi', 'evm.bytecode.object', 'evm.deployedBytecode.object'] } } } }));
-  if (D.chat) fs.writeFileSync(path.join(outDir, 'input-chat.json'), JSON.stringify({ language: 'Solidity', sources, settings: { viaIR: true, optimizer: { enabled: true, runs: 200 }, evmVersion: 'shanghai', metadata: { bytecodeHash: 'none' }, outputSelection: { '*': { '*': ['abi', 'evm.bytecode.object', 'evm.deployedBytecode.object'] } } } }));
+  const write = (file, srcs) => fs.writeFileSync(path.join(outDir, file), JSON.stringify({ language: 'Solidity', sources: srcs, settings: { viaIR: true, optimizer: { enabled: true, runs: 200 }, evmVersion: 'shanghai', metadata: { bytecodeHash: 'none' }, outputSelection: { '*': { '*': ['abi', 'evm.bytecode.object', 'evm.deployedBytecode.object'] } } } }));
+  if (D.chat) write('input-chat.json', Object.fromEntries(Object.entries(sources).filter(([f]) => f !== ADDON.SqueekHoldings)));   // the five's sources plus Chat.sol, in the same order
+  if (D.holdings) write('input-holdings.json', { 'SqueekHoldings.sol': sources['SqueekHoldings.sol'] });   // it imports nothing
   fs.writeFileSync(path.join(outDir, 'contracts.json'), JSON.stringify(out, null, 2));
   console.log('compiler', out.compiler, '| sources', Object.keys(sources).join(' '));
 })();
