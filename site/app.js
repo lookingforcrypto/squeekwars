@@ -1399,6 +1399,7 @@ function liveNote() {
 }
 function homeChanges() { const el = $('#ruleLog'); if (el) setHTML(el, changeLog()); }
 function homeInit() {
+  if (CFG && $('#shieldText')) { const h = CFG.econ.shieldHours; $('#shieldText').textContent = h % 24 === 0 ? `${h / 24}-day` : `${h}-hour`; }   // follows the rule table
   const units = CFG ? unitsOn() : [];
   $('#unitCards').innerHTML = units.length ? units.map(u => `<div class="unit px"><img src="${spr(unitSprite(u.i))}" alt="${esc(u.name)}"><b>${esc(u.name)}</b><span>${u.attack} attack · ${u.defense} defense<br>speed ${u.speed} · carry ${u.carry}${u.tier ? ` · tier ${u.tier}` : ''}</span></div>`).join('') : '<p class="muted">The unit list loads from the rule table.</p>';
   const A_ = SW.ADDR, link = ad => SW.D && !SW.D.local ? `<a href="https://sepolia.etherscan.io/address/${ad}" target="_blank" rel="noopener">${ad}</a>` : ad;
